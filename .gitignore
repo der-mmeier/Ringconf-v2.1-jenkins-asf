@@ -19,6 +19,7 @@
 .env
 .env.*
 !.env.example
+/src/php/config.local.php
 
 # Logs
 *.log
