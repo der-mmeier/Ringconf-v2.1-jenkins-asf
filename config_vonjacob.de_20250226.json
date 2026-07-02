@@ -1,0 +1,2196 @@
+{
+  "profile": [
+    {
+      "name": "P1",
+      "wa": {
+        "min": 30,
+        "max": 50,
+        "step": 10
+      },
+      "wc": {
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "sw": {
+        "min": 300,
+        "max": 1000,
+        "step": 100
+      },
+      "sd": 300,
+      "rhMaxFactor": 0.8,
+      "sideGapDistance": 800,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36
+      ],
+      "maxWaveAmpMultipleWaves": 40,
+      "maxWaveCountMultipleWaves": 4
+    },
+    {
+      "name": "P2",
+      "rw": {
+        "min": 2000,
+        "max": 12000,
+        "step": 500
+      },
+      "rh": {
+        "min": 1300,
+        "max": 4000,
+        "step": 100
+      },
+      "rs": {
+        "min": 45000,
+        "max": 78000,
+        "step": 500
+      },
+      "wa": {
+        "min": 30,
+        "max": 50,
+        "step": 10
+      },
+      "wc": {
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "sw": {
+        "min": 300,
+        "max": 1000,
+        "step": 100
+      },
+      "sd": 300,
+      "rhMaxFactor": 0.8,
+      "sideGapDistance": 500,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36
+      ],
+      "maxWaveAmpMultipleWaves": 40,
+      "maxWaveCountMultipleWaves": 4
+    },
+    {
+      "name": "P3",
+      "wa": {
+        "min": 30,
+        "max": 50,
+        "step": 10
+      },
+      "wc": {
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "sw": {
+        "min": 300,
+        "max": 1000,
+        "step": 100
+      },
+      "sd": 300,
+      "rhMaxFactor": 0.8,
+      "sideGapDistance": 500,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36
+      ],
+      "maxWaveAmpMultipleWaves": 40,
+      "maxWaveCountMultipleWaves": 4
+    },
+    {
+      "name": "P4",
+      "wa": {
+        "min": 30,
+        "max": 50,
+        "step": 10
+      },
+      "wc": {
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "sw": {
+        "min": 300,
+        "max": 1000,
+        "step": 100
+      },
+      "sd": 300,
+      "rhMaxFactor": 0.8,
+      "sideGapDistance": 300,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "maxWaveAmpMultipleWaves": 40,
+      "maxWaveCountMultipleWaves": 4
+    },
+    {
+      "name": "P5",
+      "wa": {
+        "min": 30,
+        "max": 40,
+        "step": 10
+      },
+      "wc": {
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "rhMaxFactor": 0.8,
+      "sideGapDistance": 500,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "maxWaveAmpMultipleWaves": 40,
+      "maxWaveCountMultipleWaves": 4,
+      "sideCrossChannelDistance": 500
+    },
+    {
+      "name": "P6",
+      "wa": {
+        "min": 30,
+        "max": 50,
+        "step": 10
+      },
+      "wc": {
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "sw": {
+        "min": 300,
+        "max": 1000,
+        "step": 100
+      },
+      "sd": 300,
+      "rhMaxFactor": 0.8,
+      "sideGapDistance": 500,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "maxWaveAmpMultipleWaves": 40,
+      "maxWaveCountMultipleWaves": 4
+    },
+    {
+      "name": "P7",
+      "rw": {
+        "min": 3000,
+        "max": 12000,
+        "step": 500
+      },
+      "wa": {
+        "min": 30,
+        "max": 50,
+        "step": 10
+      },
+      "wc": {
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "rhMaxFactor": 0.5,
+      "sideGapDistance": 800,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36
+      ],
+      "maxWaveAmpMultipleWaves": 40,
+      "maxWaveCountMultipleWaves": 4,
+      "sideCrossChannelDistance": 500
+    },
+    {
+      "name": "P11",
+      "rh": {
+        "min": 1200,
+        "max": 4000,
+        "step": 100
+      },
+      "wa": {
+        "min": 30,
+        "max": 50,
+        "step": 10
+      },
+      "wc": {
+        "min": 1,
+        "max": 6,
+        "step": 1
+      },
+      "sw": {
+        "min": 300,
+        "max": 1000,
+        "step": 100
+      },
+      "sd": 300,
+      "rhMaxFactor": 0.8,
+      "sideGapDistance": 300,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "maxWaveAmpMultipleWaves": 40,
+      "maxWaveCountMultipleWaves": 4
+    },
+    {
+      "name": "P12",
+      "rw": {
+        "min": 1500,
+        "max": 5000,
+        "step": 100
+      },
+      "rh": {
+        "min": 1500,
+        "max": 5000,
+        "step": 100
+      },
+      "wa": {
+        "min": 0,
+        "max": 0,
+        "step": 0
+      },
+      "wc": {
+        "min": 0,
+        "max": 0,
+        "step": 0
+      },
+      "rhMaxFactor": 1,
+      "sideGapDistance": 800,
+      "gapGapDistance": 300,
+      "gapGapDistanceWave": 400,
+      "stoneModes": [
+        10,
+        20,
+        30
+      ],
+      "maxWaveAmpMultipleWaves": 0,
+      "maxWaveCountMultipleWaves": 0,
+      "syncRwRh": true
+    }
+  ],
+  "ringWidth": {
+    "min": 2000,
+    "max": 12000,
+    "step": 500
+  },
+  "ringHeight": {
+    "min": 1300,
+    "max": 3000,
+    "step": 100
+  },
+  "ringSize": {
+    "min": 45000,
+    "max": 78000,
+    "step": 500
+  },
+  "divPreset": [
+    {
+      "name": "Einfarbig",
+      "img": "div-einfarbig.svg",
+      "divPreset": "-:1"
+    },
+    {
+      "name": "Zweifarbig",
+      "img": "div-zweifarbig.svg",
+      "items": [
+        {
+          "img": "div-vertical-1-1.svg",
+          "divPreset": "-:1:1"
+        },
+        {
+          "img": "div-vertical-1-2.svg",
+          "divPreset": "-:1:2"
+        },
+        {
+          "img": "div-vertical-1-3.svg",
+          "divPreset": "-:1:3"
+        },
+        {
+          "img": "div-vertical-1-4.svg",
+          "divPreset": "-:1:4",
+          "rwMin": 2500
+        },
+        {
+          "img": "div-sine-1-1.svg",
+          "divPreset": "W:1:1",
+          "rwMin": 2500
+        },
+        {
+          "img": "div-diagonal-1-1.svg",
+          "divPreset": "D:1:1",
+          "rwMin": 2500
+        },
+        {
+          "img": "div-segment-1-1.svg",
+          "divPreset": "S:1:1"
+        },
+        {
+          "img": "div-horizontal-1-1.svg",
+          "divPreset": "H:1:1",
+          "rhMin": 1600,
+          "notProfile": [
+            "P1",
+            "P5"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dreifarbig",
+      "img": "div-dreifarbig.svg",
+      "items": [
+        {
+          "img": "div-vertical-1-1-1.svg",
+          "divPreset": "-:1:1:1"
+        },
+        {
+          "img": "div-vertical-2-1-1.svg",
+          "divPreset": "-:2:1:1",
+          "rwMin": 2500
+        },
+        {
+          "img": "div-vertical-3-1-1.svg",
+          "divPreset": "-:3:1:1",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-vertical-4-1-1.svg",
+          "divPreset": "-:4:1:1",
+          "rwMin": 4000
+        },
+        {
+          "img": "div-vertical-1-2-1.svg",
+          "divPreset": "-:1:2:1",
+          "rwMin": 2500
+        },
+        {
+          "img": "div-vertical-1-3-1.svg",
+          "divPreset": "-:1:3:1",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-vertical-1-4-1.svg",
+          "divPreset": "-:1:4:1",
+          "rwMin": 4000
+        },
+        {
+          "img": "div-vertical-2-1-2.svg",
+          "divPreset": "-:2:1:2",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-diagonal-1-1-1.svg",
+          "divPreset": "D:1:1:1",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-diagonal-2-1-2.svg",
+          "divPreset": "D:2:1:2",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-diagonal-1-2-1.svg",
+          "divPreset": "D:1:2:1",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-sine-1-1-1.svg",
+          "divPreset": "W:1:1:1",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-sine-2-1-2.svg",
+          "divPreset": "W:2:1:2",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-sine-1-2-1.svg",
+          "divPreset": "W:1:2:1",
+          "rwMin": 3000
+        }
+      ]
+    },
+    {
+      "name": "Frei",
+      "img": "div-frei.svg",
+      "items": [
+        {
+          "img": "div-vertical-frei-1.svg",
+          "divPreset": "F:1:1"
+        },
+        {
+          "img": "div-vertical-frei-2.svg",
+          "divPreset": "F:1:1:1",
+          "rwMin": 2500
+        },
+        {
+          "img": "div-vertical-frei-3.svg",
+          "divPreset": "F:1:1:1:1",
+          "rwMin": 3000
+        },
+        {
+          "img": "div-vertical-frei-4.svg",
+          "divPreset": "F:1:1:1:1:1",
+          "rwMin": 3500
+        },
+        {
+          "img": "div-sine-frei-1.svg",
+          "divPreset": "WF:1:1",
+          "rwMin": 2500
+        },
+        {
+          "img": "div-sine-frei-2.svg",
+          "divPreset": "WF:1:1:1",
+          "rwMin": 3500
+        },
+        {
+          "img": "div-diagonal-frei-1.svg",
+          "divPreset": "DF:1:1",
+          "rwMin": 2500
+        },
+        {
+          "img": "div-diagonal-frei-2.svg",
+          "divPreset": "DF:1:1:1",
+          "rwMin": 2500
+        }
+      ]
+    }
+  ],
+  "material": [
+    {
+      "id": 0,
+      "name": "Gelbgold",
+      "symbol": "Au",
+      "fineness": [
+        333,
+        375,
+        585,
+        750
+      ],
+      "color3d": "#f2b04e",
+      "colorHtml": "#f2b04e",
+      "asfProfileIndex": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "processingFee": [
+        10,
+        17,
+        10,
+        10
+      ],
+      "pricePerGramm": 57,
+      "calcFactor": 1.94
+    },
+    {
+      "id": 1,
+      "name": "Weißgold",
+      "symbol": "Au",
+      "fineness": [
+        333,
+        375,
+        585,
+        750
+      ],
+      "color3d": "#c7c7c7",
+      "colorHtml": "#c7c7c7",
+      "asfProfileIndex": [
+        5,
+        9,
+        13,
+        17
+      ],
+      "processingFee": [
+        10,
+        17,
+        10,
+        10
+      ],
+      "pricePerGramm": 57,
+      "calcFactor": 1.94
+    },
+    {
+      "id": 2,
+      "name": "Rosegold",
+      "symbol": "Au",
+      "fineness": [
+        333,
+        375,
+        585,
+        750
+      ],
+      "color3d": "#eb925e",
+      "colorHtml": "#eb925e",
+      "asfProfileIndex": [
+        4,
+        8,
+        12,
+        16
+      ],
+      "processingFee": [
+        10,
+        17,
+        10,
+        10
+      ],
+      "pricePerGramm": 57,
+      "calcFactor": 1.94
+    },
+    {
+      "id": 3,
+      "name": "Rotgold",
+      "symbol": "Au",
+      "fineness": [
+        333,
+        375,
+        585,
+        750
+      ],
+      "color3d": "#d66e49",
+      "colorHtml": "#d66e49",
+      "asfProfileIndex": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "processingFee": [
+        10,
+        17,
+        10,
+        10
+      ],
+      "pricePerGramm": 57,
+      "calcFactor": 1.94
+    },
+    {
+      "id": 4,
+      "name": "Platin",
+      "symbol": "Pt",
+      "fineness": [
+        600,
+        950
+      ],
+      "color3d": "#828282",
+      "colorHtml": "#828282",
+      "asfProfileIndex": [
+        20,
+        21
+      ],
+      "processingFee": [
+        10,
+        11
+      ],
+      "pricePerGramm": 44,
+      "calcFactor": 2.09
+    },
+    {
+      "id": 5,
+      "name": "Palladium",
+      "symbol": "Pd",
+      "fineness": [
+        585,
+        950
+      ],
+      "color3d": "#616161",
+      "colorHtml": "#616161",
+      "asfProfileIndex": [
+        18,
+        19
+      ],
+      "processingFee": [
+        10,
+        15
+      ],
+      "pricePerGramm": 90,
+      "calcFactor": 2.13
+    },
+    {
+      "id": 6,
+      "name": "Silber",
+      "symbol": "Ag",
+      "fineness": [
+        925
+      ],
+      "color3d": "#c7c7c7",
+      "colorHtml": "#c7c7c7",
+      "asfProfileIndex": [
+        5,
+        9,
+        13,
+        17
+      ],
+      "processingFee": [
+        10,
+        17,
+        10,
+        10
+      ],
+      "pricePerGramm": 57,
+      "calcFactor": 1.94
+    }
+  ],
+  "surface": [
+    {
+      "id": 0,
+      "name": "poliert",
+      "img": "icon-poliert.svg",
+      "material": {
+        "metallic": 1,
+        "roughness": 0
+      }
+    },
+    {
+      "id": 1,
+      "name": "sandmatt fein",
+      "img": "icon-sandmatt-fein.svg",
+      "material": {
+        "file": "tex-sandmatt-fein.jpg",
+        "uScale": 0.4,
+        "vScale": 0.4,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 1,
+        "roughness": 0.3
+      }
+    },
+    {
+      "id": 2,
+      "name": "sandmatt grob",
+      "img": "icon-sandmatt-grob.svg",
+      "material": {
+        "file": "tex-sandmatt-grob.jpg",
+        "uScale": 0.15,
+        "vScale": 0.15,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 1,
+        "roughness": 0.3
+      }
+    },
+    {
+      "id": 3,
+      "name": "längsmatt",
+      "img": "icon-laengsmatt.svg",
+      "material": {
+        "file": "tex-laengsmatt.jpg",
+        "uScale": 0.05,
+        "vScale": 0.05,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 0.95,
+        "roughness": 0.35
+      }
+    },
+    {
+      "id": 4,
+      "name": "quermatt",
+      "img": "icon-quermatt.svg",
+      "material": {
+        "file": "tex-quermatt.jpg",
+        "uScale": 0.05,
+        "vScale": 0.05,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 0.95,
+        "roughness": 0.35
+      }
+    },
+    {
+      "id": 5,
+      "name": "schrägmatt",
+      "img": "icon-schraegmatt.svg",
+      "material": {
+        "file": "tex-schraegmatt.jpg",
+        "uScale": 0.07,
+        "vScale": 0.07,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 0.95,
+        "roughness": 0.35
+      }
+    },
+    {
+      "id": 6,
+      "name": "x-matt",
+      "img": "icon-x-matt.svg",
+      "material": {
+        "file": "tex-xmatt.jpg",
+        "uScale": 0.15,
+        "vScale": 0.15,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 0.95,
+        "roughness": 0.25
+      },
+      "minSegmentWidth": 2000,
+      "forceGap": true
+    },
+    {
+      "id": 7,
+      "name": "eismatt",
+      "img": "icon-eismatt.svg",
+      "material": {
+        "file": "tex-eismatt.jpg",
+        "uScale": 0.18,
+        "vScale": 0.18,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 0.88,
+        "roughness": 0.18
+      },
+      "minSegmentWidth": 300,
+      "forceGap": true
+    },
+    {
+      "id": 8,
+      "name": "hammer-poliert",
+      "img": "icon-hammer-poliert.svg",
+      "material": {
+        "file": "tex-hammerschlag-poliert.jpg",
+        "uScale": 0.142857142,
+        "vScale": 0.142857142,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 1,
+        "roughness": 0
+      },
+      "minSegmentWidth": 3000,
+      "maxDivision": 2,
+      "forceGap": true,
+      "surcharge": 30
+    },
+    {
+      "id": 9,
+      "name": "hammer-matt",
+      "img": "icon-hammer-matt.svg",
+      "material": {
+        "file": "tex-hammerschlag-poliert.jpg",
+        "uScale": 0.142857142,
+        "vScale": 0.142857142,
+        "invertX": true,
+        "invertY": true,
+        "metallic": 1,
+        "roughness": 0.3
+      },
+      "minSegmentWidth": 3000,
+      "maxDivision": 2,
+      "forceGap": true,
+      "surcharge": 30
+    }
+  ],
+  "gapMode": [
+    {
+      "id": 0,
+      "name": "Ohne",
+      "img": "icon-stufe-ohne.svg",
+      "width": [
+        0
+      ],
+      "surface": [
+        0
+      ],
+      "depth": 0
+    },
+    {
+      "id": 3,
+      "name": "U",
+      "img": "icon-u-fuge.svg",
+      "width": [
+        300,
+        500,
+        1000,
+        1500,
+        2000
+      ],
+      "surface": [
+        0,
+        1
+      ],
+      "depth": 0.5
+    },
+    {
+      "id": 1,
+      "name": "Eckig",
+      "img": "icon-eckige-fuge.svg",
+      "width": [
+        300,
+        500,
+        1000,
+        1500,
+        2000
+      ],
+      "surface": [
+        0,
+        1
+      ],
+      "depth": 300
+    },
+    {
+      "id": 2,
+      "name": "V",
+      "img": "icon-v-fuge.svg",
+      "width": [
+        300,
+        500,
+        1000,
+        1500
+      ],
+      "surface": [
+        0,
+        1
+      ],
+      "depth": 0.5
+    }
+  ],
+  "stepMode": [
+    {
+      "id": 0,
+      "name": "Ohne",
+      "img": "icon-stufe-ohne.svg"
+    },
+    {
+      "id": 3,
+      "name": "Beide",
+      "img": "icon-stufe-beide.svg"
+    },
+    {
+      "id": 1,
+      "name": "Links",
+      "img": "icon-stufe-links.svg"
+    },
+    {
+      "id": 2,
+      "name": "Rechts",
+      "img": "icon-stufe-rechts.svg"
+    }
+  ],
+  "stoneMode": [
+    {
+      "mode": 0,
+      "name": "Ohne",
+      "img": "icon-stone-none.svg",
+      "safeDistX": 200,
+      "safeDistY": 200
+    },
+    {
+      "mode": 10,
+      "name": "Eingerieben",
+      "img": "icon-stone-bezel.svg",
+      "safeDistX": 200,
+      "safeDistY": 200,
+      "bevelDistX": 100,
+      "bevelDistY": 100,
+      "stoneDistances": [
+        {
+          "profile": [
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5"
+          ],
+          "stoneToStone_x": 500,
+          "stoneToStone_y": 200,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 100
+        },
+        {
+          "profile": [
+            "P6",
+            "P11"
+          ],
+          "stoneToStone_x": 300,
+          "stoneToStone_y": 200,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 100
+        },
+        {
+          "profile": [
+            "P7",
+            "P12"
+          ],
+          "stoneToStone_x": 800,
+          "stoneToStone_y": 200,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 100
+        }
+      ]
+    },
+    {
+      "mode": 20,
+      "name": "Verschnitt",
+      "img": "icon-stone-section.svg",
+      "safeDistX": 100,
+      "safeDistY": 100,
+      "safeDistXGap": 150,
+      "distribution": 0,
+      "maxWaveCount": 3,
+      "maxGapWidth": 300,
+      "stoneDistances": [
+        {
+          "profile": [
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5"
+          ],
+          "stoneToStone_x": 80,
+          "stoneToStone_y": 120,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 100
+        },
+        {
+          "profile": [
+            "P6",
+            "P11"
+          ],
+          "stoneToStone_x": 80,
+          "stoneToStone_y": 120,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 150
+        },
+        {
+          "profile": [
+            "P7",
+            "P12"
+          ],
+          "stoneToStone_x": 80,
+          "stoneToStone_y": 120,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 150
+        }
+      ]
+    },
+    {
+      "mode": 30,
+      "name": "Kanal",
+      "img": "icon-stone-channel-open.svg",
+      "safeDistX": 0,
+      "safeDistY": 0,
+      "safeDistXGap": 0,
+      "maxGapWidth": 300,
+      "stoneDistances": [
+        {
+          "profile": [
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5",
+            "P6",
+            "P11",
+            "P7",
+            "P12"
+          ],
+          "stoneToStone_x": 0,
+          "stoneToStone_y": 50,
+          "stoneToGap_x": 100,
+          "stoneToBevel_x": -0.12
+        }
+      ]
+    },
+    {
+      "mode": 31,
+      "name": "Kanal quer",
+      "img": "icon-stone-channel-cross.svg",
+      "safeDistX": 200,
+      "safeDistY": 200,
+      "sideCrossChannelDistance": 150,
+      "maxGapWidth": 300,
+      "stoneDistances": [
+        {
+          "stoneToStone_x": 50,
+          "stoneToStone_y": 0,
+          "stoneToGap_x": 0,
+          "stoneToBevel_x": -0.12
+        }
+      ]
+    },
+    {
+      "mode": 35,
+      "name": "Spannring",
+      "img": "icon-stone-clamp.svg",
+      "safeDistX": 200,
+      "safeDistY": 200,
+      "sideCrossChannelDistance": 150,
+      "maxGapWidth": 300,
+      "stoneDistances": [
+        {
+          "profile": [
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5"
+          ],
+          "stoneToStone_x": 0,
+          "stoneToStone_y": 0,
+          "stoneToGap_x": 500,
+          "stoneToBevel_x": 0.88
+        },
+        {
+          "profile": [
+            "P6",
+            "P11"
+          ],
+          "stoneToStone_x": 0,
+          "stoneToStone_y": 0,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 0.88
+        },
+        {
+          "profile": [
+            "P7",
+            "P12"
+          ],
+          "stoneToStone_x": 0,
+          "stoneToStone_y": 0,
+          "stoneToGap_x": 800,
+          "stoneToBevel_x": 0.88
+        }
+      ],
+      "defaultStoneSize": 1900
+    },
+    {
+      "name": "Seitlich",
+      "img": "icon-stone-side-bezel-left.svg",
+      "items": [
+        {
+          "mode": 40,
+          "name": "Eingerieben (links)",
+          "img": "icon-stone-side-bezel-left.svg",
+          "safeDistX": 200,
+          "safeDistY": 300,
+          "sideIndex": 0,
+          "stoneDistances": [
+            {
+              "stoneToStone_x": 0,
+              "stoneToStone_y": 200,
+              "stoneToGap_x": 0,
+              "stoneToBevel_x": 100
+            }
+          ]
+        },
+        {
+          "mode": 41,
+          "name": "Eingerieben (rechts)",
+          "img": "icon-stone-side-bezel-right.svg",
+          "safeDistX": 200,
+          "safeDistY": 200,
+          "bevelDistX": 50,
+          "bevelDistY": 50,
+          "sideIndex": 1,
+          "stoneDistances": [
+            {
+              "stoneToStone_x": 0,
+              "stoneToStone_y": 200,
+              "stoneToGap_x": 0,
+              "stoneToBevel_x": 100
+            }
+          ]
+        },
+        {
+          "mode": 42,
+          "name": "Kanal (links)",
+          "img": "icon-stone-side-channel-left.svg",
+          "safeDistX": 200,
+          "safeDistY": 10,
+          "sideIndex": 0,
+          "stoneDistances": [
+            {
+              "stoneToStone_x": 0,
+              "stoneToStone_y": 0,
+              "stoneToGap_x": 0,
+              "stoneToBevel_x": 0.88
+            }
+          ]
+        },
+        {
+          "mode": 43,
+          "name": "Kanal (rechts)",
+          "img": "icon-stone-side-channel-right.svg",
+          "safeDistX": 200,
+          "safeDistY": 10,
+          "sideIndex": 1,
+          "stoneDistances": [
+            {
+              "stoneToStone_x": 0,
+              "stoneToStone_y": 0,
+              "stoneToGap_x": 0,
+              "stoneToBevel_x": 0.88
+            }
+          ]
+        },
+        {
+          "mode": 44,
+          "name": "Verschnitt (links)",
+          "img": "icon-stone-side-section-left.svg",
+          "safeDistX": 200,
+          "safeDistY": 200,
+          "sideIndex": 0,
+          "distribution": 0,
+          "stoneDistances": [
+            {
+              "stoneToStone_x": 0,
+              "stoneToStone_y": 200,
+              "stoneToGap_x": 0,
+              "stoneToBevel_x": 150
+            }
+          ]
+        },
+        {
+          "mode": 45,
+          "name": "Verschnitt (rechts)",
+          "img": "icon-stone-side-section-right.svg",
+          "safeDistX": 200,
+          "safeDistY": 200,
+          "sideIndex": 1,
+          "distribution": 0,
+          "stoneDistances": [
+            {
+              "stoneToStone_x": 0,
+              "stoneToStone_y": 200,
+              "stoneToGap_x": 0,
+              "stoneToBevel_x": 150
+            }
+          ]
+        }
+      ],
+      "safeDistX": 0,
+      "safeDistY": 0
+    },
+    {
+      "mode": 11,
+      "name": "Freie Aufteilung",
+      "img": "icon-stone-free.svg",
+      "safeDistX": 200,
+      "safeDistY": 200,
+      "bevelDistX": 100,
+      "bevelDistY": 100,
+      "minRingWidth": 3000,
+      "maxGapWidth": 500,
+      "stoneDistances": [
+        {
+          "profile": [
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5"
+          ],
+          "stoneToStone_x": 200,
+          "stoneToStone_y": 200,
+          "stoneToGap_x": 500,
+          "stoneToBevel_x": 100
+        },
+        {
+          "profile": [
+            "P6",
+            "P11"
+          ],
+          "stoneToStone_x": 200,
+          "stoneToStone_y": 200,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 100
+        },
+        {
+          "profile": [
+            "P7",
+            "P12"
+          ],
+          "stoneToStone_x": 200,
+          "stoneToStone_y": 200,
+          "stoneToGap_x": 300,
+          "stoneToBevel_x": 100
+        }
+      ]
+    }
+  ],
+  "stoneType": [
+    {
+      "id": 1,
+      "name": "Brillant",
+      "img": "icon-brillant.svg",
+      "obj": "brillant.obj",
+      "allowedStoneMode": [
+        10,
+        11,
+        20,
+        30,
+        31,
+        35,
+        36,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "size": [
+        {
+          "size": 1000,
+          "carat": 0.005,
+          "minRingWidth": 1500,
+          "minRingHeight": 1200,
+          "priceFactor": 2.3,
+          "surcharge": 5,
+          "price": [
+            465,
+            595,
+            785,
+            600
+          ]
+        },
+        {
+          "size": 1300,
+          "carat": 0.01,
+          "minRingWidth": 1500,
+          "minRingHeight": 1200,
+          "priceFactor": 2.7,
+          "surcharge": 5,
+          "price": [
+            325,
+            450,
+            635,
+            300
+          ]
+        },
+        {
+          "size": 1500,
+          "carat": 0.015,
+          "minRingWidth": 2000,
+          "minRingHeight": 1200,
+          "priceFactor": 2.8,
+          "surcharge": 5,
+          "price": [
+            325,
+            450,
+            635,
+            200
+          ]
+        },
+        {
+          "size": 1700,
+          "carat": 0.02,
+          "minRingWidth": 2000,
+          "minRingHeight": 1300,
+          "priceFactor": 2.9,
+          "surcharge": 5,
+          "price": [
+            305,
+            425,
+            610,
+            150
+          ]
+        },
+        {
+          "size": 1900,
+          "carat": 0.03,
+          "minRingWidth": 2500,
+          "minRingHeight": 1400,
+          "priceFactor": 2.9,
+          "surcharge": 5,
+          "price": [
+            350,
+            450,
+            615,
+            100
+          ]
+        },
+        {
+          "size": 2100,
+          "carat": 0.04,
+          "minRingWidth": 2500,
+          "minRingHeight": 1500,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            415,
+            500,
+            660,
+            75
+          ]
+        },
+        {
+          "size": 2300,
+          "carat": 0.05,
+          "minRingWidth": 2500,
+          "minRingHeight": 1700,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            415,
+            500,
+            660,
+            60
+          ]
+        },
+        {
+          "size": 2500,
+          "carat": 0.06,
+          "minRingWidth": 3000,
+          "minRingHeight": 1800,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            415,
+            500,
+            660,
+            50
+          ]
+        },
+        {
+          "size": 2600,
+          "carat": 0.07,
+          "minRingWidth": 3000,
+          "minRingHeight": 1900,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            415,
+            500,
+            660,
+            42
+          ]
+        },
+        {
+          "size": 2700,
+          "carat": 0.08,
+          "minRingWidth": 3000,
+          "minRingHeight": 2000,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            570,
+            655,
+            895,
+            37
+          ]
+        },
+        {
+          "size": 2900,
+          "carat": 0.09,
+          "minRingWidth": 3500,
+          "minRingHeight": 2000,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            615,
+            705,
+            975,
+            33
+          ]
+        },
+        {
+          "size": 3000,
+          "carat": 0.1,
+          "minRingWidth": 3500,
+          "minRingHeight": 2200,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            615,
+            805,
+            1015,
+            30
+          ]
+        },
+        {
+          "size": 3200,
+          "carat": 0.12,
+          "minRingWidth": 4000,
+          "minRingHeight": 2300,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            615,
+            830,
+            1140,
+            25
+          ]
+        },
+        {
+          "size": 3400,
+          "carat": 0.15,
+          "minRingWidth": 4000,
+          "minRingHeight": 2500,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            655,
+            865,
+            1255,
+            20
+          ]
+        },
+        {
+          "size": 3700,
+          "carat": 0.18,
+          "minRingWidth": 4500,
+          "minRingHeight": 2600,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            700,
+            920,
+            1310,
+            16
+          ]
+        },
+        {
+          "size": 3800,
+          "carat": 0.2,
+          "minRingWidth": 5000,
+          "minRingHeight": 2800,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            755,
+            975,
+            1500,
+            15
+          ]
+        },
+        {
+          "size": 3900,
+          "carat": 0.23,
+          "minRingWidth": 5000,
+          "minRingHeight": 2800,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            800,
+            1125,
+            1675,
+            13
+          ]
+        },
+        {
+          "size": 4100,
+          "carat": 0.25,
+          "minRingWidth": 5500,
+          "minRingHeight": 2900,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            875,
+            1280,
+            1800,
+            12
+          ]
+        },
+        {
+          "size": 4300,
+          "carat": 0.3,
+          "minRingWidth": 6000,
+          "minRingHeight": 3200,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            1320,
+            1510,
+            1790,
+            10
+          ]
+        }
+      ],
+      "sizeDepthFactor": 0.6
+    },
+    {
+      "id": 2,
+      "name": "Princess",
+      "obj": "princess.obj",
+      "img": "icon-princess.svg",
+      "allowedStoneMode": [
+        10,
+        40,
+        41
+      ],
+      "size": [
+        {
+          "size": 1800,
+          "carat": 0.03,
+          "minRingWidth": 2500,
+          "minRingHeight": 1600,
+          "calcSize": 2000,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            100
+          ]
+        },
+        {
+          "size": 1900,
+          "carat": 0.04,
+          "minRingWidth": 2500,
+          "minRingHeight": 1700,
+          "calcSize": 2100,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            75
+          ]
+        },
+        {
+          "size": 2100,
+          "carat": 0.05,
+          "minRingWidth": 2500,
+          "minRingHeight": 1800,
+          "calcSize": 2300,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            60
+          ]
+        },
+        {
+          "size": 2500,
+          "carat": 0.09,
+          "minRingWidth": 3000,
+          "minRingHeight": 2200,
+          "calcSize": 2700,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            100
+          ]
+        },
+        {
+          "size": 2700,
+          "carat": 0.12,
+          "minRingWidth": 3000,
+          "minRingHeight": 2300,
+          "calcSize": 2900,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            75
+          ]
+        },
+        {
+          "size": 3000,
+          "carat": 0.15,
+          "minRingWidth": 3500,
+          "minRingHeight": 2600,
+          "calcSize": 3200,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            60
+          ]
+        },
+        {
+          "size": 3500,
+          "carat": 0.25,
+          "minRingWidth": 4500,
+          "minRingHeight": 3100,
+          "calcSize": 3700,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            800,
+            850,
+            970,
+            12
+          ]
+        },
+        {
+          "size": 3800,
+          "carat": 0.3,
+          "minRingWidth": 5000,
+          "minRingHeight": 3500,
+          "calcSize": 4000,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            1065,
+            1145,
+            1385,
+            10
+          ]
+        }
+      ],
+      "sizeDepthFactor": 0.73
+    },
+    {
+      "id": 3,
+      "name": "Princess 45Â°",
+      "obj": "princess_45.obj",
+      "img": "icon-princess-45.svg",
+      "allowedStoneMode": [
+        10
+      ],
+      "size": [
+        {
+          "size": 1800,
+          "carat": 0.03,
+          "minRingWidth": 3600,
+          "minRingHeight": 1600,
+          "calcSize": 2546,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            100
+          ]
+        },
+        {
+          "size": 1900,
+          "carat": 0.04,
+          "minRingWidth": 3600,
+          "minRingHeight": 1700,
+          "calcSize": 2687,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            75
+          ]
+        },
+        {
+          "size": 2100,
+          "carat": 0.05,
+          "minRingWidth": 3600,
+          "minRingHeight": 1800,
+          "calcSize": 2970,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            60
+          ]
+        },
+        {
+          "size": 2500,
+          "carat": 0.09,
+          "minRingWidth": 4300,
+          "minRingHeight": 2200,
+          "calcSize": 3536,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            100
+          ]
+        },
+        {
+          "size": 2700,
+          "carat": 0.12,
+          "minRingWidth": 4300,
+          "minRingHeight": 2300,
+          "calcSize": 3818,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            75
+          ]
+        },
+        {
+          "size": 3000,
+          "carat": 0.15,
+          "minRingWidth": 5000,
+          "minRingHeight": 2600,
+          "calcSize": 4243,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            535,
+            580,
+            670,
+            60
+          ]
+        },
+        {
+          "size": 3500,
+          "carat": 0.25,
+          "minRingWidth": 6400,
+          "minRingHeight": 3100,
+          "calcSize": 4950,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            800,
+            850,
+            970,
+            12
+          ]
+        },
+        {
+          "size": 3800,
+          "carat": 0.3,
+          "minRingWidth": 7100,
+          "minRingHeight": 3500,
+          "calcSize": 5374,
+          "priceFactor": 2.2,
+          "surcharge": 5,
+          "price": [
+            1065,
+            1145,
+            1385,
+            10
+          ]
+        }
+      ],
+      "sizeDepthFactor": 0.73
+    },
+    {
+      "id": 4,
+      "name": "Baguette quer",
+      "obj": "baguette.obj",
+      "img": "icon-baguette.svg",
+      "allowedStoneMode": [
+        10,
+        40,
+        41
+      ],
+      "size": [
+        {
+          "size": 3100,
+          "calcSize": 1811,
+          "safeDistY": -500,
+          "carat": 0.05,
+          "minRingWidth": 4000,
+          "minRingHeight": 1600,
+          "lengthFactor": 0.584327,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            390,
+            480,
+            660,
+            60
+          ]
+        },
+        {
+          "size": 3200,
+          "calcSize": 1870,
+          "carat": 0.08,
+          "minRingWidth": 4000,
+          "minRingHeight": 1800,
+          "lengthFactor": 0.584327,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            860,
+            920,
+            985,
+            37
+          ]
+        },
+        {
+          "size": 3500,
+          "calcSize": 2046,
+          "carat": 0.1,
+          "minRingWidth": 4500,
+          "minRingHeight": 1900,
+          "lengthFactor": 0.584327,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            1020,
+            1090,
+            1180,
+            30
+          ]
+        },
+        {
+          "size": 3800,
+          "calcSize": 2221,
+          "carat": 0.12,
+          "minRingWidth": 5000,
+          "minRingHeight": 2200,
+          "lengthFactor": 0.584327,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            1155,
+            1265,
+            1395,
+            25
+          ]
+        }
+      ],
+      "sizeDepthFactor": 0.39,
+      "maxWaveCount": 3
+    },
+    {
+      "id": 5,
+      "name": "Baguette lÃ¤ngs",
+      "obj": "baguette_90.obj",
+      "img": "icon-baguette-90.svg",
+      "allowedStoneMode": [
+        10,
+        40,
+        41
+      ],
+      "size": [
+        {
+          "size": 1600,
+          "carat": 0.05,
+          "minRingWidth": 4000,
+          "minRingHeight": 1600,
+          "lengthFactor": 1.71138,
+          "calcSize": 2739,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            390,
+            480,
+            660,
+            60
+          ]
+        },
+        {
+          "size": 1800,
+          "carat": 0.06,
+          "minRingWidth": 3500,
+          "minRingHeight": 1700,
+          "lengthFactor": 1.71138,
+          "calcSize": 3081,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            400,
+            490,
+            670,
+            50
+          ]
+        },
+        {
+          "size": 1900,
+          "carat": 0.07,
+          "minRingWidth": 3500,
+          "minRingHeight": 1800,
+          "lengthFactor": 1.71138,
+          "calcSize": 3252,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            700,
+            750,
+            850,
+            42
+          ]
+        },
+        {
+          "size": 2000,
+          "carat": 0.08,
+          "minRingWidth": 4000,
+          "minRingHeight": 1800,
+          "lengthFactor": 1.71138,
+          "calcSize": 3423,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            860,
+            920,
+            985,
+            37
+          ]
+        },
+        {
+          "size": 2100,
+          "carat": 0.1,
+          "minRingWidth": 4500,
+          "minRingHeight": 1900,
+          "lengthFactor": 1.71138,
+          "calcSize": 3594,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            1020,
+            1090,
+            1180,
+            30
+          ]
+        },
+        {
+          "size": 2300,
+          "carat": 0.12,
+          "minRingWidth": 5000,
+          "minRingHeight": 2200,
+          "lengthFactor": 1.71138,
+          "calcSize": 3937,
+          "priceFactor": 2.5,
+          "surcharge": 5,
+          "price": [
+            1155,
+            1265,
+            1395,
+            25
+          ]
+        }
+      ],
+      "sizeDepthFactor": 0.653,
+      "maxWaveCount": 2
+    }
+  ],
+  "stoneQuality": [
+    {
+      "id": 0,
+      "name": "G-SI (Feines Weiß, kleine Einschlüsse)"
+    },
+    {
+      "id": 1,
+      "name": "G-VS (Feines Weiß, sehr kleine Einschlüsse)"
+    },
+    {
+      "id": 2,
+      "name": "E-IF (Hochfeines Weiß, lupenrein)"
+    },
+    {
+      "id": 3,
+      "name": "Zirkonia AAA (Weiß, sehr gut)"
+    }
+  ],
+  "stoneDistribution": [
+    {
+      "id": 0,
+      "name": "aneinander"
+    },
+    {
+      "id": 5,
+      "name": "halber Steinabstand"
+    },
+    {
+      "id": 10,
+      "name": "ganzer Steinabstand"
+    },
+    {
+      "id": 20,
+      "name": "doppelter Steinabstand"
+    },
+    {
+      "id": 33,
+      "name": "drittel Ring"
+    },
+    {
+      "id": 50,
+      "name": "halber Ring"
+    },
+    {
+      "id": 100,
+      "name": "ganzer Ring"
+    }
+  ],
+  "stonePosition": [
+    {
+      "id": -1,
+      "name": "Links",
+      "img": "icon-position-left.svg"
+    },
+    {
+      "id": 0,
+      "name": "Mittig",
+      "img": "icon-position-middle.svg"
+    },
+    {
+      "id": 1,
+      "name": "Rechts",
+      "img": "icon-position-right.svg"
+    }
+  ],
+  "stoneRowsMax": 5,
+  "stoneCount": [
+    {
+      "id": -33.339,
+      "name": "drittel"
+    },
+    {
+      "id": -50,
+      "name": "halb"
+    },
+    {
+      "id": -100,
+      "name": "voll"
+    }
+  ],
+  "engraving": {
+    "maxLength": 30,
+    "symbols": [
+      {
+        "unicode": "ð",
+        "img": "icon-symbol-heart.svg"
+      },
+      {
+        "unicode": "ñ",
+        "img": "icon-symbol-double-heart.svg"
+      },
+      {
+        "unicode": "ò",
+        "img": "icon-symbol-double-ring.svg"
+      },
+      {
+        "unicode": "ó",
+        "img": "icon-symbol-infinity.svg"
+      }
+    ],
+    "color": "#333333",
+    "alpha": 0.6
+  },
+  "webglSettings": {
+    "maxTextureSize": 2048,
+    "maxAlphaTextureSize": 4096,
+    "tesselation": [
+      150,
+      100,
+      20
+    ],
+    "ringRotationX": 27,
+    "ringRotationY": [
+      42,
+      0
+    ],
+    "ringOffsetZ": [
+      -2.5,
+      0
+    ],
+    "camera": [
+      -1.8830285392434571,
+      1.1869035161232264,
+      30
+    ],
+    "cameraMinOrthoSize": 20,
+    "forceFrames": 15,
+    "maxFps": 40,
+    "environmentPreset": {
+      "refSampler_reflect": 1.636,
+      "refSampler_camRad": 0.992,
+      "refSampler_factor": 0.947,
+      "tri1_reflect": 1.022,
+      "tri1_camRad": 1.067,
+      "tri1_factor": 0.184,
+      "tri2_reflect": 0.903,
+      "tri2_camRad": 0.753,
+      "tri2_factor": 0.109,
+      "high_reflect": 0.962,
+      "high_camRad": 0.588,
+      "high_factor": 1.112,
+      "sparkle_reflect": 0.001,
+      "sparkle_camRad": 0.001,
+      "sparkle_factor": 0.001,
+      "fire_reflect": 0.124,
+      "fire_camRad": 2.19,
+      "fire_factor": 0.079,
+      "envTexture_yaw": 0.18999999999999997,
+      "envTexture_pitch": 0.9999999999999999,
+      "envTexture_roll": 0,
+      "scene_exposure": 2.204,
+      "scene_contrast": 1.8,
+      "refSampler_image": "diamondMap_1.jpg"
+    }
+  }
+}

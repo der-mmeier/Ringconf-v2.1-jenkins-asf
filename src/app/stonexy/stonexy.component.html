@@ -1,0 +1,22 @@
+<!--<img id="iconBrillant" src="{{env.assetFolderLocation}}/assets/imgui/icon-brillant-stoneXY.png" style="display:'none'">-->
+<!--<img id="iconBrillant-selected" src="{{env.assetFolderLocation}}/assets/imgui/icon-brillant-stoneXY-selected.png"-->
+<!--     style="display:'none'">-->
+
+<div class="slider-wrapper">
+  <canvas #canvas class="slider-bg" width="80" height="400"
+          (mousedown)="onCanvasMouseDown($event)"
+          (touchstart)="onCanvasTouchStart($event)">
+  </canvas>
+  <div class="yPos" id="pos0">0°</div>
+  <div class="yPos" id="pos45">45°</div>
+  <div class="yPos" id="pos90">90°</div>
+  <div class="yPos" id="pos135">135°</div>
+  <div class="yPos" id="pos180">180°</div>
+  <div class="yPos" id="pos45n">-45°</div>
+  <div class="yPos" id="pos90n">-90°</div>
+  <div class="yPos" id="pos135n">-135°</div>
+  <div class="yPos" id="pos180n">-180°</div>
+</div>
+
+<canvas #canvasRadial class="radial-display" width="80" height="80">
+</canvas>

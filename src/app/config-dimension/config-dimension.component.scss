@@ -1,0 +1,25 @@
+@import "../../default";
+
+x-config-dimension {
+  width: 100%;
+  //margin: 10px 0 10px 5px;
+  margin:10px;
+}
+
+.row {
+  width: 100%;
+  @include flexbox();
+  @include flex-direction(row);
+  @include align-items(center);
+  margin-bottom: 20px;
+
+  > img {
+    display: block;
+    width: 50px;
+    margin-right: 20px;
+  }
+
+  x-dropdown {
+    @include flex-grow(1);
+  }
+}

@@ -1,0 +1,59 @@
+@import "../../default";
+
+x-logger {
+  @include flexbox();
+  @include flex-direction(column);
+  @include justify-content(center);
+  @include align-items(center);
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, $overlay-opacity);
+  z-index: 3000;
+
+  .info-wrapper {
+    //display: inline-block;
+    width: 300px;
+    background-color: #f2f2f2;
+    box-shadow: 5px 5px 18px -6px rgb(0 0 0 / 60%);
+
+    .header {
+      background: #ab3333 url(#{$asset-root}/assets/imgui/icon-info-white.svg) center center no-repeat;
+      background-size: 70px;
+      height: 130px;
+    }
+
+    .content {
+      padding: 20px 10px;
+
+      h6.title {
+        font-size: 14px;
+        line-height: 20px;
+        margin-bottom: 20px;
+      }
+
+      .message-wrapper {
+        @include flexbox();
+        @include flex-direction(column);
+
+        .message {
+          margin-bottom: 20px;
+        }
+      }
+
+      .button {
+        padding: 9px 15px;
+        height: 40px;
+        background-color: #ab3333;
+        color: white;
+        cursor: pointer;
+        border-radius: 20px;
+        width: 100%;
+        margin-top: 40px;
+        text-align: center;
+      }
+    }
+  }
+}

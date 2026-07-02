@@ -1,0 +1,162 @@
+<h6 class="title">
+  Fassung
+</h6>
+
+<ng-template [ngIf]="items != app.data.stoneMode">
+  <div class="close" (mousedown)="closeStoneMode()">
+    <img src="{{env.assetFolderLocation}}/assets/imgui/icon-close-black.svg" alt="">
+  </div>
+</ng-template>
+
+<div class="mode-wrapper">
+  <x-image-card *ngFor="let item of items;trackBy:trackByFn"
+                [class.active]="isActive_stoneMode(item)"
+                [class.disabled]="isDisabled_stoneMode(item)"
+                (mousedown)="selectStoneMode(item)"
+                [title]="curStoneMode != null ? curStoneMode.name : item.name"
+                [image]="curStoneMode != null ? env.assetFolderLocation+'/assets/imgui/'+ curStoneMode.img : env.assetFolderLocation+'/assets/imgui/'+item.img">
+  </x-image-card>
+</div>
+
+<ng-template
+  [ngIf]="ringData[ringId].stone[curStoneGroup()].mode > 0 && ringData[ringId].stone[curStoneGroup()].mode != 11">
+  <div class="stone-wrapper">
+    <x-dropdown title="Schliff / Ausrichting"
+                [options]="app.data.stoneType"
+                [value]="getValue_stoneType()"
+                [onValueFormat]="onValueFormat_stoneType"
+                [onValueHidden]="onValueHidden_stoneType"
+                [that]="this"
+                (onSelect)="onSelect_stoneType($event)"></x-dropdown>
+
+    <x-dropdown title="Steingröße / Carat"
+                [options]="getOptions_stoneSize()"
+                [value]="getValue_stoneSize()"
+                [onValueFormat]="onValueFormat_stoneSize"
+                [onValueHidden]="onValueHidden_stoneSize"
+                [that]="this"
+                (onSelect)="onSelect_stoneSize($event)">
+    </x-dropdown>
+
+  </div>
+
+  <h6 class="title">
+    Steinfarbe und Qualität
+  </h6>
+
+  <x-checkbox *ngFor="let item of app.data.stoneQuality;trackBy:trackByFn"
+              [checked]="ringData[ringId].stone[curStoneGroup()].quality==item.id"
+              (onCheck)="setValue_stoneQuality(item)"
+              class="quality">
+    {{item.name}}
+  </x-checkbox>
+
+  <div class="division-wrapper">
+    <ng-template [ngIf]="isVisible_distribution() && isVisible_count()">
+      <x-dropdown title="Verteilung / Abstände"
+                  [options]="app.data.stoneDistribution"
+                  [value]="getValue_stoneDistribution()"
+                  [onValueFormat]="onValueFormat_stoneDistribution"
+                  (onSelect)="onSelect_stoneDistribution($event)">
+      </x-dropdown>
+    </ng-template>
+    <ng-template [ngIf]="isVisible_count()">
+      <x-dropdown
+        [title]="getTitle_stoneCount()"
+        [options]="stoneCount"
+        [value]="getValue_stoneCount()"
+        [onValueFormat]="onValueFormat_stoneCount"
+        [onValueHidden]="onValueHidden_stoneCount"
+        [that]="this"
+        (onSelect)="onSelect_stoneCount($event)">
+      </x-dropdown>
+      <ng-template [ngIf]="hasRows()">
+        <x-dropdown
+          title="Anzahl Reihen"
+          [options]="stoneRows"
+          [value]="getValue_stoneRows()"
+          [onValueHidden]="onValueHidden_stoneRows"
+          [that]="this"
+          (onSelect)="onSelect_stoneRows($event)">
+        </x-dropdown>
+      </ng-template>
+    </ng-template>
+  </div>
+
+  <ng-template [ngIf]="isVisible_stonePosition() && isVisible_count()">
+    <h6 class="title">
+      Position
+    </h6>
+
+      <div class="position-wrapper">
+        <x-image-card *ngFor="let item of app.data.stonePosition"
+                      (mousedown)="setValue_stonePosition(item)"
+                      [title]="item.name"
+                      [image]="env.assetFolderLocation+'/assets/imgui/'+item.img">
+        </x-image-card>
+      </div>
+
+    <x-multi-thumb-slider [ringId]=ringId mode="stonePosition"></x-multi-thumb-slider>
+
+    <!--  <ng-template [ngIf]="ringData[ringId].stone[curStoneGroup()].positionId==2">-->
+    <!--    <x-multi-thumb-slider [ringId]=ringId mode="stonePosition"></x-multi-thumb-slider>-->
+    <!--  </ng-template>-->
+
+  </ng-template>
+</ng-template>
+
+<ng-template [ngIf]="ringData[ringId].stone[curStoneGroup()].mode == 11">
+
+<!--  <ng-template [ngIf]="app.state.debug">-->
+
+  <div class="mode11">
+
+    <x-stonexy #stonexy [ringId]=ringId></x-stonexy>
+
+    <div class="flex-wrapper">
+    <table class="mode11">
+      <tr>
+        <th class="title" style="width:40%">Größe</th>
+        <th class="title" style="width:20%">X (mm)</th>
+        <th class="title" style="width:20%">Y</th>
+        <th class="title" style="width:20%">Löschen</th>
+      </tr>
+      <tr *ngFor="let item of ringData[ringId].stone[curStoneGroup()].freeStones;trackBy: trackByFn; let i = index" [class.selected]="stonexy.lastSelectedShapeIndex == i">
+        <td>{{getValue_freeStoneSize(item.size)}}</td>
+        <td>{{getValue_freeStoneX(item.xDiv)}}</td>
+        <td>{{getValue_freeStoneY(item.yRad)}}</td>
+        <td><div class="delete" (mousedown)="delete_freeStone(i)"></div></td>
+      </tr>
+    </table>
+    <div class="stone-wrapper">
+      <x-dropdown #stoneSize_mode11
+                  title="Steingröße / Carat"
+                  [options]="getOptions_stoneSize()"
+                  [value]="getValue_stoneSize()"
+                  [onValueFormat]="onValueFormat_stoneSize"
+                  [onValueHidden]="onValueHidden_stoneSize"
+                  [that]="this">
+      </x-dropdown>
+      <div class="mode11-plus">
+        <div class="icon" (mousedown)="onClick_addFreeStone()"></div>
+        <h6 class="title" (mousedown)="onClick_addFreeStone()">Stein hinzufügen</h6>
+      </div>
+
+    </div>
+    <h6 class="title">
+      Steinfarbe und Qualität
+    </h6>
+
+    <x-checkbox *ngFor="let item of app.data.stoneQuality;trackBy:trackByFn"
+                [checked]="ringData[ringId].stone[curStoneGroup()].quality==item.id"
+                (onCheck)="setValue_stoneQuality(item)"
+                class="quality">
+      {{item.name}}
+    </x-checkbox>
+    </div>
+  </div>
+<!--  </ng-template>-->
+
+
+
+</ng-template>

@@ -1,0 +1,99 @@
+{
+  "name": "Damenring",
+  "_isDirty": false,          => intern
+  "_blockDirty": false,       => intern
+  "_cartActive": true,        => ist das Preset für den Warenkorb aktiv?
+  "_index": 0,                => intern
+  "_price": 3485,             => berechneter Preis aus dem Backend
+  "calcTime": 79,             => intern
+  "_profileName": "P4",       => Profil
+  "_ringWidth": 11000,        => Ringweite * 1000
+  "_ringHeight": 3900,        => Ringhöhe * 1000
+  "_ringSize": 56000,         => Ringgröße * 1000
+  "_divPreset": "-:1:1",      => Materialteilungs-Preset
+  "_materialDiv": [           => Materialteilung (die Gesamtsumme muss 10000 betragen)
+    5000,
+    5000
+  ],
+  "_material": [              => Material für jede Teilung (max 5 möglich)
+    0,
+    5,
+    0,
+    1,
+    0
+  ],
+  "_surface": [               => Oberfläche für jede Teilung (max 5 möglich)
+    0,
+    1,
+    0,
+    0,
+    0
+  ],
+  "_fineness": [              => Feingehalt jür jede Teilung (max 5 möglich)
+    585,
+    585,
+    585,
+    585,
+    585
+  ],
+  "_waveAmp": 0,              => Wellemamplitude
+  "_waveCount": 0,            => Wellenanzahl
+  "_gapDiv": [],              => Freie Fugenteilung (Aufbau wie _materialDiv)
+  "_gapMode": 3,              => Fugenmodus
+  "_gapWidth": 1000,          => Fugenbreite * 1000
+  "_gapDepth": 0,             => Fugentiefe
+  "_gapSurface": 0,           => Fugenoberfläche
+  "_gapEnabled": [            => Materialfuge aktiv? (je nach Materialteilung)
+    1,
+    1,
+    1,
+    1
+  ],
+  "_stepMode": 3,             => Stufenmodus
+  "_stepWidth": [             => Stufenbreite * 1000
+    600,
+    1100
+  ],
+  "_stepDepth": 300,          => Stufentiefe
+  "_engraving": "",           => Gravurtext
+  "_engravingFont": 0,        => Gravurschriftart
+  "_stone": [                 => Steinabschnitt (hier kann es in Zukunft mehrere geben, wenn die Steingruppen implementiert werden)
+    {
+      "mode": 10,             => Steinmodus
+      "count": 1,             => Steinanzahl (gewünscht) [es kann sein, dass der Algorithmus die gewünschte Menge an Steinen nicht platzieren kann],
+      "countReal": 1,         => Steinanzahl (tatsächlich) [deshalb ist die tatsächliche Menge für die Preisberechnung zu verwenden],
+      "rows": 1,              => Anzahl Steinreihen
+      "type": 1,              => Steintyp
+      "size": 2300,           => Steingröße * 1000 (keine Carat!)
+      "distribution": 0,      => Verteilung
+      "quality": 0,           => Qualität
+      "positionValue": 2500,  => Steinposition links-rechts
+      "positionDiv": [
+        5000,
+        5000
+      ],
+      "freeStones": [         => freie Steine, jeder Eintrag entspricht einem Stein
+      {
+        "xDiv": 1246,
+        "yRad": -0.227474579176594193796745457802899181842803955078125,
+        "size": 1000          => Größe des Steins * 1000
+      },
+      {
+        "xDiv": 2848,
+        "yRad": -0.103323491718064541800004008109681308269500732421875,
+        "size": 1000
+      },
+      {
+        "xDiv": -2196,
+        "yRad": 0.1946623892391006194202418555505573749542236328125,
+        "size": 1000
+      },
+      {
+        "xDiv": 22,
+        "yRad": 0.01070468607889818457579167443327605724334716796875,
+        "size": 2100
+      }
+    ]
+    }
+  ]
+}

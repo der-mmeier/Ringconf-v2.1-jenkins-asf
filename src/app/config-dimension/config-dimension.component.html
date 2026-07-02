@@ -1,0 +1,14 @@
+<div class="row">
+  <img src="{{env.assetFolderLocation}}/assets/imgui/icon-rw.svg" alt="">
+  <x-dropdown title="Ringbreite" [options]="getOptions_ringWidth(ringId)" [value]="ringData[ringId].ringWidth.toString()" (onSelect)="setOption('ringWidth', $event)" [onValueFormat]="onFormat_mm"></x-dropdown>
+</div>
+<x-property-sync-dialog [ringId]="ringId" property="ringWidth"></x-property-sync-dialog>
+<div class="row">
+  <img src="{{env.assetFolderLocation}}/assets/imgui/icon-rh.svg" alt="">
+  <x-dropdown title="Ringhöhe" [options]="getOptions_ringHeight(ringId)" [value]="ringData[ringId].ringHeight.toString()" (onSelect)="setOption('ringHeight', $event)" [onValueFormat]="onFormat_mm"></x-dropdown>
+</div>
+<x-property-sync-dialog [ringId]="ringId" property="ringHeight"></x-property-sync-dialog>
+<div class="row">
+  <img src="{{env.assetFolderLocation}}/assets/imgui/icon-rs.svg" alt="">
+  <x-dropdown title="Ringgröße" [options]="getOptions_ringSize(ringId)" [value]="ringData[ringId].ringSize" (onSelect)="setOption('ringSize', $event)" [onValueFormat]="onFormat_ringSize"></x-dropdown>
+</div>

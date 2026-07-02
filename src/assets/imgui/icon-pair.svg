@@ -1,0 +1,11 @@
+<svg id="Couple" xmlns="http://www.w3.org/2000/svg" width="40.406" height="35.531" viewBox="0 0 40.406 35.531">
+  <defs>
+    <style>
+      .cls-1 {
+        fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <path id="Rechteck_1_Kopie_2" data-name="Rechteck 1 Kopie 2" class="cls-1" d="M17,29.016V34.5h5.031a1,1,0,0,1,1,1v2a1,1,0,0,1-1,1H17V42a1,1,0,0,1-1,1H14a1,1,0,0,1-1-1V38.5H7.969a1,1,0,0,1-1-1v-2a1,1,0,0,1,1-1H13V29.016A10.214,10.214,0,1,1,17,29.016ZM15,13.281A5.719,5.719,0,1,0,20.719,19,5.719,5.719,0,0,0,15,13.281Z" transform="translate(-4.781 -7.469)"/>
+  <path id="Polygon_1_Kopie" data-name="Polygon 1 Kopie" class="cls-1" d="M36.972,15.019v7.7a10.214,10.214,0,1,1-4,0v-7.7H26.206l8.985-7.562,8.985,7.562h-7.2Zm-2,12a5.719,5.719,0,1,0,5.719,5.719A5.719,5.719,0,0,0,34.972,27.019Z" transform="translate(-4.781 -7.469)"/>
+</svg>

@@ -1,0 +1,202 @@
+@import "../../default";
+
+x-config-gap {
+  width: 100%;
+
+  x-tab-control.inner {
+    border: 1px solid #d5d8d8;
+    border-radius: $border-radius;
+
+    .header {
+      &:first-child {
+        border-top-left-radius: $border-radius;
+      }
+
+      &:last-child {
+        border-top-right-radius: $border-radius;
+      }
+
+      &.gap::before {
+        content: "";
+        display: inline-block;
+        background: url(#{$asset-root}/assets/imgui/icon-fuge.svg) center center no-repeat;
+        width: 30px;
+        height: 20px;
+        margin-right: 10px;
+      }
+
+      &.step::before {
+        content: "";
+        display: inline-block;
+        background: url(#{$asset-root}/assets/imgui/icon-stufe.svg) center center no-repeat;
+        width: 30px;
+        height: 20px;
+        margin-right: 10px;
+      }
+    }
+
+    .content {
+      background: #f00;
+
+      x-tab-page {
+        margin: 0;
+        border-radius: 0;
+        padding: 5px 5px 10px 5px;
+
+        x-property-sync-dialog {
+          margin:20px 0 0 0;
+        }
+
+        .image-card-wrapper {
+          @include flexbox;
+          //@include flex-direction(row);
+
+          x-image-card {
+            img {
+              width: 50px;
+              height: 50px;
+            }
+          }
+        }
+
+        x-dropdown {
+          width: calc(100% - 10px);
+          margin: 20px 5px 0 5px;
+        }
+
+        &.gap, &.step {
+          display: none;
+
+          &.active {
+            @include flexbox();
+            @include flex-direction(column);
+          }
+        }
+
+        &.gap, &.step {
+          @include flex-wrap(wrap);
+
+          .image-card-wrapper {
+            @include flex-wrap(wrap);
+
+            x-image-card {
+              width: calc(50% - 10px);
+            }
+          }
+        }
+
+        > h6.title {
+          margin: 20px 10px 10px 10px;
+        }
+
+        .gap-item {
+          @include flexbox;
+          @include flex-direction(row);
+          @include align-items(center);
+          padding: 7px 10px;
+          background-color: #d5d8d8;
+          border-bottom: 2px solid #bec0c0;
+          margin: 0 5px;
+
+          &:last-child {
+            border:unset;
+          }
+
+          .number {
+            @include flexbox;
+            @include flex-direction(row);
+            @include justify-content(center);
+            text-align: center;
+            line-height: 30px;
+            font-size: 11px;
+            font-weight: 500;
+            background: url(#{$asset-root}/assets/imgui/mts-handle.svg) no-repeat;
+            //background: url(#{$asset-root}/assets/imgui/icon-fugenindex.svg) no-repeat;
+            background-size: contain;
+            width: 20px;
+            height: 26px;
+            //opacity: 0.35;
+            //color: #f2f2f2;
+
+            &.-freeGap {
+              background: url(#{$asset-root}/assets/imgui/mts-handle-freeGap.svg) no-repeat;
+            }
+            //&.-gapDiv {
+            //  background: url(#{$asset-root}/assets/imgui/icon-fugenindex-frei.svg) no-repeat;
+            //  color: #262626;
+            //  opacity: 1;
+            //}
+          }
+
+          .title {
+            font-size: 13px;
+            font-weight: normal;
+            margin: 0 10px;
+            @include flexbox;
+            @include flex-grow(2);
+            @include flex-direction(row);
+            @include justify-content(space-between);
+
+            &.position {
+              @include flex-grow(1);
+              text-align: right;
+              margin: 0 10px 0 0;
+              width: 60px;
+            }
+          }
+
+          .switch {
+            width: 44px;
+            height: 22px;
+            margin-top: 0;
+            margin-right: 0;
+            margin-left: 0;
+            border: 2px solid #262626;
+            border-radius: 20px;
+            background-color: #d5d8d8;
+            background-image: url(#{$asset-root}/assets/imgui/icon-black-circle.svg);
+            background-position: 2px 50%;
+            background-size: 16px;
+            background-repeat: no-repeat;
+            cursor: pointer;
+
+            &.active {
+              border-color: #262626;
+              background-color: #262626;
+              background-image: url(#{$asset-root}/assets/imgui/icon-white-circle.svg);
+              background-position: 23px 50%;
+              background-size: 16px;
+            }
+
+            &.delete {
+              width: 22px;
+              background-size: contain;
+              border: none;
+              border-radius: 0;
+              background-image: url(#{$asset-root}/assets/imgui/icon-recycle.svg);
+            }
+          }
+        }
+
+        .gapDiv-plus {
+          @include flexbox;
+          @include flex-direction(row);
+          @include align-content(center);
+          @include align-items(center);
+          margin: 20px 0 0 10px;
+
+          .icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 20px;
+            background: #f2f2f2 url(#{$asset-root}/assets/imgui/icon-red-plus.svg) center center no-repeat;
+            background-size: 18px 18px;
+            box-shadow: 0 2px 5px -2px #000;
+            cursor: pointer;
+            margin-right:10px;
+          }
+        }
+      }
+    }
+  }
+}

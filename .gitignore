@@ -1,0 +1,29 @@
+# Dependencies
+/node_modules/
+
+# Angular build/cache
+/dist/
+/.angular/
+/coverage/
+/out-tsc/
+
+# Generated shop builds
+/_shop/shopware5/OneRingconf/Resources/dist/
+/_shop/woocommerce/OneRingconf/dist/
+
+# PhpStorm
+/.idea/
+*.iml
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Operating system
+.DS_Store
+Thumbs.db

@@ -1,0 +1,49 @@
+@import "../../default";
+
+x-config-engraving {
+  width: 100%;
+
+  h6.title {
+    margin-bottom: 10px;
+  }
+
+  input[text] {
+    width:100%;
+  }
+
+  button.applyText {
+    width: 100%;
+  }
+
+  .symbol-wrapper {
+    @include flexbox();
+    @include flex-direction(row);
+    @include flex-wrap(nowrap);
+    margin-left: -5px;
+    margin-right: -5px;
+    margin-bottom:15px;
+
+    .symbol {
+      @include flex-grow(1);
+      @include flexbox();
+      @include justify-content(center);
+      @include align-items(center);
+      margin: 5px;
+      padding: 7px;
+      border-style: solid;
+      border-width: 1px;
+      border-color: #d5d8d8;
+      background-color: #f2f2f2;
+      box-shadow: 0 4px 9px -7px #000;
+      cursor: pointer;
+
+      img {
+        height: 15px;
+      }
+
+      &:hover {
+        background-color: #d5d8d8;
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+@import "../../default";
+
+x-property-sync-dialog {
+  display: none;
+  @include flex-direction(column);
+  @include align-items(center);
+  width: 100%;
+  padding: 10px;
+  border: 3px dashed #ab3333;
+  background-color: #f2f2f2;
+  margin-bottom: 20px;
+
+  .wrapper {
+    @include flexbox();
+    @include flex-direction(row);
+    @include flex-wrap(nowrap);
+    @include justify-content(space-between);
+    width: 100%;
+    max-width: 300px;
+  }
+
+  h6.title {
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  div.button {
+    width: 56px;
+    padding: 5px 10px;
+    background-color: #262626;
+    font-size: 11px;
+    text-align: center;
+    color: white;
+    border: 0;
+    //line-height: inherit;
+    //text-decoration: none;
+    cursor: pointer;
+    border-radius: 0;
+  }
+
+  img {
+    height: 24px;
+  }
+
+  &.visible {
+    @include flexbox();
+  }
+}

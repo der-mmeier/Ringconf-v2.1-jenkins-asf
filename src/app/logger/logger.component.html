@@ -1,0 +1,22 @@
+<div class="info-wrapper">
+  <div class="header"></div>
+  <div class="content">
+    <h6 class="title">
+      {{getHeader()}}
+    </h6>
+    <ng-template [ngIf]="header" [ngIfElse]="elseHeader">
+      {{data[0].message}}
+      <div class="button" (mousedown)="clear()">Ok</div>
+    </ng-template>
+
+    <ng-template #elseHeader>
+      <ul class="messag-wrapper">
+        <li class="message"
+            *ngFor="let item of data">
+          {{item.message}}
+        </li>
+      </ul>
+    <div class="button" (mousedown)="clear()">Weiter</div>
+    </ng-template>
+  </div>
+</div>

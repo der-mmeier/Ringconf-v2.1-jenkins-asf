@@ -1,0 +1,56 @@
+<!--<x-stonexy></x-stonexy>-->
+<!--<div id="configurator-shipping-methods">-->
+<!--  <div data-sm-id="96953791df1b4d9fb02011224f15b304" data-sm-desc="Standard - 6 - 15 Arbeitstage"></div>-->
+<!--  <div data-sm-id="f1697234768940e4a24d4e78a28d2e8e" data-sm-desc="Light Express - 7 - 9 Arbeitstage (+55€)"></div>-->
+<!--  <div data-sm-id="41cfdf663e064b40919edf0537ca0152" data-sm-desc="Express - 4 - 6 Arbeitstage (+85€)"></div>-->
+<!--  <div data-sm-id="8e9843aa5d7c497f81b170888014051a" data-sm-desc="Super Express - 1 - 4 Arbeitstage (+120€)"></div>-->
+<!--</div>-->
+
+<x-menu mode="desktop"></x-menu>
+
+<div class="flex-row break">
+  <div class="flex-grow max40">
+    <x-webgl></x-webgl>
+    <x-menu mode="mobile"></x-menu>
+  </div>
+  <div class="flex-grow">
+    <x-config class="show-if-desktop"></x-config>
+  </div>
+</div>
+<div class="flex-row">
+  <x-config class="show-if-mobile"></x-config>
+</div>
+<div class="flex-row break">
+  <div class="flex-grow">
+    <x-tools mode="normal"></x-tools>
+  </div>
+  <div class="flex-grow">
+    <x-menu mode="prevNext"></x-menu>
+  </div>
+</div>
+<x-footer></x-footer>
+
+<ng-template [ngIf]="state.debug">
+  <x-debug></x-debug>
+</ng-template>
+
+<x-logger [hidden]="!state.logVisible"></x-logger>
+
+<div *ngIf="!state.ready" class="waitOverlay show">
+  <div class="spinner"></div>
+</div>
+
+<div *ngIf="state.toolsMenu" class="waitOverlay noAnimation alignTop">
+  <x-tools mode="menu"></x-tools>
+</div>
+
+<x-save-load *ngIf="state.saveLoad"></x-save-load>
+
+<div *ngIf="state.ringDetails" class="waitOverlay noAnimation alignTop percent">
+  <x-ring-details></x-ring-details>
+</div>
+
+<x-local-storage></x-local-storage>
+
+<img id="a4pdfbg" src="{{env.assetFolderLocation}}/assets/imgui/a4-pdf.png" alt="" style="display:none">
+

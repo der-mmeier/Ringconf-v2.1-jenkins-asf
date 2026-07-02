@@ -1,0 +1,170 @@
+@import "flex.scss";
+
+$asset-root: ""; // wird im Postbuild an Shopware angepasst
+
+$breakpoint-mobile: 1200px;
+$breakpoint-footer-split: 1000px;
+$border-radius: 4px;
+$z-index-dropdown: 10000;
+$overlay-opacity:0.7;
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('#{$asset-root}/assets/font/Montserrat-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'engraving-0';
+  src: url('#{$asset-root}/assets/font/Arial-Gravur.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+.engraving-0 {
+  font-family: engraving-0;
+}
+
+@font-face {
+  font-family: 'engraving-1';
+  src: url('#{$asset-root}/assets/font/Monotype-Corsiva-Gravur.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+.engraving-1 {
+  font-family: engraving-1;
+}
+
+@font-face {
+  font-family: 'engraving-2';
+  src: url('#{$asset-root}/assets/font/MV-Boli-Gravur.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+.engraving-2 {
+  font-family: engraving-2;
+}
+
+@font-face {
+  font-family: 'engraving-3';
+  src: url('#{$asset-root}/assets/font/Savoye-LET-Plain-Gravur.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+.engraving-3 {
+  font-family: engraving-3;
+}
+
+#ONE {
+  font-family: Montserrat;
+  user-select: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+h6.title {
+  font-size: 13px;
+  margin: 0;
+}
+
+button {
+
+  &.default {
+    background-image: linear-gradient(0deg, #ab3333, #d14b4b);
+    padding: 9px 15px;
+    color: white;
+    cursor: pointer;
+    text-align: center;
+    font-family: inherit;
+    margin: 0 0 20px 0;
+    border: 0;
+    display: block;
+
+    &:hover {
+      box-shadow: 0 0 3px 1px rgba(0, 0, 0, 0.25), inset 0 0 0 1px #f2f2f2;
+    }
+  }
+}
+
+.waitOverlay {
+  @include flexbox();
+  @include align-items(center);
+  @include justify-content(center);
+  position:fixed;
+  left:0;
+  top:0;
+  width: 100vw;
+  height:100vh;
+  background:rgba(0, 0, 0, $overlay-opacity);
+  z-index:5000;
+  animation: anim-waitOverlay 2s linear;
+
+  &.webgl {
+    position:absolute;
+    width:100%;
+    height:100%;
+  }
+
+  &.noAnimation {
+    animation:unset;
+  }
+  &.alignTop {
+    @include align-items(flex-start);
+  }
+  &.percent {
+    width:100%;
+    min-height:100%;
+    overflow-y:auto;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 80px;
+    height: 80px;
+
+    &:after {
+      content: " ";
+      display: block;
+      width: 64px;
+      height: 64px;
+      margin: 8px;
+      border-radius: 50%;
+      border-width: 6px;
+      border-style: solid;
+      border-color: #fff transparent #fff transparent;
+      animation: anim-spinner 2s linear infinite;
+    }
+  }
+}
+
+@keyframes anim-waitOverlay {
+  0% {
+    opacity:0;
+  }
+  50% {
+    opacity:0;
+  }
+  100% {
+    opacity:1;
+  }
+}
+
+@keyframes anim-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+

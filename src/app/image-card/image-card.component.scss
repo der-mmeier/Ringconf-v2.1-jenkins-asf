@@ -1,0 +1,36 @@
+@import "../../default";
+
+x-image-card {
+  @include flexbox();
+  @include flex-direction(column);
+  @include align-items(center);
+  @include justify-content(space-between);
+  width: calc(50% - 10px);
+  background: #f2f2f2;
+  position: relative;
+  box-shadow: 0 0 2px 0 rgb(0 0 0 / 20%);
+  margin: 5px;
+  cursor: pointer;
+
+  h6.title {
+    font-size: 12px;
+    font-weight: 400;
+    margin: 10px 0 0 0;
+    text-align: center;
+  }
+
+  img {
+    max-width:calc(100% - 10px);
+    height: 70px;
+    display: block;
+    margin-top:10px;
+  }
+
+  &.active {
+    box-shadow: 0 0 0 2px #ab3333;
+  }
+  &.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+}

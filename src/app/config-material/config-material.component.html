@@ -1,0 +1,87 @@
+<h6 class="title">
+  {{curPresetTitle}}
+</h6>
+
+<ng-template [ngIf]="items != app.data.divPreset">
+  <div class="close" (mousedown)="closePresets()">
+    <img src="{{env.assetFolderLocation}}/assets/imgui/icon-close-black.svg" alt="">
+  </div>
+</ng-template>
+
+<div class="preset-wrapper">
+  <x-image-card *ngFor="let item of items;trackBy:trackByFn"
+                [class.active]="isActive_preset(item)"
+                [class.disabled]="isDisabled_preset(item)"
+                (mousedown)="selectPreset(item)"
+                title="{{item.name}}"
+                [image]="curPreset != null ? env.assetFolderLocation+'/assets/imgui/'+ curPreset.img : env.assetFolderLocation+'/assets/imgui/'+item.img">
+  </x-image-card>
+</div>
+<x-property-sync-dialog [ringId]="ringId" property="divPreset"></x-property-sync-dialog>
+
+<ng-template [ngIf]="isDiv_s()">
+  <h6 class="title">
+    Schrägenhöhe
+  </h6>
+  <x-dropdown title="" [options]="getOptions_wa()" [value]="ringData[ringId].waveAmp"
+              (onSelect)="setOption_wa($event)"
+              [onValueFormat]="onValueFormat_wa"></x-dropdown>
+  <x-property-sync-dialog *ngIf="canPropertySync()" [ringId]="ringId" property="waveAmp"></x-property-sync-dialog>
+</ng-template>
+
+<ng-template [ngIf]="isDiv_w()">
+  <h6 class="title">
+    Wellenanzahl
+  </h6>
+  <x-dropdown title="" [options]="getOptions_wc()" [value]="ringData[ringId].waveCount"
+              (onSelect)="setOption_wc($event);"></x-dropdown>
+  <x-property-sync-dialog *ngIf="canPropertySync()" [ringId]="ringId" property="waveCount"></x-property-sync-dialog>
+
+  <h6 class="title">
+    Wellenhöhe
+  </h6>
+  <x-dropdown title="" [options]="getOptions_wa()" [value]="ringData[ringId].waveAmp"
+              (onSelect)="setOption_wa($event)"
+              [onValueFormat]="onValueFormat_wa"></x-dropdown>
+  <x-property-sync-dialog *ngIf="canPropertySync()" [ringId]="ringId" property="waveAmp"></x-property-sync-dialog>
+</ng-template>
+
+<h6 class="title">
+  Farbe
+</h6>
+<div class="materialindex-wrapper">
+  <div *ngFor="let color of getOptions_materialColor();trackBy:trackByFn; let i = index" class="item" [class.active]="i==curMaterialIndex"
+       (mousedown)="curMaterialIndex=i">
+    <div class="color" style="background-color:{{color}}">{{i + 1}}</div>
+  </div>
+</div>
+
+<x-dropdown #materialDropDown title="" [options]="app.data.material" [value]="getValue_material()"
+            [onValueFormat]="onValueFormat_material"
+            (onSelect)="setValue_material($event)"></x-dropdown>
+<x-property-sync-dialog *ngIf="canPropertySync()" [ringId]="ringId" property="material"></x-property-sync-dialog>
+
+<ng-template [ngIf]="isEnabled_surfaceSelector()">
+<h6 class="title">
+  Oberfläche
+</h6>
+<x-dropdown title="" [options]="getOptions_surface()" [value]="getValue_surface()"
+            [onValueFormat]="onValueFormat_surface"
+            (onSelect)="setValue_surface($event)"></x-dropdown>
+<x-property-sync-dialog *ngIf="canPropertySync()" [ringId]="ringId" property="surface"></x-property-sync-dialog>
+</ng-template>
+
+<h6 class="title">
+  Feingehalt
+</h6>
+<div class="fineness-wrapper">
+  <div *ngFor="let item of getValue_fineness();trackBy:trackByFn;let i = index" class="item" [class.active]="isActive_fineness(item)"
+       (mousedown)="setValue_fineness(item)">
+    {{item}}
+  </div>
+</div>
+<x-property-sync-dialog *ngIf="canPropertySync()" [ringId]="ringId" property="fineness" style="margin-top: 20px;margin-bottom: 0;"></x-property-sync-dialog>
+
+<!--<x-multi-thumb-slider *ngIf="ringData[ringId].hasFreeDiv" [ringId]=ringId mode="material"></x-multi-thumb-slider>-->
+
+<x-mts-horizontal *ngIf="ringData[ringId].hasFreeDiv" [ringId]=ringId (onValueGapChanged)="onValueGapArrayChanged($event)" mode="material"></x-mts-horizontal>

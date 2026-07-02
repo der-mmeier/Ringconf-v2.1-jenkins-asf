@@ -1,0 +1,12 @@
+<div class="local-storage-wrapper" [hidden]="!isVisible">
+  <h6 class="title">
+    Vorherige Konfiguration laden?
+  </h6>
+  Es wurde eine gespeicherte Konfiguration mit der<br/>
+  Id <strong>{{ringconfId}}</strong> erkannt.<br/><br/>
+  Möchten Sie diese Konfiguration laden?
+  <div class="button-wrapper">
+    <div class="button yes" (mousedown)="restoreConfiguration()">Ja</div>
+    <div class="button no" (mousedown)="close()">Nein</div>
+  </div>
+</div>

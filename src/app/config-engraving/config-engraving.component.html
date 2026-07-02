@@ -1,0 +1,24 @@
+<h6 class="title">Gravurtext</h6>
+<meta charset=utf-8 />
+<x-textbox id="engravingText" [value]="ringData[ringId].engraving" [class]="'engraving-'+ringData[ringId].engravingFont" infotext="test"
+           [maxlength]=30 [onInfotextFormat]="onEngravingInfoFormat" #textbox></x-textbox>
+
+<button class="default applyText" (mousedown)="applyEngravingText()">Anwenden</button>
+
+<h6 class="title">Symbol hinzufügen</h6>
+<div class="symbol-wrapper">
+  <div class="symbol" *ngFor="let item of app.data.engraving.symbols" (mousedown)="addSymbol(item.unicode)">
+    <img src="{{env.assetFolderLocation}}/assets/imgui/{{item.img}}" alt="">
+  </div>
+</div>
+
+<h6 class="title">Schriftart</h6>
+<x-checkbox class="engraving-0" [checked]="ringData[ringId].engravingFont===0" (onCheck)="setFont(0)">Abc 123
+</x-checkbox>
+<x-checkbox class="engraving-1" [checked]="ringData[ringId].engravingFont===1" (onCheck)="setFont(1)">Abc 123
+</x-checkbox>
+<x-checkbox class="engraving-2" [checked]="ringData[ringId].engravingFont===2" (onCheck)="setFont(2)">Abc 123
+</x-checkbox>
+<x-checkbox class="engraving-3" [checked]="ringData[ringId].engravingFont===3" (onCheck)="setFont(3)">Abc 123
+</x-checkbox>
+

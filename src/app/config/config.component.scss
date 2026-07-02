@@ -1,0 +1,98 @@
+@import "../../default";
+
+x-config {
+  position: relative;
+
+  .config-wrapper {
+    margin: 10px 0 0 5px;
+
+    @media (max-width: $breakpoint-mobile) {
+      margin-left: 0;
+    }
+
+  }
+}
+
+/*
+#one-app {
+  tab-wrapper.profile {
+    height: unset;
+
+    .tabHeaderWrapper {
+      .tabHeader {
+        @include flexbox();
+        @include flex-direction(column);
+        margin: 0;
+        border-right: 1px solid #e6e6e6;
+        background-color: #f2f2f2;
+        border-radius: unset;
+        font-size: 15px;
+        color: #262626;
+        font-weight: 600;
+        padding: 15px 0;
+        height: unset;
+
+        &:first-child {
+          border-top-left-radius: $border-radius;
+        }
+
+        &:last-child {
+          border-top-right-radius: $border-radius;
+          border-right: unset;
+        }
+
+        &.active {
+          background-color: #e6e6e6;
+        }
+      }
+    }
+  }
+
+  .config {
+    height: calc(100% - 15px);
+    margin: 10px 0 5px 5px;
+
+    @media (max-width: $breakpoint-mobile) {
+      margin-left: 0;
+    }
+  }
+
+  .config.dimension,
+  .config.material {
+    .tabHeaderWrapper {
+      .tabHeader {
+        width: 50%;
+      }
+    }
+
+    .tabContentWrapper {
+      .tabContent {
+        width: 50%;
+      }
+    }
+  }
+
+  .config.material {
+    x-dropdown {
+      .icon {
+        width: 25px;
+        height: 25px;
+        margin-right: 10px;
+        box-shadow: inset 0 20px 30px -20px rgb(255 255 255 / 75%), inset 0 -20px 30px -20px rgb(0 0 0 / 50%);
+      }
+      .selected {
+        margin-bottom:20px;
+      }
+    }
+  }
+
+  .config.gap {
+    .tabContentWrapper {
+      .tabContent {
+        width:100%;
+      }
+    }
+  }
+}
+*/
+

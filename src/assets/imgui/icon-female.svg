@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20.438" height="32.219" viewBox="0 0 20.438 32.219">
+  <defs>
+    <style>
+      .cls-1 {
+        fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <path id="Rechteck_1_Kopie" data-name="Rechteck 1 Kopie" class="cls-1" d="M27,30.016V33.5h5.031a1,1,0,0,1,1,1v2a1,1,0,0,1-1,1H27V41a1,1,0,0,1-1,1H24a1,1,0,0,1-1-1V37.5H17.969a1,1,0,0,1-1-1v-2a1,1,0,0,1,1-1H23V30.016A10.214,10.214,0,1,1,27,30.016ZM25,14.281A5.719,5.719,0,1,0,30.719,20,5.719,5.719,0,0,0,25,14.281Z" transform="translate(-14.781 -9.781)"/>
+</svg>

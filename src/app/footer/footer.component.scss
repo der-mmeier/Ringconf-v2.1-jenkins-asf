@@ -1,0 +1,168 @@
+@import "../../default.scss";
+
+x-footer {
+  .footer {
+    @include flexbox;
+    @include flex-direction(row);
+    @include flex-wrap(wrap);
+    border-color: #ab3333;
+    border-width: 3px 0 1px 0;
+    border-style: solid;
+    margin: 5px 10px;
+
+    .priceWrapper {
+      @include flexbox();
+      @include flex-direction(column);
+      margin: 10px 5px 10px 0;
+      width: 300px;
+
+      .item {
+        @include flexbox();
+        @include flex-direction(row);
+
+        .checkbox {
+          width: 18px;
+          height: 18px;
+          border: 2px solid #000;
+          margin: 6px 5px 6px 0;
+          cursor: pointer;
+          position: relative;
+
+          &.checked::after {
+            content: "";
+            display: block;
+            position: absolute;
+            top: 0;
+            width: 4px;
+            height: 9px;
+            border: solid #ab3333;
+            border-width: 0 2px 2px 0 !important;
+            left: 4px;
+            -webkit-transform: rotate(45deg);
+            -ms-transform: rotate(45deg);
+            transform: rotate(45deg);
+          }
+        }
+
+        .name {
+          @include flex-grow(1);
+          font-size: 13px;
+          line-height: 30px;
+        }
+
+        .price {
+          font-size: 13px;
+          line-height: 30px;
+        }
+
+        &.total {
+          border-top: 2px solid #ab3333;
+          font-weight: 600;
+          margin-top: 5px;
+        }
+      }
+
+      @media (max-width: $breakpoint-footer-split) {
+        //@include flex-grow(1);
+        width: 100%;
+        margin: 10px 0;
+      }
+    }
+
+    .wrapper {
+      @include flexbox();
+      @include justify-content(flex-end);
+      //@include flex-grow(1);
+      margin: 10px 0 10px 5px;
+
+      &.line-items {
+        @include flex-grow(1);
+        .wrap-left {
+          @include flexbox();
+          @include flex-direction(column);
+          @include flex-grow(1);
+          //padding:20px 0;
+          margin:0 10px 0 20px;
+          h4 {
+            margin:0 0 10px 0;
+            padding:0;
+          }
+          p {
+            padding:0;
+            margin:0;
+          }
+        }
+        .wrap-right {
+          @include flexbox();
+          @include flex-direction(column);
+          @include flex-grow(1);
+          //padding:20px 0;
+          margin:0 0 0 10px;
+          h4 {
+            margin:0 0 10px 0;
+            padding:0;
+          }
+          p {
+            padding:0;
+            margin:0;
+          }
+        }
+      }
+      .button {
+        @include flexbox();
+        @include flex-direction(row);
+        @include align-items(center);
+        @include justify-content(center);
+        border-radius: $border-radius;
+        background-image: linear-gradient(0deg, #ab3333, #d14b4b);
+        cursor: pointer;
+        color: #f2f2f2;
+        padding: 0 40px;
+        margin-left: 10px;
+        font-size: 14px;
+        font-weight: 600;
+
+        &.more {
+          display:none;
+          @media (max-width:$breakpoint-mobile) {
+            @include flexbox();
+          }
+        }
+
+        img {
+          height: 25px;
+          margin-right: 10px;
+        }
+      }
+    }
+
+    @media (max-width: $breakpoint-mobile) {
+      .priceWrapper {
+        width: 100%;
+      }
+
+    }
+    @media (max-width: $breakpoint-footer-split) {
+      //.priceWrapper {
+      //  width: 100%;
+      //}
+      .wrapper {
+        @include justify-content(space-around);
+        @include flex-grow(1);
+        margin: 0 0 10px 0;
+
+        &.line-items {
+          width:100%;
+          .wrap-left,
+          .wrap-right {
+            width:50%;
+            margin:0;
+          }
+        }
+        .button {
+          padding: 20px;
+        }
+      }
+    }
+  }
+}

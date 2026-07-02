@@ -1,0 +1,67 @@
+@import "../../default";
+
+x-config-profile {
+  @include flexbox();
+  @include flex-direction(column);
+  margin: 10px 0 10px 5px;
+
+  @media (max-width: $breakpoint-mobile) {
+    margin-left: 0;
+  }
+
+  @media (max-width: $breakpoint-footer-split) {
+    x-tab-control .header .item h6.title {
+      font-size: 13px;
+    }
+  }
+
+  .contentWrapper {
+    background-color: #e6e6e6;
+    border-bottom-left-radius: $border-radius;
+    border-bottom-right-radius: $border-radius;
+    padding: 10px;
+    @include flexbox();
+    @include flex-direction(row);
+    @include flex-wrap(wrap);
+    @include align-items(flex-start);
+    @include align-content(flex-start);
+
+    x-image-card {
+      width: calc(33.33% - 10px);
+
+      h6.title {
+        font-size: 16px;
+      }
+
+      &.female::before {
+        content: "";
+        display: block;
+        position: absolute;
+        left: 5px;
+        top: 10px;
+        width: 20px;
+        height: 20px;
+        opacity: 0.25;
+        background: url("#{$asset-root}/assets/imgui/icon-female.svg") center center no-repeat;
+        background-size: contain;
+      }
+
+      &.male::after {
+        content: "";
+        display: block;
+        position: absolute;
+        right: 5px;
+        top: 10px;
+        width: 20px;
+        height: 20px;
+        opacity: 0.25;
+        background: url("#{$asset-root}/assets/imgui/icon-male.svg") center center no-repeat;
+        background-size: contain;
+      }
+    }
+  }
+}
+
+
+
+

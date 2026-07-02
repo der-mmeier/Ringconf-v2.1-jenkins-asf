@@ -1,0 +1,60 @@
+<div class="footer">
+  <div class="priceWrapper">
+    <div *ngFor="let ring of ringData" class="item">
+      <div class="checkbox" [class.checked]="ring.cartActive" (mousedown)="ring.cartActive = !ring.cartActive"></div>
+      <div class="name">{{ring.name}}</div>
+      <div class="price" [hidden]="!ring.cartActive">{{ring.price | number:'1.2-2' | removeCommaPipe}}&nbsp;&euro;</div>
+    </div>
+    <div class="item total">
+      <div class="name">Gesamtpreis</div>
+      <div class="price">{{app.getPriceTotal() | number:'1.2-2' | removeCommaPipe}}&nbsp;&euro;</div>
+    </div>
+  </div>
+  <div class="wrapper line-items">
+      <div class="wrap-left">
+        <h4>
+          Sie kennen Ihre Ringgröße nicht?
+        </h4>
+        <p>
+        <input type="checkbox" id="line-item-testringe">
+        <label for="line-item-testringe">Testringe bestellen</label>
+        </p>
+        <p>
+        <input type="checkbox" id="line-item-ringmass">
+        <label for="line-item-ringmass">Ringmaß kostenlos bestellen</label>
+        </p>
+      </div>
+    <div class="wrap-right">
+      <h4>
+        Lieferung
+      </h4>
+      <p>
+        <input type="radio" id="line-item-lieferung-0" name="line-item-lieferung" checked>
+        <label for="line-item-lieferung-0">{{desc_0}}</label>
+      </p>
+      <p>
+        <input type="radio" id="line-item-lieferung-1" name="line-item-lieferung">
+        <label for="line-item-lieferung-1">{{desc_1}}</label>
+      </p>
+      <p>
+        <input type="radio" id="line-item-lieferung-2" name="line-item-lieferung">
+        <label for="line-item-lieferung-2">{{desc_2}}</label>
+      </p>
+      <p>
+        <input type="radio" id="line-item-lieferung-3" name="line-item-lieferung">
+        <label for="line-item-lieferung-3">{{desc_3}}</label>
+      </p>
+    </div>
+  </div>
+  <div class="wrapper">
+    <div class="button more" (mousedown)="app.state.toolsMenu=true">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-more.svg" alt="">
+      mehr
+    </div>
+    <div class="button" (mousedown)="addToCart()">
+      <form id="ring-config-form"></form>
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-cart.svg" alt="">
+      zur Kasse
+    </div>
+  </div>
+</div>

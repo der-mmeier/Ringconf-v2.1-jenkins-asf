@@ -1,0 +1,15 @@
+@import "../../default";
+
+.debug {
+  @include flexbox();
+  @include flex-direction(row);
+  @include justify-content(flex-start);
+  @include flex-grow(1);
+  margin:10px;
+
+  pre {
+    margin:5px;
+    background:rgba(0, 0, 0, 0.1);
+    max-width: calc(50% - 50px);
+  }
+}

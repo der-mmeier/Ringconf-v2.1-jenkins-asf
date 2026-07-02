@@ -1,0 +1,83 @@
+@import "../default";
+
+:host {
+  position: relative;
+  font-family: Montserrat, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .flex-row {
+    @include flexbox;
+    @include flex-direction(row);
+    margin: 0 10px;
+
+    .flex-grow {
+      @include flex-grow(1);
+      @include flex-basis(50%);
+    }
+
+    //.max40 {
+    //  max-width: 40%;
+    //}
+
+    &.break {
+      @media (max-width: $breakpoint-mobile) {
+        @include align-self(flex-start);
+        @include flex-direction(column);
+        position: relative;
+      }
+    }
+
+    &.sticky {
+      @media (max-width: $breakpoint-mobile) {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+    }
+
+    @media (max-width: $breakpoint-footer-split) {
+      margin: 0 10px 5px 10px;
+    }
+  }
+
+  .show-if-mobile {
+    display: none;
+  }
+
+  @media (max-width: $breakpoint-mobile) {
+    .show-if-desktop {
+      display: none;
+    }
+    .show-if-mobile {
+      display: block;
+      @include flex-grow(1);
+    }
+
+    .flex-row {
+      .max40 {
+        max-width: none;
+      }
+    }
+  }
+}
+
+//.contentWrapper {
+//  margin:5px;
+//  padding:15px;
+//  background-color: #e6e6e6;
+//  border-radius: $border-radius;
+//}
+
+//.tools{
+//  display:none;
+//  @media (min-width: $breakpoint-mobile) {
+//    display:block;
+//  }
+//}
+

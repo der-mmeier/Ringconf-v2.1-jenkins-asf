@@ -1,0 +1,142 @@
+<ng-template [ngIf]="mode=='material'">
+  <div class="mts" [class.hasValue]="showValue">
+    <div class="track">
+      <div class="segment"
+           *ngFor="let item of ringData[ringId].materialDiv; let i = index; let first = first; let last = last;"
+           style="background-color:{{getMaterialColor(i)}}; width:{{getMaterialPercent(i)}}">
+        <div class="index">{{(i + 1)}}</div>
+      </div>
+
+      <!--      <div class="segment safe left" style="width:{{getMaterialSafeSegmentPercent(0)}}"></div>-->
+      <!--      <div class="segment safe right" style="width:{{getMaterialSafeSegmentPercent(1)}}"></div>-->
+
+      <div class="valueWrapper">
+        <div class="value"
+             *ngFor="let item of ringData[ringId].materialDiv; let i = index;"
+             style="width:{{getMaterialPercent(i)}}">
+          {{getMaterialValue(i)}}
+        </div>
+      </div>
+
+      <ng-template [ngFor] let-item let-i=index let-last=last [ngForOf]="ringData[ringId].materialDiv">
+        <div *ngIf="!last"
+             class="thumb"
+             [attr.data-index]="i"
+             (mousedown)="onThumbSelectMouse($event)"
+             (touchstart)="onThumbSelectTouch($event)"
+             style="left:{{getMaterialThumbPosition(i)}}">
+          <div class="line"></div>
+        </div>
+      </ng-template>
+
+    </div>
+  </div>
+</ng-template>
+
+<ng-template [ngIf]="mode=='gap'">
+  <div class="mts" [class.hasValue]="showValue">
+    <div class="track">
+      <div class="segment"
+           *ngFor="let item of getMaterialDiv(); let i = index; let first = first; let last = last;"
+           style="background-color:{{getMaterialColor(i)}}; width:{{getMaterialPercent(i)}}">
+      </div>
+
+      <ng-template [ngFor] let-item let-i=index let-last=last [ngForOf]="getMaterialDiv()">
+        <div *ngIf="!last"
+             class="thumb disabled"
+             style="left:{{getMaterialThumbPosition(i)}}">
+          <div class="line"></div>
+          <div class="number">{{i + 1}}</div>
+        </div>
+      </ng-template>
+
+      <ng-template [ngFor] let-item let-i=index let-last=last [ngForOf]="ringData[ringId].gapDiv">
+        <div *ngIf="!last"
+             class="thumb gap"
+             style="left:{{getGapThumbPosition(i)}}"
+             [attr.data-index]="i"
+             (mousedown)="onThumbSelectMouse($event)"
+             (touchstart)="onThumbSelectTouch($event)">
+          <div class="line"></div>
+          <div class="number">{{i + 1}}</div>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template [ngIf]="mode=='stonePosition'">
+  <div class="mts" [class.hasValue]="showValue">
+    <div class="track stone">
+      <div class="segment"
+           *ngFor="let item of segmentDiv"
+           style="background-color:{{item.color}}; width:{{item.width}}">
+      </div>
+      <div style="position:absolute; left:0; top:0; width:100%;height:100%;background:transparent;z-index:11">
+        <div class="segment"
+             *ngFor="let item of gapSegments;"
+             style="background-color:{{item.color}}; width:{{item.width}}; opacity:0.4;">
+        </div>
+      </div>
+
+      <div class="valueWrapper">
+        <div class="value"
+             *ngFor="let item of ringData[ringId].stone[0].positionDiv; let i = index;"
+             style="width:{{getStonePositionPercent(i)}}">
+          {{getStonePositionValue(i)}}
+        </div>
+      </div>
+
+      <!--      <div class="segment"-->
+<!--           *ngFor="let item of getMaterialDiv(); let i = index; let first = first; let last = last;"-->
+<!--           style="background-color:{{getMaterialColor(i)}}; width:{{getMaterialPercent(i)}}">-->
+<!--      </div>-->
+
+      <!-- TODO: NOGO AREAS -->
+      <ng-template [ngFor] let-item let-i=index let-first=first let-last=last [ngForOf]="getNoGoPercent(0)">
+        <div *ngIf="first" class="segment safe left" style="background-color:#f00; width:{{item}}"></div>
+        <div *ngIf="last" class="segment safe right" style="background-color:#f00; width:{{item}}"></div>
+      </ng-template>
+
+
+      <!--      <ng-template [ngFor] let-item let-i=index let-last=last [ngForOf]="ringData[ringId].materialDiv">-->
+      <!--        <div *ngIf="!last"-->
+      <!--             class="thumb line-only"-->
+      <!--             style="left:{{getMaterialThumbPosition(i)}}">-->
+      <!--          <div class="line"></div>-->
+      <!--        </div>-->
+      <!--      </ng-template>-->
+
+      <!--      <ng-template [ngFor] let-item let-i=index let-last=last [ngForOf]="ringData[ringId].gapDiv">-->
+      <!--        <div *ngIf="!last"-->
+      <!--             class="thumb line-only"-->
+      <!--             style="left:{{getGapThumbPosition(i)}}">-->
+      <!--          <div class="line"></div>-->
+      <!--        </div>-->
+      <!--      </ng-template>-->
+
+<!--      <ng-template [ngFor] let-item let-i=index [ngForOf]="getStoneMinMaxArray()">-->
+<!--        <div class="thumb line-only"-->
+<!--             style="left:{{getPossibleStoneThumbPosition(i)}}">-->
+<!--          &lt;!&ndash;          <div class="line"></div>&ndash;&gt;-->
+<!--        </div>-->
+<!--      </ng-template>-->
+
+      <div class="thumb rowSize"
+           style="left:{{getStoneThumbPosition()}};width:{{getStoneRowSize()}}">
+      </div>
+      <div class="thumb stone fixed"
+           style="left:{{getStoneThumbPosition()}}">
+      </div>
+      <div class="thumb stone notFixed"
+           style="left:{{getStoneThumbPosition()}}"
+           (mousedown)="onThumbSelectMouse($event)"
+           (touchstart)="onThumbSelectTouch($event)">
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template [ngIf]="mode !== 'material' && mode !== 'gap' && mode !== 'stonePosition'">
+  MultiThumbSlider: mode not set!
+</ng-template>

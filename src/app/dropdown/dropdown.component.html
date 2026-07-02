@@ -1,0 +1,12 @@
+<h6 class="title" [hidden]="title==''">
+  {{ title }}
+</h6>
+<div class="wrapper" tabindex="1" (blur)="open=false">
+  <div class="selected" [class.open]="open" (mousedown)="open=!open" [innerHTML]="onValueFormat ? (onValueFormat(value) | safeHtml) : value">
+  </div>
+  <div class="items" [class.selectHide]="!open">
+    <div *ngFor="let item of options;trackBy:trackByFn; let i = index;" (mousedown)="select(item)" [class.-hidden]="onValueHidden ? onValueHidden(that, item) : false"
+         [innerHTML]="onValueFormat ? (onValueFormat(item) | safeHtml) : item">
+    </div>
+  </div>
+</div>

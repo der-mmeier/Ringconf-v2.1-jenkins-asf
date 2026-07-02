@@ -1,0 +1,98 @@
+@import "../../default";
+
+x-tools {
+  height: 92px;
+  margin: 5px 5px 5px 0;
+
+  &.mode-normal {
+    @include flexbox();
+    @include flex-direction(row);
+    @include flex-wrap(nowrap);
+
+    > div {
+      @include flexbox();
+      @include flex-direction(column);
+      @include flex-grow(1);
+      @include align-items(center);
+      @include justify-content(center);
+      margin: 0 5px;
+      background-color: #e6e6e6;
+      color: #262626;
+      cursor: pointer;
+      border-radius: $border-radius;
+      font-size: 11px;
+      padding: 10px 20px;
+      width: 0;
+      text-align: center;
+
+      img {
+        height: 25px;
+        margin-bottom: 5px;
+        display: block;
+        width: 100%;
+      }
+
+      &:first-child {
+        margin-left: 0;
+      }
+
+      &:last-child {
+        margin-right: 0;
+      }
+
+      &.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+        cursor: default;
+      }
+    }
+  }
+
+  &.mode-menu {
+    display:none;
+  }
+
+  @media (max-width: $breakpoint-mobile) {
+    &.mode-normal {
+      display: none;
+    }
+    &.mode-menu {
+      @include flexbox();
+      @include flex-grow(0);
+      @include flex-direction(column);
+      padding-top:80px;
+      //@include align-items(flex-start);
+      //@include justify-content(flex-start);
+
+      @include align-content(flex-start);
+      img.close {
+        position:absolute;
+        display:block;
+        top:23px;
+        left: calc(100% - 70px);
+        width:30px;
+        height:30px;
+        cursor:pointer;
+      }
+      > div {
+        @include flexbox();
+        @include flex-grow(0);
+        @include flex-direction(column);
+        @include align-items(center);
+        @include justify-content(center);
+        border-radius: $border-radius;
+        background-color: #e6e6e6;
+        padding: 10px 20px;
+        margin-bottom: 20px;
+        width: 300px;
+        height: 80px;
+        cursor: pointer;
+
+        img {
+          height: 25px;
+          margin-right: 10px;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+<x-tab-control class="profile" [headerOnly]=true>
+  <x-tab-page [title]="ringData[0].name" class="female"
+              [enabled]="ringData[0].cartActive"
+              [active]="app.state.configMode===0"
+              (onSelect)="app.setConfigMode(0)">
+  </x-tab-page>
+  <x-tab-page title="Ringpaar" class="pair"
+              [enabled]="ringData[0].cartActive && ringData[1].cartActive"
+              [active]="app.state.configMode===2"
+              (onSelect)="app.setConfigMode(2)">
+  </x-tab-page>
+  <x-tab-page [title]="ringData[1].name" class="male"
+              [enabled]="ringData[1].cartActive"
+              [active]="app.state.configMode===1"
+              (onSelect)="app.setConfigMode(1)">
+  </x-tab-page>
+</x-tab-control>
+
+<div class="contentWrapper">
+  <x-image-card *ngFor="let prf of app.data.profile;trackBy:trackByFn" (mousedown)="setProfile(prf.name)" title="{{prf.name}}"
+                [image]="isProfileSelected(prf.name) ? env.assetFolderLocation+'/assets/imgui/'+(prf.name | lowercase) +'-fill.svg' : env.assetFolderLocation+'/assets/imgui/'+(prf.name | lowercase)+'-contour.svg'"
+                [class.female]="isProfileSelected(prf.name, 0)" [class.male]="isProfileSelected(prf.name, 1)">
+  </x-image-card>
+</div>

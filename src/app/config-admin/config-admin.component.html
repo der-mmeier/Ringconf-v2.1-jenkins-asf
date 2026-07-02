@@ -1,0 +1,22 @@
+<section>
+  <div class="button" (mousedown)="setStdPreset()">Set Standardpreset</div>
+  <div class="button" (mousedown)="toggleWireframe()">Toggle Wireframe</div>
+  <div class="button" (mousedown)="exportObj()">Export OBJ</div>
+</section>
+<section>
+  <div class="button" (mousedown)="dbSetAppData()">Upload internal APPDATA</div><br/>
+</section>
+<section>
+  <div class="button" (mousedown)="downloadCfg()">Download APPDATA</div>
+</section>
+<section>
+  <a id="downloadAnchorElem" style="display:none"></a>
+  Achtung! Das hochladen der Configurations-Daten erfolgt direkt in die Datenbank mit anschließendem Neuladen des Browserfensters!
+  <br/>
+  <input class="button" type="file" id="selectFiles" value="Select Config">
+  <div class="button" (mousedown)="uploadCfg()">Upload APPDATA</div>
+</section>
+<section>
+  <x-slider-gap></x-slider-gap>
+</section>
+

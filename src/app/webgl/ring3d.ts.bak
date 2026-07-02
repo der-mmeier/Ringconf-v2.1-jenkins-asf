@@ -1,0 +1,2898 @@
+import {RingData} from "../app.ringdata";
+import {WebglComponent} from "./webgl.component";
+import {eRingFlags} from "./webgl-ring";
+import {calculateIntersection, CMesh, CVertex, iMeshData, iPoint, TEMP} from "./threeD";
+import {
+  CreatePlane, DynamicTexture,
+  Material,
+  Mesh, PBRMaterial,
+  TransformNode,
+  VertexBuffer,
+  VertexData
+} from "@babylonjs/core";
+import {iMinMaxCur, iProfile, iProfileResponse} from "../app.interfaces";
+import {Preload} from "../app.preload";
+import {Log} from "../logger/logger.component";
+import {iInterpolateResult, iVertexArray} from "./cProfile";
+import {AppComponent} from "../app.component";
+
+let USE_BEVEL_ALPHA = false;
+let DEBUG_UV_MAP_ENABLED = false;
+
+/*
+
+back
+9   10  11
+6   7   8
+x---------
+3   4   5
+0   1   2
+front
+
+ausgehend von 'x' für 'back' im Uhrzeigersinn und für 'front' gegen den Uhrzeigersinn
+*/
+
+interface iRingMaterial {
+  surfaceId: number;
+  material: PBRMaterial;
+  uScale: number;
+  vScale: number;
+}
+
+// export
+class Ring3D {
+
+  static list: Ring3D[] = [];
+  ringData: RingData;
+  flags: eRingFlags;
+
+  frontVertices: CVertex[] = [] as CVertex[];
+  frontVerticeLength: number = 1;
+  backVertices: CVertex[] = [] as CVertex[];
+  backVerticeLength: number = 1;
+  maxVerticeLength: number = 1; // Länge der maximal abgewickelten front- oder backVertices
+  stepLeftVertices: CVertex[] = [] as CVertex[];
+  stepRightVertices: CVertex[] = [] as CVertex[];
+  middleVertexBack: number[] = [0, 0]; // Anzahl der Punkte bis zur Mittellinie zwischen 3-6 und 5-8, ausgehend von der Front
+  pivot: TransformNode;
+  position: CVertex;
+  meshData: iMeshData[] = [] as iMeshData[];
+  meshes: Mesh[] = [] as Mesh[];
+  profileArea = 0; // mm2
+  sideLength: number[] = [0, 0]; // Die Seitenlänge für die maximale Steingröße wird durch den Abstand der Vektoren V[middleVertexBack[0]-1] und V[middleVertexBack[0]+1] ermittelt
+  textures: {
+    albedo: DynamicTexture,
+    alpha: DynamicTexture,
+    alphaBevel: DynamicTexture | null,
+    roughnessEngraving: DynamicTexture | null,
+  };
+  material: iRingMaterial[] = [] as iRingMaterial[];
+  cameraData: {
+    radius: number;
+    target: CVertex;
+    position: CVertex;
+    distance_x: number;
+  };
+
+  calc = {
+    gapDivMinMax: [] as iMinMaxCur[],
+  }
+
+  constructor(ringData: RingData) {
+
+    Ring3D.list.push(this);
+
+    let that = this;
+    let webgl = WebglComponent.WEBGL;
+
+    this.ringData = ringData;
+    this.flags = eRingFlags.IsValid;
+
+    this.pivot = new TransformNode("", webgl?.scene);
+    this.position = new CVertex();
+    this.textures = {
+      albedo: new DynamicTexture("albedo_front", {
+        width: webgl.maxTextureSize_doubled,
+        height: webgl.maxTextureSize_doubled
+      }, webgl?.scene),
+      alpha: new DynamicTexture("alpha_front", {
+        width: webgl.maxAlphaTextureSize_doubled,
+        height: webgl.maxAlphaTextureSize_doubled
+      }, webgl?.scene),
+      alphaBevel: null,
+      roughnessEngraving: new DynamicTexture("roughnessEngraving", {
+        width: webgl.maxTextureSize_doubled,
+        height: webgl.maxTextureSize_doubled
+      }, webgl?.scene),
+    };
+    this.textures.albedo.gammaSpace = false;
+    this.textures.alpha.getAlphaFromRGB = true;
+
+    // init Materials
+    AppComponent.app.data.surface.forEach(function (e) {
+      //@ts-ignore
+      let mat = new PBRMaterial(e.name, webgl.scene);
+      // mat.albedoColor = new Color3(1, 1, 1);
+      mat.metallic = e.material.metallic;
+      mat.roughness = e.material.roughness;
+      mat.metallicF0Factor = 0.0;
+      // mat.backFaceCulling = true;
+      mat.backFaceCulling = false;
+
+      if (e.material.file !== undefined) {
+        let T = Preload.surface.find(function (e1) {
+          return e1.id == e.id;
+        });
+
+        if (T) {
+          mat.bumpTexture = T.texture;
+          if (e.material.invertX !== undefined)
+            mat.invertNormalMapX = e.material.invertX;
+          if (e.material.invertY !== undefined)
+            mat.invertNormalMapY = e.material.invertY;
+        } else
+          console.log("no texture: " + e.material.file);
+      }
+
+      //@ts-ignore
+      mat.reflectionTexture = webgl.envTexture;
+
+      mat.albedoTexture = that.textures.albedo;
+
+      that.material.push({
+        surfaceId: e.id,
+        material: mat,
+        uScale: (e.material.uScale ? e.material.uScale * 2 : 1.0),
+        vScale: (e.material.vScale ? e.material.vScale * 2 : 1.0),
+      });
+
+      if (e.id == 0) // poliert...für Innenring und bevels
+      {
+        let M = mat.clone(e.name + '_back');
+        M.useRoughnessFromMetallicTextureAlpha = false;
+        M.useRoughnessFromMetallicTextureGreen = true;
+        M.useMetallnessFromMetallicTextureBlue = true;
+        M.metallicTexture = that.textures.roughnessEngraving;
+        that.material.push({
+          surfaceId: -1,
+          material: M,
+          uScale: (e.material.uScale ? e.material.uScale * 2 : 1.0),
+          vScale: (e.material.vScale ? e.material.vScale * 2 : 1.0),
+        });
+
+        M = mat.clone(e.name + '_bevel');
+        M.albedoTexture = that.textures.albedo;
+        if (USE_BEVEL_ALPHA)
+          M.opacityTexture = that.textures.alphaBevel;
+        M.backFaceCulling = true;
+        that.material.push({
+          surfaceId: -2,
+          material: M,
+          uScale: (e.material.uScale ? e.material.uScale * 2 : 1.0),
+          vScale: (e.material.vScale ? e.material.vScale * 2 : 1.0),
+        });
+
+        M = mat.clone(e.name + '_cut');
+        M.albedoTexture = that.textures.albedo;
+        // if (USE_BEVEL_ALPHA)
+        //     M.opacityTexture = that.GL.doubledTextures.alphaBevel;
+        M.backFaceCulling = true;
+        that.material.push({
+          surfaceId: -3,
+          material: M,
+          uScale: (e.material.uScale ? e.material.uScale * 2 : 1.0),
+          vScale: (e.material.vScale ? e.material.vScale * 2 : 1.0),
+        });
+      }
+    })
+
+    this.cameraData = {
+      radius: 0,
+      target: new CVertex(),
+      position: new CVertex(),
+      distance_x: 0,
+    };
+
+    setInterval(function () {
+      if (that.ringData.isDirty)
+        that.flags &= ~eRingFlags.IsValid;
+
+      if (that.ringData.cartActive && (that.flags & eRingFlags.IsValid) !== eRingFlags.IsValid) {
+        if (that.flags & eRingFlags.InvalidateMaterialOnly) {
+          if (that.update("material"))
+            that.flags &= ~eRingFlags.InvalidateMaterialOnly;
+        } else {
+          WebglComponent.busyCounter++;
+          if (that.update("all")) {
+            that.flags |= eRingFlags.IsValid;
+            that.ringData.isDirty = false;
+
+            // if (that.GL.profile) {
+            //   that.calc.area = that.GL.profile.area;
+            //   that.calc.mm3 = that.calc.area * that.ringData.ringHeight / 1000;
+            // }
+          }
+        }
+      }
+
+      if (!that.ringData.cartActive && that.meshes.length) {
+        WebglComponent.busyCounter++;
+        that.disposeMeshes();
+        let webgl = WebglComponent.WEBGL;
+        if (webgl)
+          webgl.renderFrame(AppComponent.app.data.webglSettings.forceFrames);
+        WebglComponent.busyCounter++;
+      }
+
+    }, 100);
+  }
+
+  private disposeMeshes() {
+    let i, webgl = WebglComponent.WEBGL;
+    for (i = 0; i < this.meshes.length; i++) {
+      if (this.meshes[i]) {
+        webgl?.scene.removeMesh(this.meshes[i]);
+        if (this.meshes[i].material && this.meshes[i].name !== "instance")
+          this.meshes[i].material = null;
+        try {
+          this.meshes[i].dispose();
+        } catch (e) {
+          console.log(e);
+        }
+      }
+    }
+
+    this.meshes = [];
+    this.meshData = [];
+  }
+
+  update(mode: string | "all" | "material" = "all"): boolean {
+
+    let webgl = WebglComponent.WEBGL;
+    if (!webgl) return false;
+
+    let that = this;
+
+    let profile = AppComponent.app.data.profile.find(e => {
+      return e.name == that.ringData.profileName;
+    });
+
+    if (!profile) return false;
+
+    let getProfileJson = function (): iProfileResponse | null {
+      let prf = Preload.prf;
+      let data = null;
+      for (let i = 0; i < prf.length; i++) {
+        if (prf[i].name.toLowerCase() == that.ringData.profileName.toLowerCase()) {
+          data = JSON.parse(prf[i].json);
+          break;
+        }
+      }
+
+      return data;
+    }
+    let calcArea_mm2 = function (): number {
+      let x = [] as number[];
+      let z = [] as number[];
+
+      let v = that.frontVertices;
+      for (let i = 0, i_l = v.length; i < i_l; i++) {
+        x.push(v[i].x);
+        z.push(v[i].z);
+      }
+
+      v = that.backVertices;
+      for (let i = v.length - 1; i > 0; i--) {
+        x.push(v[i].x);
+        z.push(v[i].z);
+      }
+
+      let area = 0.0, j;
+      for (let i = 0, i_l = x.length; i < i_l; i++) {
+        j = (i + 1) % i_l;
+        area += x[i] * z[j];
+        area -= x[j] * z[i];
+      }
+      area = Math.abs(area) / 2;
+      return area / 1000000;
+    }
+    let createProfileVertices = function (): boolean {
+      let prfJson = getProfileJson();
+      if (prfJson) {
+        // ermittle die Anzahl an gültigen Segmenten
+        let segmentCount = 0;
+        prfJson.xzs.forEach(e => {
+          if (e != null) segmentCount++;
+        })
+
+        // erstelle frontVertices und backVertices mit den Zieldimensionen
+        if (segmentCount == 2) //
+        {
+          if (prfJson.xzs[0] && prfJson.xzs[9]) //
+          {
+            let setOrigin_topMiddle = function (vertices: CVertex[]) {
+              let xHalf = (vertices[vertices.length - 1].x - vertices[0].x) / 2, z = -9999, x0 = vertices[0].x;
+              vertices.forEach(e => {
+                if (e.z > z) z = e.z;
+              })
+              for (let i = 0, i_l = vertices.length; i < i_l; i++) {
+                vertices[i].x = vertices[i].x - x0 - xHalf;
+                vertices[i].z -= z;
+              }
+            }
+
+            let i, i_l, x = 0, z = 0, t;
+
+            // prf.xzs[9] = back
+            let backVertices = [] as CVertex[];
+            for (i = 0, i_l = prfJson.xzs[9].length; i < i_l; i++) {
+              if (i == 0) {
+                x = prfJson.xzs[9][i].x;
+                z = prfJson.xzs[9][i].z;
+                t = new CVertex(0, 0, 0);
+                backVertices.push(t);
+              } else {
+                t = new CVertex(prfJson.xzs[9][i].x - x, 0, prfJson.xzs[9][i].z - z)
+                backVertices.push(t);
+              }
+            }
+
+            setOrigin_topMiddle(backVertices);
+
+            // prf.xzs[0] = front
+            let frontVertices = [] as CVertex[];
+            for (i = 0, i_l = prfJson.xzs[0].length; i < i_l; i++) {
+              if (i == 0) {
+                x = prfJson.xzs[0][i].x;
+                z = prfJson.xzs[0][i].z;
+                t = new CVertex(backVertices[0].x, 0, backVertices[0].z);
+                frontVertices.push(t);
+              } else {
+                t = new CVertex(prfJson.xzs[0][i].x - x + backVertices[0].x, 0, prfJson.xzs[0][i].z - z + backVertices[0].z)
+                frontVertices.push(t);
+              }
+            }
+
+            let sizeFrontVertices: any = CVertex.getVerticesDimensions(frontVertices);
+            let sizeBackVertices: any = CVertex.getVerticesDimensions(backVertices);
+
+            let cxVertices = sizeFrontVertices.cx,
+              czVertices = sizeFrontVertices.cz + sizeBackVertices.cz,
+              scaleX = that.ringData.ringWidth / cxVertices,
+              scaleZ = that.ringData.ringHeight / czVertices;
+
+            for (i = 0, i_l = frontVertices.length; i < i_l; i++) frontVertices[i].scale([scaleX, 1, scaleZ]);
+            for (i = 0, i_l = backVertices.length; i < i_l; i++) backVertices[i].scale([scaleX, 1, scaleZ]);
+
+            that.frontVertices = frontVertices;
+            that.backVertices = backVertices;
+            // that.heightFactor = czVertices / cxVertices;
+          } else //
+          {
+            Log("error", "Keine gültigen Profildaten!");
+            return false;
+          }
+        } else //
+        {
+          // ermittle die Ringhöhe durch den Abstand der mittleren Vertices aus den Segmenten 1 und 10 oder
+          // aus den letzten Vertices aus den Segmenten 0 und 9
+          let prfHeight = 0;
+
+          if (prfJson.xzs[1] != null && prfJson.xzs[10] != null)
+            prfHeight = Math.abs(prfJson.xzs[1][Math.round(prfJson.xzs[1].length / 2)].z - prfJson.xzs[10][Math.round(prfJson.xzs[10].length / 2)].z);
+          else if (prfJson.xzs[0] != null && prfJson.xzs[9] != null)
+            prfHeight = Math.abs(prfJson.xzs[0][prfJson.xzs[0].length - 1].z - prfJson.xzs[9][prfJson.xzs[9].length - 1].z);
+          else
+            return false;
+
+          let i, j, v: CVertex[], x, z, cx, t: any;
+
+          // konvertiere die Rohdaten in CVertex Klassen und verschieben auf den NUllpubkt
+          let vertices: CVertex[][] = [] as CVertex[][];
+
+          for (i = 0; i < prfJson.xzs.length; i++) {
+            if (prfJson.xzs[i]) {
+              vertices[i] = [] as CVertex[];
+              x = z = 0;
+              for (j = 0; j < prfJson.xzs[i].length; j++) {
+                // ...und setze den 1. Vertex eines jeden Segmentes auf die Nullposition
+                if (j == 0) {
+                  x = prfJson.xzs[i][j].x;
+                  z = prfJson.xzs[i][j].z;
+                  t = new CVertex(0, 0, 0);
+                  t.i = prfJson.xzs[i][j].s;
+                  vertices[i].push(t);
+                } else {
+                  t = new CVertex(prfJson.xzs[i][j].x - x, 0, prfJson.xzs[i][j].z - z)
+                  t.i = prfJson.xzs[i][j].s;
+                  vertices[i].push(t);
+                }
+              }
+            } else
+              vertices.push([]);
+          }
+
+          // ermittle die Größen der Reihen und Spalten
+          let rows = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]];
+          // let cols = [[0, 3, 6, 9], [1, 4, 7, 10], [2, 5, 8, 11]];
+
+          let rowsCX = [0, 0, 0, 0];
+          // let colsCZ = [0, 0, 0, 0];
+
+          // ...Reihen
+          for (i = 0; i < 4; i++) {
+            cx = 0.0;
+            for (j = 0; j < 3; j++) {
+              if (prfJson.size[rows[i][j]] != null)
+                cx += prfJson.size[rows[i][j]].cx;
+            }
+            rowsCX[i] = cx;
+          }
+
+          // ...Spalten
+          let profileOriginWidth = rowsCX.reduce(function (a, b) {
+            return Math.max(a, b);
+          });
+
+          let profileOriginHeight = prfHeight;
+
+          let t1, t2, scaleFactorX, scaleFactorZ;
+
+          if (vertices[1] == null || vertices[10] == null) {
+            t1 = that.ringData.ringWidth / profileOriginWidth;
+            t2 = that.ringData.ringHeight / profileOriginHeight;
+
+            scaleFactorX = Math.min(t1, t2);
+            scaleFactorZ = scaleFactorX;
+          } else {
+            scaleFactorX = that.ringData.ringWidth / profileOriginWidth;
+            scaleFactorZ = that.ringData.ringHeight / profileOriginHeight;
+          }
+
+          // Skalierungsfaktor für die Segmente mit festem Seitenverhältniss (0, 2, 9, 11)
+          let scaleFactorLocked;
+
+          if (vertices[3].length == 0 && vertices[6].length == 0)
+            scaleFactorLocked = scaleFactorZ;
+          else
+            scaleFactorLocked = Math.min(scaleFactorX, scaleFactorZ);
+
+          // skalieren der Ecksegmente mit festem Seitenverhältniss
+          let ar = [0, 2, 9, 11];
+          for (i = 0; i < 4; i++) {
+            v = vertices[ar[i]];
+            for (j = 0; j < v.length; j++) {
+              v[j].x *= scaleFactorLocked;
+              v[j].z *= scaleFactorLocked;
+            }
+
+            t = CVertex.getVerticesDimensions(v);
+            prfJson.size[ar[i]].cx = t.cx;
+            prfJson.size[ar[i]].cz = t.cz;
+            prfJson.size[ar[i]].length = CVertex.getVerticesLength(v);
+          }
+
+          // skalieren der Mittelspalte
+          let scaleX, middleVertex;
+          let V1 = TEMP.Vertex_1, v0, v1, v2, v3, v5, v6, v8, v10, v9, v11, vt = TEMP.Vertex_3;
+          if (vertices[1].length > 0 && vertices[10].length > 0) {
+            ar = [1, 10, 12];
+            for (i = 0; i < 2; i++) {
+              if (i == 0)
+                scaleX = (that.ringData.ringWidth - prfJson.size[0].cx - prfJson.size[2].cx) / prfJson.size[1].cx;
+              else
+                scaleX = (that.ringData.ringWidth - prfJson.size[9].cx - prfJson.size[11].cx) / prfJson.size[10].cx;
+
+              v = vertices[ar[i]];
+              for (j = 0; j < v.length; j++) {
+                v[j].x *= scaleX;
+                v[j].z *= scaleFactorLocked;
+              }
+
+              t = CVertex.getVerticesDimensions(v);
+              prfJson.size[ar[i]].cx = t.cx;
+              prfJson.size[ar[i]].cz = t.cz;
+              prfJson.size[ar[i]].length = CVertex.getVerticesLength(v);
+
+              // Mittelpunkt auf 0:0 setzen
+              middleVertex = Math.trunc(vertices[ar[i]].length / 2)
+              // middleVertex = Math.trunc(prf.xzs[ar[i]].length / 2)
+
+              vertices[ar[i]][middleVertex].toRef(V1);
+
+              for (j = 0; j < v.length; j++)
+                v[j].sub(V1);
+            }
+
+            // Segment 1 auf Profilhöhe verschieben
+            V1.assign(0.0, 0.0, -that.ringData.ringHeight);
+            v = vertices[1];
+            for (i = 0; i < v.length; i++)
+              v[i].add(V1);
+
+            // Segment 12 auf Profilhöhe verschieben (Kanal)
+            // if (vertices[12].length)
+            // {
+            //   v = vertices[12];
+            //
+            //   // Mittelpunkt auf 0:0 setzen
+            //   middleVertex = Math.trunc(vertices[12].length / 2)
+            //   vertices[12][middleVertex].toRef(V1);
+            //
+            //   for (j = 0; j < v.length; j++)
+            //     v[j].sub(V1);
+            //
+            //   V1.assign(0.0, 0.0, -profile.height);
+            //   for (j = 0; j < v.length; j++)
+            //   {
+            //     v[j].x *= scaleFactorX;
+            //     v[j].z *= scaleFactorZ;
+            //     v[j].add(V1);
+            //   }
+            //   profile.channelVertices = vertices[12];
+            // }
+          }
+
+          // Ecksegmente verschieben
+          if (vertices[1].length > 0 && vertices[10].length > 0) {
+            // Segment 0
+            v1 = vertices[1];
+            v1[0].toRef(vt);
+            v0 = vertices[0];
+            vt.sub(v0[v0.length - 1]);
+            for (i = 0; i < v0.length; i++)
+              v0[i].add(vt);
+            // Segment 2
+            v1[v1.length - 1].toRef(vt);
+            v2 = vertices[2];
+            vt.sub(v2[0]);
+            for (i = 0; i < v2.length; i++)
+              v2[i].add(vt);
+            // Segment 9
+            v10 = vertices[10];
+            v10[0].toRef(vt);
+            v9 = vertices[9];
+            vt.sub(v9[v9.length - 1]);
+            for (i = 0; i < v9.length; i++)
+              v9[i].add(vt);
+            // Segment 11
+            v10[v10.length - 1].toRef(vt);
+            v11 = vertices[11];
+            vt.sub(v11[0]);
+            for (i = 0; i < v11.length; i++)
+              v11[i].add(vt);
+          } else {
+            // Segment 9
+            vt.assign(0.0, 0.0, 0.0);
+            v9 = vertices[9];
+            vt.sub(v9[v9.length - 1]);
+            for (i = 0; i < v9.length; i++)
+              v9[i].add(vt);
+            // Segment 0
+            v0 = vertices[0];
+            v9[0].toRef(vt);
+            for (i = 0; i < v0.length; i++)
+              v0[i].add(vt);
+
+            // Segment 11
+            vt.assign(0.0, 0.0, 0.0);
+            v11 = vertices[11];
+            vt.sub(v11[0]);
+            for (i = 0; i < v11.length; i++)
+              v11[i].add(vt);
+            // Segment 2
+            v2 = vertices[2];
+            v11[v11.length - 1].toRef(vt);
+            vt.sub(v2[v2.length - 1]);
+            for (i = 0; i < v2.length; i++)
+              v2[i].add(vt);
+          }
+
+          if (vertices[3].length > 0 && prfJson.size[6] != null) {
+            // Segmente 3 und 6 skalieren und verschieben
+            let scale = Math.abs(vertices[0][0].z - vertices[9][0].z) / Math.abs(prfJson.size[3].cz + prfJson.size[6].cz);
+
+            ar = [3, 6];
+            for (i = 0; i < 2; i++) {
+              v = vertices[ar[i]];
+              for (j = 0; j < v.length; j++)
+                v[j].scale([scaleFactorLocked, 1.0, scale]);
+
+              t = CVertex.getVerticesDimensions(v);
+              prfJson.size[ar[i]].cx = t.cx;
+              prfJson.size[ar[i]].cz = t.cz;
+              prfJson.size[ar[i]].length = CVertex.getVerticesLength(v);
+            }
+
+            v0 = vertices[0];
+            v3 = vertices[3];
+            v0[0].subToRef(v3[v3.length - 1], vt);
+            for (i = 0; i < v3.length; i++)
+              v3[i].add(vt);
+
+            v9 = vertices[9];
+            v6 = vertices[6];
+            v9[0].subToRef(v6[v6.length - 1], vt);
+            for (i = 0; i < v6.length; i++)
+              v6[i].add(vt);
+          }
+
+          if (vertices[5].length > 0 && prfJson.size[8] != null) {
+            // Segmente 5 und 8 skalieren und verschieben
+            let scale = Math.abs(vertices[2][vertices[2].length - 1].z - vertices[11][vertices[11].length - 1].z) / Math.abs(prfJson.size[5].cz + prfJson.size[8].cz);
+
+            ar = [5, 8];
+            for (i = 0; i < 2; i++) {
+              v = vertices[ar[i]];
+              for (j = 0; j < v.length; j++)
+                v[j].scale([scaleFactorLocked, 1.0, scale]);
+
+              t = CVertex.getVerticesDimensions(v);
+              prfJson.size[ar[i]].cx = t.cx;
+              prfJson.size[ar[i]].cz = t.cz;
+              prfJson.size[ar[i]].length = CVertex.getVerticesLength(v);
+            }
+
+            v2 = vertices[2];
+            v5 = vertices[5];
+            v2[v2.length - 1].subToRef(v5[0], vt);
+            for (i = 0; i < v5.length; i++)
+              v5[i].add(vt);
+
+            v11 = vertices[11];
+            v8 = vertices[8];
+            v11[v11.length - 1].subToRef(v8[0], vt);
+            for (i = 0; i < v8.length; i++)
+              v8[i].add(vt);
+          }
+
+          let reverse_vertices = function (V: CVertex[]) {
+            let c = V.length;
+            let half = Math.trunc(c / 2);
+            for (i = 0; i < half; i++) {
+              V[i].toRef(V1);
+              V[c - 1 - i].toRef(V[i]);
+              V1.toRef(V[c - 1 - i]);
+            }
+          };
+
+          if (vertices[0][0].i == 0) // is front ?
+          {
+            if (vertices[1].length > 0) {
+              vertices[1][0].toRef(vertices[0][vertices[0].length - 1]);
+              vertices[1][vertices[1].length - 1].toRef(vertices[2][0]);
+            } else {
+              vertices[2][0].toRef(vertices[0][vertices[0].length - 1]);
+            }
+
+            if (vertices[1].length) {
+              vertices[1] = vertices[1].slice(1, vertices[1].length - 1);
+            }
+
+            vertices[0].pop();
+            that.frontVertices = vertices[0].concat(vertices[1]);
+            that.frontVertices.pop();
+            that.frontVertices = that.frontVertices.concat(vertices[2]);
+
+            if (vertices[10].length) {
+              vertices[10][0].toRef(vertices[9][vertices[9].length - 1]);
+              vertices[10][vertices[10].length - 1].toRef(vertices[11][0]);
+            } else {
+              vertices[2][0].toRef(vertices[0][vertices[0].length - 1]);
+            }
+
+            if (vertices[10].length) {
+              vertices[10] = vertices[10].slice(1, vertices[10].length - 1);
+            }
+
+            vertices[9].pop();
+            that.backVertices = vertices[9].concat(vertices[10]);
+            that.backVertices.pop();
+            that.backVertices = that.backVertices.concat(vertices[11]);
+          } else {
+            reverse_vertices(vertices[0]);
+            reverse_vertices(vertices[2]);
+            reverse_vertices(vertices[3]);
+            reverse_vertices(vertices[5]);
+
+            ar = [0, 3, 6, 9, 10, 11, 8, 5, 2];
+
+            for (i = 1; i < ar.length; i++) {
+              vertices[ar[i - 1]][vertices[ar[i - 1]].length - 1].toRef(vertices[ar[i]][0]);
+            }
+
+            vertices[0][0].toRef(vertices[1][0]);
+            vertices[2][vertices[2].length - 1].toRef(vertices[1][vertices[1].length - 1]);
+
+            that.frontVertices = vertices[1];
+
+            vertices[0].pop();
+            that.backVertices = vertices[0].concat(vertices[3]);
+            that.backVertices.pop();
+            that.backVertices = that.backVertices.concat(vertices[6]);
+            that.backVertices.pop();
+            that.backVertices = that.backVertices.concat(vertices[9]);
+            that.backVertices.pop();
+            that.backVertices = that.backVertices.concat(vertices[10]);
+            that.backVertices.pop();
+            that.backVertices = that.backVertices.concat(vertices[11]);
+            that.backVertices.pop();
+            that.backVertices = that.backVertices.concat(vertices[8]);
+            that.backVertices.pop();
+            that.backVertices = that.backVertices.concat(vertices[5]);
+            that.backVertices.pop();
+            that.backVertices = that.backVertices.concat(vertices[2]);
+          }
+
+          // prüfen, ob z-Werte "kleiner" als die Ringhöhe sind und verschiebe die Vertices entsprechend
+          // Dies ist bei Profilen der Fall, wo die Segmente 0 und 2 "höher" sind als das Segment 1.
+          let minZ = -that.ringData.ringHeight;
+          that.frontVertices.forEach(function (e) {
+            if (e.z < minZ) minZ = e.z;
+          });
+
+          if (minZ < -that.ringData.ringHeight) {
+            let diff = minZ + that.ringData.ringHeight;
+            that.frontVertices.forEach(function (e) {
+              e.z -= diff;
+            });
+            that.backVertices.forEach(function (e) {
+              e.z -= diff;
+            });
+          }
+
+          // Anfangs und Endpunkte gleichsetzen
+          {
+            let A: CVertex[] = that.frontVertices, B: CVertex[] = that.backVertices;
+            B[0].x = A[0].x;
+            B[0].z = A[0].z;
+            B[B.length - 1].x = A[A.length - 1].x;
+            B[B.length - 1].z = A[A.length - 1].z;
+          }
+
+          if (vertices[0].length && vertices[3].length)
+            that.middleVertexBack[0] = vertices[0].length + vertices[3].length - 1;
+
+          if (vertices[2].length && vertices[5].length)
+            that.middleVertexBack[1] = vertices[2].length + vertices[5].length - 2;
+
+          // that.heightFactor = profileOriginHeight / profileOriginWidth;
+        }
+
+        let stepLeftIndex = null, stepRightIndex = null;
+
+        if (1) // berechne Stufen
+        {
+          let stepWidth = [0, 0];
+
+          if (1) // ermittle die Stufenbreiten
+          {
+            if (that.ringData.stepMode == 1)
+              stepWidth[0] = that.ringData.stepWidth[0];
+            else if (that.ringData.stepMode == 2)
+              stepWidth[1] = that.ringData.stepWidth[1];
+            else if (that.ringData.stepMode == 3) {
+              stepWidth[0] = that.ringData.stepWidth[0];
+              stepWidth[1] = that.ringData.stepWidth[1];
+            }
+          }
+
+
+          if (stepWidth[0] > 0.0) // Stufe links
+          {
+            let IP = that.interpolateVertex(that.frontVertices[0].x + stepWidth[0], that.frontVertices);
+
+            // Vectoren für die linke Stufe sichern
+            let vec3Before = that.frontVertices.slice(0, IP.indexVectorA + 1);
+
+            // front Vectoren neu zuweisen
+            that.frontVertices = that.frontVertices.slice(IP.indexVectorB);
+
+            // Stufenvectoren anpassen
+            let z = IP.z + that.ringData.stepDepth, i, i_l = vec3Before.length, v: CVertex;
+
+            // Der Übergang vom Profil zur Stufe muss scharfkantig sein. Deshalb wird hier ein extra Vector an der
+            // Übergangsstelle gesetzt (gedoppelt), damit die Normalen entsprechen berechnet werden können.
+            let ar = [], edge = false;
+            for (i = 0; i < i_l; i++) {
+              v = vec3Before[i];
+              if (v.z < z) {
+                v.z = z;
+                if (!edge) {
+                  ar.push(v);
+                  edge = true;
+                }
+              }
+              ar.push(v);
+            }
+            vec3Before = ar;
+
+            // Eckpunkte hinzufügen; doppelt für die Normalen
+            vec3Before.push(new CVertex(IP.x, 0.0, z));
+            vec3Before.push(new CVertex(IP.x, 0.0, z));
+            vec3Before.push(new CVertex(IP.x, 0.0, IP.z));
+
+            // 1 x für Front
+            vec3Before.push(new CVertex(IP.x, 0.0, IP.z));
+
+            stepLeftIndex = vec3Before.length - 1; // abzgl. 1 x Front
+
+            // zusammenführen für die U-Wert Berechnung
+            that.frontVertices = vec3Before.concat(that.frontVertices);
+
+            i_l = that.backVertices.length;
+            for (i = 0; i < i_l; i++) {
+              v = that.backVertices[i];
+              // if (v.x > IP.x) break;
+              if (v.z < z) v.z = z;
+              else break;
+            }
+
+            if (i > 1) {
+              that.middleVertexBack[0] -= (i - 1);
+
+              if (that.middleVertexBack[0] < 0)
+                that.middleVertexBack[0] = 0;
+
+              let ar = that.backVertices.slice(i);
+              ar.unshift(CVertex.fromVertex(vec3Before[0]));
+              ar[0].x = that.backVertices[i].x;
+              vec3Before[0].x = ar[0].x;
+
+              for (i = 0; i < ar.length; i++)
+                ar[i].i = i + 1;
+              that.backVertices = ar;
+            }
+          }
+          if (stepWidth[1] > 0.0) {
+            let IP = that.interpolateVertex(that.frontVertices[that.frontVertices.length - 1].x - stepWidth[1], that.frontVertices);
+
+            // Vectoren für die rechte Stufe sichern
+            let vec3After = that.frontVertices.slice(IP.indexVectorB);
+
+            // front Vectoren neu zuweisen
+            that.frontVertices = that.frontVertices.slice(0, IP.indexVectorA + 1);
+
+            // Stufenvectoren anpassen
+            let z = IP.z + that.ringData.stepDepth, i, i_l = vec3After.length, v: CVertex;
+
+            // Der Übergang vom Profil zur Stufe muss scharfkantig sein. Deshalb wird hier ein extra Vector an der
+            // Übergangsstelle gesetzt (gedoppelt), damit die Normalen entsprechen berechnet werden können.
+            let ar = [], edge = false;
+
+            for (i = 0; i < i_l; i++) {
+              v = vec3After[i];
+              if (v.z < z) {
+                v.z = z;
+                if (!edge) {
+                  ar.push(v);
+                  edge = true;
+                }
+              }
+              ar.push(v);
+            }
+            vec3After = ar;
+
+            // Eckpunkte hinzufügen; doppelt für die Normalen
+            that.frontVertices.push(new CVertex(IP.x, 0.0, IP.z));
+
+            stepRightIndex = that.frontVertices.length;
+
+            vec3After.unshift(new CVertex(IP.x, 0.0, z));
+            vec3After.unshift(new CVertex(IP.x, 0.0, z));
+            vec3After.unshift(new CVertex(IP.x, 0.0, IP.z));
+
+            // zusammenführen für die U-Wert Berechnung
+            that.frontVertices = that.frontVertices.concat(vec3After);
+
+            i_l = that.backVertices.length - 1;
+            for (i = i_l; i > 0; i--) {
+              v = that.backVertices[i];
+              // if (v.x < IP.x) break;
+              if (v.z < z) v.z = z;
+              else break;
+            }
+
+            if (i > 1) {
+              that.middleVertexBack[1] -= (that.backVertices.length - i);
+              that.middleVertexBack[1] += 2;
+
+              if (that.middleVertexBack[1] < 0)
+                that.middleVertexBack[1] = 0;
+
+              let ar = that.backVertices.slice(0, i + 1);
+              ar.push(CVertex.fromVertex(vec3After[vec3After.length - 1]));
+              ar[ar.length - 1].x = that.backVertices[i].x;
+              vec3After[vec3After.length - 1].x = ar[ar.length - 1].x;
+              for (i = 0; i < ar.length; i++)
+                ar[i].i = i + 1;
+              that.backVertices = ar;
+            }
+          }
+        }
+
+        if (1) // berechne U-Werte
+        {
+          let V = [that.frontVertices, that.backVertices];
+          let SUM: number[] = []; // um eine einzige albedoTextur zu benutzen, muss die maximale Länge der beiden Geometrien ermittelt werden
+          let sum = 0.0, last;
+
+          // ermiteln der maximalen Geometrielänge
+          V.forEach(function (e) {
+            sum = 0.0;
+            e[0].l = 0.0;
+            last = 0.0;
+
+            for (let i = 1; i < e.length; i++) {
+              e[i].l = last + e[i].distance(e[i - 1]);
+              last = e[i].l;
+            }
+
+            SUM.push(last);
+          })
+
+          sum = SUM[0] > SUM[1] ? SUM[0] : SUM[1];
+
+          /*
+          Es gab Texturfehler bei der Berechnung der seitlichen Kanäle. Werden Stufen eingebracht, so ist der Mittelpunkt der
+          Textur nicht gleich der Mittelpubkt des Ringes. Aus diesem Grund wurde ein Puffer von 0.5mm eingebracht.
+          */
+          sum += 500;
+
+          that.maxVerticeLength = sum;
+          that.frontVerticeLength = SUM[0];
+          that.backVerticeLength = SUM[1];
+
+          // U-Werte berechnen
+          V.forEach(function (e, index) {
+            let iHalf = (index == 0 ? that.frontVertices : that.backVertices).findIndex(e2 => {
+              return e2.x > -15 && e2.x < 15;
+            });
+
+            let lHalf = (index == 0 ? that.frontVertices : that.backVertices)[iHalf].l;
+
+            for (let i = 0; i < e.length; i++) {
+              e[i].u = 0.5 + ((e[i].l - lHalf) / sum);
+              if (e[i].u < 0.0) e[i].u = 0.0;
+              else if (e[i].u >= 1.0) e[i].u = 1.0;
+            }
+          })
+
+          if (stepLeftIndex !== null) {
+            that.stepLeftVertices = that.frontVertices.slice(0, stepLeftIndex);
+            that.frontVertices = that.frontVertices.slice(stepLeftIndex);
+          }
+
+          if (stepRightIndex !== null) {
+            if (stepLeftIndex != null)
+              stepRightIndex -= stepLeftIndex;
+
+            that.stepRightVertices = that.frontVertices.slice(stepRightIndex);
+            that.frontVertices = that.frontVertices.slice(0, stepRightIndex);
+          }
+        }
+
+        that.profileArea = calcArea_mm2();
+
+        return true;
+      }
+
+      return false;
+    }
+
+    // let checkPlausibility = function() {
+    //
+    // }
+    // let calcGapDiv = function(gapDiv: number[] | null = null, gapDivIndexIgnore: number | null = null): iMinMaxCur[] {
+    //   // Alle Teilungen beziehen sich auf die Mittelposition. Die Fugenbreiten werden in der Berechnung min/max bereits abgezogen.
+    //   // let j, pos: number, divMM = [], data = that.ringData;
+    //   //
+    //   // pos = 0;
+    //   // if (!this.isDivMode_h_s()) {
+    //   //   for (j = 0; j < data.materialDiv.length - 1; j++) { // letztes Segment ignorieren
+    //   //     pos += data.materialDiv[j];
+    //   //     /*
+    //   //     Die Trennfuge ist hier absichtlich immer 'aktiv'.
+    //   //     Es wurde ein Fehler festgestellt, wodurch eine inaktive Trennfuge eine freie Fuge ermöglichte und dadurch die
+    //   //     Materialteilung fehlerhaft erstellt wurde. Eine Designfuge auf der Position einer Trennfuge wurde nicht dargestell´t.
+    //   //      */
+    //   //     // if (this.ringData.gapEnabled[j])
+    //   //     divMM.push(pos * data.ringWidth / 10000);
+    //   //   }
+    //   // }
+    //   //
+    //   // divMM.push(data.ringWidth);
+    //   //
+    //   // if (!gapDiv)
+    //   //   gapDiv = data.gapDiv;
+    //   //
+    //   // pos = 0;
+    //   // for (j = 0; j < gapDiv.length - 1; j++) {  // letztes Segment ignorieren
+    //   //   pos += gapDiv[j];
+    //   //   if (gapDivIndexIgnore != j)
+    //   //     divMM.push(pos * data.ringWidth / 10000);
+    //   // }
+    //   //
+    //   // divMM.sort(function (a, b) {
+    //   //   return a - b
+    //   // });
+    //   //
+    //   // let new_segment = function (min: number, max: number) {
+    //   //   if (min > max) return;
+    //   //   let size = max - min, half = Math.trunc(size / 2);
+    //   //   segments.push({min, max, cur: min + half});
+    //   // };
+    //   //
+    //   // let gapGapDistance = data.hasWave ? profile.gapGapDistanceWave : profile.gapGapDistance;
+    //   // let minSize = data.gapWidth + gapGapDistance,
+    //   //   segments: iMinMaxCur[] = [],
+    //   //   min = this.calc.gapSafeLeft + this.calc.wa_mm, max;
+    //   //
+    //   // for (j = 0; j < divMM.length - 1; j++) {
+    //   //   max = divMM[j] - minSize;
+    //   //   new_segment(min, max);
+    //   //   min = max + minSize * 2;
+    //   // }
+    //   //
+    //   // new_segment(min, data.ringWidth - this.calc.gapSafeRight - this.calc.wa_mm);
+    //   //
+    //   // return segments;
+    //
+    // }
+    //
+    // let adaptGapDiv = function() {
+    //
+    // }
+
+    let mDiv_to_mm = function (): number[] {
+      let lc = that.ringData.divPreset.toLowerCase();
+      if (lc.startsWith("s:") || lc.startsWith("h:"))
+        return [that.ringData.ringWidth];
+
+      let t, last = 0, result = [] as number[];
+      that.ringData.materialDiv.forEach(function (e: number) {
+        t = ((e + last) * that.ringData.ringWidth / 10000) - (that.ringData.ringWidth / 2);
+        result.push(t);
+        last += e;
+      });
+
+      return result;
+    }
+    let calc_WA_mm = function (): number {
+      return that.ringData.ringWidth / 4; // TODO: Do real calc !!
+    }
+    let map = function (value: number, low1: number, high1: number, low2: number, high2: number) {
+      return low2 + (high2 - low2) * (value - low1) / (high1 - low1);
+    }
+    let get_sin = function (y: number, maxY: number, factor: number): number {
+      return Math.sin(map(y, 0, maxY, 0, Math.PI * 2 * that.ringData.waveCount)) * factor;
+    }
+    let extrude_shape_xy = function (shape: CVertex[], path: CVertex[], zContour: CVertex[] = that.frontVertices, close: boolean = true, alignY = true) {
+      let V1 = TEMP.Vertex_1;
+      let V2 = TEMP.Vertex_2;
+      let normal = new CVertex(0, 0, 1.0);
+      let vX = new CVertex(1, 0, 0);
+
+      let rows = [], row, finalRow, lastPath = path.length - 1, theta = 0, index = 0, i, j, j_l, v, IP;
+
+      for (i = 1; i <= lastPath; i++) {
+        path[i].subToRef(path[i - 1], V1);
+        CVertex.crossToRef(V1, normal, V2);
+
+        theta = CVertex.angleXY(V2, vX);
+        if (V2.y < 0) theta = -theta;
+
+        row = [];
+        finalRow = [];
+        j_l = shape.length;
+        for (j = 0; j < j_l; j++) {
+          v = CVertex.fromVertex(shape[j]);
+          v.rotateZ(theta);
+          v.add(path[i - 1]);
+
+          row.push(v);
+        }
+
+        j_l = row.length;
+        for (j = 0; j < j_l; j++) {
+          v = row[j];
+          IP = that.interpolateVertex(v.x, zContour, 0);
+
+          if (v.z < IP.z) {
+            let p1: iPoint = {x: zContour[IP.indexVectorA].x, y: zContour[IP.indexVectorA].z};
+            let p2: iPoint = {x: zContour[IP.indexVectorB].x, y: zContour[IP.indexVectorB].z};
+            let p3: iPoint = {x: v.x, y: v.z};
+            let p4: iPoint = {
+              x: j == j_l - 1 ? row[j - 1].x : row[j + 1].x,
+              y: j == j_l - 1 ? row[j - 1].z : row[j + 1].z
+            };
+
+            let pI = calculateIntersection(p1, p2, p3, p4);
+            if (pI != null) {
+              v.x = pI.x;
+              v.z = pI.y;
+            } else
+              continue;
+          } else {
+            if (j == 0 || j == j_l - 1)
+              v.z = IP.z;
+          }
+
+          v.u = that.interpolateVertex(v.x, zContour).uv_u;
+          // Fehler bei Wellenfuge an rechter Ringseite. Die Fuge wurde an den Wellenbergen über den Ringrand hinaus gezeichnet
+          // v.u = this.interpolate(v.x, zContour, IP.indexVectorA).uv_u;
+          v.v = v.y;
+
+          finalRow.push(v);
+        }
+
+        rows.push(finalRow);
+      }
+
+      /*
+      Richtet die Y-Werte am Pfad aus.
+      Die Y-Werte einer Reihe haben alle den selben Wert.
+      */
+
+      if (alignY) {
+        for (i = 0; i < lastPath; i++) {
+          row = rows[i];
+
+          let p1: iPoint = {x: 0, y: path[i].y};
+          let p2: iPoint = {x: 100, y: path[i].y};
+          let p3: iPoint = {x: 0, y: 0};
+          let p4: iPoint = {x: 0, y: 0};
+
+          j_l = row.length;
+          for (j = 0; j < j_l; j++) {
+            p3.x = row[j].x;
+            p3.y = row[j].y;
+            try {
+              if (i == lastPath - 1) {
+                let l = rows[i - 1].length;
+                if (j >= l) {
+                  p4.x = rows[i - 1][l - 1].x;
+                  p4.y = rows[i - 1][l - 1].y;
+                } else {
+                  p4.x = rows[i - 1][j].x
+                  p4.y = rows[i - 1][j].y
+                }
+              } else {
+                let l = rows[i + 1].length;
+                if (j >= l) {
+                  p4.x = rows[i + 1][l - 1].x;
+                  p4.y = rows[i + 1][l - 1].y;
+                } else {
+                  p4.x = rows[i + 1][j].x
+                  p4.y = rows[i + 1][j].y
+                }
+              }
+            } catch (e) {
+              console.log(i, j, rows);
+              throw "er";
+            }
+
+            let pI = calculateIntersection(p1, p2, p3, p4);
+
+            if (pI) {
+              IP = that.interpolateVertex(pI.x, zContour);
+              row[j].x = pI.x;
+              row[j].y = pI.y;
+              if (j == 0 || j == j_l - 1)
+                row[j].z = IP.z;
+            }
+          }
+        }
+      }
+
+      index = 0;
+      for (i = 0; i < rows.length; i++) {
+        row = rows[i];
+        for (j = 0; j < row.length; j++)
+          row[j].i = index++;
+      }
+
+      if (close) {
+        row = [];
+        let row_0 = rows[0];
+        j_l = row_0.length;
+        for (j = 0; j < j_l; j++) {
+          v = CVertex.fromVertex(row_0[j]);
+          v.sub(path[0]);
+          v.add(path[lastPath]);
+          v.v = v.y;
+          v.i = index++;
+          row.push(v);
+        }
+        rows.push(row);
+      }
+
+      return rows;
+    }
+    let computeUV_V = function (vec: CVertex[] | CVertex[][], scale: number) {
+      let calc = function (row: CVertex[]) {
+        try {
+          let i;
+          for (i = 0; i < row.length; i++) {
+            row[i].v = row[i].y * scale;
+          }
+        } catch (e) {
+          console.log(row);
+          throw "error";
+        }
+      };
+
+      if (Array.isArray(vec[0])) {
+        let i;
+        for (i = 0; i < vec.length; i++) {
+          calc(<CVertex[]>vec[i]);
+        }
+      } else {
+        calc(<CVertex[]>vec);
+      }
+    }
+    let outline = function (vec: CVertex[][], ccw: boolean = false, minIndex: number | null = null, maxIndex: number | null = null) {
+      let path: CVertex[] = [], i, i_l = vec.length;
+
+      if (minIndex == null) minIndex = 0;
+      if (maxIndex == null) maxIndex = 0;
+
+      if (ccw) {
+        for (i = 0; i < i_l; i++)
+          path.push(vec[i][vec[i].length - 1 - maxIndex]);
+        for (i = i_l - 1; i >= 0; i--)
+          path.push(vec[i][minIndex]);
+      } else {
+        for (i = 0; i < i_l; i++)
+          path.push(vec[i][minIndex]);
+        for (i = i_l - 1; i >= 0; i--)
+          path.push(vec[i][vec[i].length - 1 - maxIndex]);
+      }
+
+      return path;
+    }
+    let createMeshes = function () {
+      let innerCircumference = that.ringData.ringSize,
+        innerRadius = innerCircumference / Math.PI / 2,
+        thetaExtra = Math.PI * AppComponent.app.data.webglSettings.ringRotationX / 180, // zusätzliche Rotation des Ringes um die X-Achse
+        tesselation = AppComponent.app.state.mobile ? AppComponent.app.data.webglSettings.tesselation[1] : AppComponent.app.data.webglSettings.tesselation[0],
+        tesselation_inc = innerCircumference / tesselation,
+        path = [] as CVertex[],
+        mDiv = mDiv_to_mm(),
+        WA = calc_WA_mm(),
+        vertexArrays: iVertexArray[] = [] as iVertexArray[],
+        divMode = that.ringData.divPreset.substring(0, 1).toLowerCase(),
+        meshData: iMeshData,
+        countFront = 0,
+        countBack = 0;
+
+      for (let i = 0; i <= tesselation; i++)
+        path.push(new CVertex(0, i * tesselation_inc, 0));
+
+      let loopData = [] as any[];
+      loopData.push({vertices: that.frontVertices, type: "front"});
+      loopData.push({vertices: that.backVertices, type: "back"});
+      if (that.stepLeftVertices.length > 0)
+        loopData.push({vertices: that.stepLeftVertices, type: "sl"});
+      if (that.stepRightVertices.length > 0)
+        loopData.push({vertices: that.stepRightVertices, type: "sr"});
+
+      for (let nLoop = 0; nLoop < loopData.length; nLoop++) {
+
+        let vertices = loopData[nLoop].vertices,
+          row: CVertex[],
+          rows: CVertex[][][] = [],
+          tmp: CVertex,
+          A: CVertex,
+          B: CVertex,
+          index: number,
+          IP: iInterpolateResult,
+          lastIP: iInterpolateResult | null = null,
+          x: number,
+          cx: number,
+          vecIndex: number;
+
+        switch (loopData[nLoop].type) {
+          case "front":
+          case "back": {
+            for (let i = 0; i < mDiv.length; i++)
+              rows.push([] as CVertex[][]);
+            break;
+          }
+          case "sl":
+          case "sr": {
+            rows.push([] as CVertex[][]);
+            break;
+          }
+        }
+
+        for (let i = 1; i < path.length; i++) // Pfad extrudieren
+        {
+          vecIndex = 0;
+          lastIP = null;
+
+          for (let j = 0; j < rows.length; j++) {
+            row = [];
+
+            if (lastIP != null) {
+              tmp = new CVertex(lastIP.x, 0, lastIP.z);
+              tmp.add(path[i - 1]);
+              tmp.u = lastIP.uv_u;
+              tmp.i = j;
+              row.push(tmp);
+            }
+
+            if (j == rows.length - 1)
+              x = vertices[vertices.length - 1].x;
+            else
+              x = mDiv[j] + get_sin(path[i - 1].y, that.ringData.ringSize, WA);
+
+            if (x < vertices[0].x)
+              x = vertices[0].x;
+            else if (x > vertices[vertices.length - 1].x)
+              x = vertices[vertices.length - 1].x;
+
+            IP = that.interpolateVertex(x, vertices, lastIP ? lastIP.indexVectorA : 0);
+            lastIP = IP;
+
+            A = vertices[IP.indexVectorA];
+            B = vertices[IP.indexVectorB];
+            cx = (B.x - A.x) / 4;
+
+            if (x - A.x < cx)
+              IP.indexVectorA--;
+            else if (B.x - x < cx)
+              IP.indexVectorB++;
+
+            if (j == rows.length - 1) {
+              for (let k = vecIndex; k < vertices.length; k++) {
+                tmp = CVertex.fromVertex(vertices[k]);
+                tmp.add(path[i - 1]);
+                tmp.u = vertices[k].u;
+                tmp.i = j;
+                row.push(tmp);
+              }
+            } else {
+              for (let k = vecIndex; k <= IP.indexVectorA; k++) {
+                tmp = CVertex.fromVertex(vertices[k]);
+                tmp.add(path[i - 1]);
+                tmp.u = vertices[k].u;
+                tmp.i = j;
+                row.push(tmp);
+              }
+
+              tmp = new CVertex(IP.x, 0, IP.z);
+              tmp.add(path[i - 1]);
+              tmp.u = IP.uv_u;
+              tmp.i = j;
+              row.push(tmp);
+            }
+
+            rows[j].push(row);
+
+            vecIndex = IP.indexVectorB;
+          }
+        }
+        for (let i = 0; i < rows.length; i++) // die 1. Reihe aller Meshes an das Ende kopieren...
+        {
+          row = [];
+          rows[i][0].forEach(function (e) {
+            tmp = CVertex.fromVertex(e);
+            tmp.y = path[path.length - 1].y;
+            tmp.u = e.u;
+            row.push(tmp);
+          })
+          rows[i].push(row);
+        }
+
+        // Vertex-Indices zuweisen
+        let frontIndex = 0,
+          backIndex = 0,
+          get_index = function (type: string) {
+            switch (type) {
+              case "front":
+                return frontIndex++;
+              case "back":
+                return backIndex++;
+              case "sl":
+                return 0;
+              case "sr":
+                return mDiv.length - 1;
+            }
+
+            return -1;
+          }
+
+        for (let i = 0; i < rows.length; i++) {
+          index = 0;
+          for (let j = 0; j < rows[i].length; j++) {
+            row = rows[i][j];
+            for (let k = 0, k_l = rows[i][j].length; k < k_l; k++) {
+              row[k].i = index++;
+            }
+          }
+
+          vertexArrays.push({
+            vertex2DArray: rows[i],
+            type: loopData[nLoop].type,
+            index: get_index(loopData[nLoop].type)
+          });
+        }
+
+        let mode = that.ringData.divPreset.substring(0, 1).toLowerCase();
+
+        if (mode == "s") // Segmentierter Ring: Teile das Frontmesh horizontal in 2 gleiche Teile um die Oberflächen zu separieren
+        {
+          let front = vertexArrays.find(function (e) {
+            return e.type == "front";
+          })
+
+          if (front) // in diesem Modus gibt es nur 1 Frontmesh
+          {
+            let rows = front.vertex2DArray;
+            let rowsBottom = rows.slice(0, rows.length / 2);
+            let rowsTop = rows.slice(rows.length / 2);
+            let row0 = rowsTop[0], rowNew = [];
+
+            for (let i = 0; i < row0.length; i++) {
+              rowNew.push(CVertex.fromVertex(row0[i]));
+            }
+            rowsBottom.push(rowNew);
+
+            front.vertex2DArray = rowsBottom;
+
+            let index = 0, row;
+            for (let i = 0, i_l = rowsTop.length; i < i_l; i++) {
+              row = rowsTop[i];
+              for (let j = 0, j_l = row.length; j < j_l; j++) {
+                row[j].i = index++;
+              }
+            }
+            vertexArrays.push({
+              vertex2DArray: rowsTop,
+              type: "front",
+              index: 1,
+            });
+          }
+        }
+      }
+
+      // generiere Trennfugen
+      let shape: CVertex[] = [],
+        gm = that.ringData.gapMode,
+        gw = that.ringData.gapWidth,
+        gd = that.ringData.gapDepth;
+      if (gd <= 1.0) gd = gw * gd;
+
+      switch (gm) {
+        case 1: // eckige Fuge
+          shape.push(new CVertex(-gw / 2, 0, 0));
+          shape.push(new CVertex(-gw / 2 + 10, 0, gd / 2));
+          shape.push(new CVertex(-gw / 2 + 20, 0, gd));
+          shape.push(new CVertex(-gw / 2 + 20, 0, gd));
+          shape.push(new CVertex(0, 0, gd));
+          shape.push(new CVertex(gw / 2 - 20, 0, gd));
+          shape.push(new CVertex(gw / 2 - 20, 0, gd));
+          shape.push(new CVertex(gw / 2 - 10, 0, gd / 2));
+          shape.push(new CVertex(gw / 2, 0, 0));
+
+          shape[0].u = 0;
+          break;
+        case 2: // V-Fuge
+          shape.push(new CVertex(-gw / 2, 0, 0));
+          shape.push(new CVertex(-0, 0, gd));
+          shape.push(new CVertex(-0, 0, gd));
+          shape.push(new CVertex(gw / 2, 0, 0));
+          break;
+        case 3: // U-Fuge
+          shape.push(new CVertex(-0.5, 0.0, 0.0).scale(gw));
+          shape.push(new CVertex(-0.460696, 0.0, 0.194589).scale(gw));
+          shape.push(new CVertex(-0.353523, 0.0, 0.353523).scale(gw));
+          shape.push(new CVertex(-0.194589, 0.0, 0.460696).scale(gw));
+          shape.push(new CVertex(0.0, 0.0, 0.5).scale(gw));
+          shape.push(new CVertex(0.194589, 0.0, 0.460696).scale(gw));
+          shape.push(new CVertex(0.353523, 0.0, 0.353523).scale(gw));
+          shape.push(new CVertex(0.460696, 0.0, 0.194589).scale(gw));
+          shape.push(new CVertex(0.5, 0.0, 0.0).scale(gw));
+          break;
+      }
+
+      let adaptLeftMesh = function (rowsFront: CVertex[][], rowsGap: CVertex[][]) {
+        if (!rowsFront.length || !rowsGap.length) {
+          throw "error: no data";
+        }
+        let i, i_l = rowsFront.length, j, j_l, B, index, rows, row;
+
+        for (i = 0; i < i_l; i++) {
+          B = CVertex.fromVertex(rowsGap[i][0]);
+          j_l = rowsFront[i].length;
+          for (j = 0; j < j_l - 1; j++) {
+            if (rowsFront[i][j + 1].x > B.x) break;
+          }
+          rows = rowsFront[i].slice(0, j + 1);
+          rows.push(B);
+          rowsFront[i] = rows;
+        }
+
+        // indices neu erstellen
+        index = 0;
+        i_l = rowsFront.length;
+        for (i = 0; i < i_l; i++) {
+          row = rowsFront[i];
+          j_l = row.length;
+          for (j = 0; j < j_l; j++)
+            row[j].i = index++;
+        }
+      }
+
+      let adaptRightMesh = function (rowsFront: CVertex[][], rowsGap: CVertex[][]) {
+        let i, i_l = rowsFront.length, j, j_l, index, B, row;
+
+        for (i = 0; i < i_l; i++) {
+          B = CVertex.fromVertex(rowsGap[i][rowsGap[i].length - 1]);
+          row = rowsFront[i];
+          j_l = row.length;
+          for (j = 0; j < j_l - 1; j++) {
+            if (row[j].x > B.x) break;
+            if (row[j + 1].x - (row[j + 1].x - row[j].x) / 4 > B.x) break;
+          }
+
+          row = [B].concat(row.slice(j + 1));
+          rowsFront[i] = row;
+        }
+
+        // indices neu erstellen
+        index = 0;
+        i_l = rowsFront.length;
+        for (i = 0; i < i_l; i++) {
+          row = rowsFront[i];
+          j_l = row.length;
+          for (j = 0; j < j_l; j++)
+            row[j].i = index++;
+        }
+      }
+
+      if (mode != "s" && mode != "h" && that.ringData.gapMode > 0 && that.ringData.gapMode < 4) {
+        let front: iVertexArray[] = [];
+
+        vertexArrays.forEach(function (e) {
+          if (e.type == "front")
+            front.push(e);
+        })
+
+        if (front.length > 1) {
+          let path, rows, rowsFront, rowsGap, gapIndex;
+
+          for (gapIndex = 0; gapIndex < front.length - 1; gapIndex++) {
+
+            console.log("gapIndex: ", gapIndex, front.length);
+            if (!that.ringData.gapEnabled[gapIndex]) {
+              continue;
+            }
+
+            path = [];
+            rowsFront = front[gapIndex].vertex2DArray;
+
+            for (let i = 0, i_l = rowsFront.length; i < i_l; i++) {
+              let t = CVertex.fromVertex(rowsFront[i][rowsFront[i].length - 1]);
+              path.push(t);
+            }
+
+            rowsGap = extrude_shape_xy(shape, path);
+
+            vertexArrays.push({
+              vertex2DArray: rowsGap,
+              type: "gap",
+              index: gapIndex,
+            });
+
+            /*
+            Anpassung front zu gap Mesh
+            für jede Reihe:
+                - suche im Frontmesh der ersten Vertex, der größer in X ist, als der erste Vertex im Gap-Mesh
+                - verwerfe alle Vertices im Frontmesh bis zum Ende der Reihe
+                - setze den letzten Vertex dieser Reihe auf die Koordinaten des ersten Vertex im Gap-Mesh
+                - es wird dadurch ein eigenes "outline" vom GapMesh benötigt, (evtl. auch 2 Wenn unterschiedliche Materialien)
+                - keine Alpha-Map für die Fugen
+             */
+
+            adaptLeftMesh(front[gapIndex].vertex2DArray, rowsGap);
+            adaptRightMesh(front[gapIndex + 1].vertex2DArray, rowsGap);
+
+            // I UV-u der Rechteckfuge anpassen
+            if (gm == 1) { // geht nur bei breiten Materialabständen; bei schmalen Abständen wird die Albedo teilweise überschrieben
+              rows = rowsGap;
+              let p1, p2;
+              for (let i = 0, i_l = rows.length; i < i_l; i++) {
+                p1 = rows[i][0];
+                p2 = rows[i][1];
+                // p1.u = p2.u - (p1.distance(p2) / that.frontVerticeLength);
+                p1.u = p2.u - (p1.distance(p2) / that.maxVerticeLength);
+                p1 = rows[i][rows[i].length - 1];
+                p2 = rows[i][rows[i].length - 2];
+                // p1.u = p2.u + (p1.distance(p2) / that.frontVerticeLength);
+                p1.u = p2.u + (p1.distance(p2) / that.maxVerticeLength);
+              }
+            }
+          }
+        }
+      }
+
+      // generiere Designfugen
+      if (that.ringData.gapDiv.length > 1) {
+        let gapDivPos = [] as number[], last = 0, t;
+        for (let i = 0, i_l = that.ringData.gapDiv.length - 1; i < i_l; i++) {
+          t = that.ringData.gapDiv[i];
+          gapDivPos.push((t + last) * that.ringData.ringWidth / 10000 - that.ringData.ringWidth / 2);
+          last += t;
+        }
+
+        let row, rows, rowsGap, fPath: CVertex[], x:number;
+
+        gapDivPos.forEach(function (xPos) {
+          vertexArrays.forEach(function (e) {
+            let curFront = null;
+            if (e.type == "front" && e.vertex2DArray[0][0].x < xPos && e.vertex2DArray[0][e.vertex2DArray[0].length - 1].x > xPos)
+              curFront = e;
+
+            if (curFront) {
+              rows = curFront.vertex2DArray;
+
+              fPath = [];
+              for (let i = 0, i_l = rows.length; i < i_l; i++) {
+                t = new CVertex(xPos + get_sin(path[i].y, that.ringData.ringSize, WA), rows[i][0].y, 0);
+                t.z = that.interpolateVertex(t.x, that.frontVertices).z;
+                fPath.push(t);
+              }
+
+              rowsGap = extrude_shape_xy(shape, fPath);
+
+              vertexArrays.push({
+                vertex2DArray: rowsGap,
+                type: "gap",
+                index: -1,
+              });
+
+              // Front neu erstellen
+              let rowsFront = curFront.vertex2DArray, rowsFrontLeft = [], rowsFrontRight = [], newRow;
+
+              for (let i = 0, i_l = rowsFront.length; i < i_l; i++) {
+                row = rowsFront[i];
+
+                x = fPath[i].x;
+                let j, j_l = row.length;
+                for (j = 0; j < j_l - 1; j++) {
+                  if (row[j].x > x) break;
+                }
+
+                newRow = row.slice(0, j);
+                rowsFrontLeft.push(newRow);
+
+                newRow = row.slice(j);
+                rowsFrontRight.push(newRow);
+              }
+
+              adaptLeftMesh(rowsFrontLeft, rowsGap);
+              adaptRightMesh(rowsFrontRight, rowsGap);
+
+              // indices neu erstellen: links
+              let index = 0;
+
+              for (let i = 0, i_l = rowsFrontLeft.length; i < i_l; i++) {
+                row = rowsFrontLeft[i];
+
+                for (let j = 0, j_l = row.length; j < j_l; j++)
+                  row[j].i = index++;
+              }
+              // indices neu erstellen: rechts
+              index = 0;
+
+              for (let i = 0, i_l = rowsFrontRight.length; i < i_l; i++) {
+                row = rowsFrontRight[i];
+
+                for (let j = 0, j_l = row.length; j < j_l; j++)
+                  row[j].i = index++;
+              }
+
+              curFront.vertex2DArray = rowsFrontLeft;
+
+              vertexArrays.push({
+                vertex2DArray: rowsFrontRight,
+                type: curFront.type,
+                index: curFront.index,
+              });
+
+              // I UV-u der Rechteckfuge anpassen
+              if (gm == 1) { // geht nur bei breiten Materialabständen; bei schmalen Abständen wird die Albedo teilweise überschrieben
+                rows = rowsGap;
+
+                let p1, p2;
+                for (let i = 0, i_l = rows.length; i < i_l; i++) {
+                  p1 = rows[i][0];
+                  p2 = rows[i][1];
+                  // p1.u = p2.u - (p1.distance(p2) / that.frontVerticeLength) / 2;
+                  p1.u = p2.u - (p1.distance(p2) / that.maxVerticeLength) / 2;
+                  p1 = rows[i][rows[i].length - 1];
+                  p2 = rows[i][rows[i].length - 2];
+                  p1.u = p2.u + (p1.distance(p2) / that.frontVerticeLength) / 2;
+                  // p1.u = p2.u + (p1.distance(p2) / that.maxVerticeLength) / 2;
+                }
+              }
+            }
+          })
+        })
+      }
+
+
+
+      vertexArrays.forEach(e => {
+        if (e.vertex2DArray && e.vertex2DArray.length) {
+
+          let mesh = new CMesh();
+          mesh.rows = e.vertex2DArray;
+          computeUV_V(mesh.rows, 1.0 / innerCircumference);
+
+          if (e.triangulate_isFrontFace !== undefined && e.triangulate_useVectorDist !== undefined)
+            mesh.triangulate(e.triangulate_isFrontFace, e.triangulate_useVectorDist);
+          else {
+            if (e.type == "front" || e.type == "sl" || e.type == "sr")
+              mesh.triangulate(true, true);
+            else if (e.type == "gap")
+              mesh.triangulate(true, false);
+            else if (e.type == "helper")
+              mesh.triangulate(true, true);
+            else if (e.type.includes("Bevel"))
+              mesh.triangulate(true, false);
+              // else if (e.type == "channel")
+            //     mesh.triangulate(true, false);
+            else
+              mesh.triangulate(false, true);
+          }
+
+          if (!e.no_rotate === true)
+            mesh.rotateRows(innerRadius, thetaExtra);
+
+          mesh.computeWeightedAngleNormals(divMode != "s" && e.close_normals !== false);
+
+          meshData = mesh.serialize();
+          meshData.index = e.index;
+          meshData.type = e.type;
+          if (e.type == "gap") {
+            if (that.ringData.gapMode == 1) // eckig?
+              meshData.outline = outline(e.vertex2DArray, false, 1, 1);
+            else
+              meshData.outline = outline(e.vertex2DArray);
+          } else if (divMode == "h" && e.type == "back") {
+            meshData.outline = outline(e.vertex2DArray, false, that.middleVertexBack[0], that.middleVertexBack[1]);
+          } else if (!e.no_outline)
+            meshData.outline = outline(e.vertex2DArray);
+
+          meshData.rows = mesh.rows;
+          meshData.normals = mesh.normals;
+          that.meshData.push(meshData);
+
+          if (e.type == "front") countFront++;
+          else if (e.type == "back") countBack++;
+        }
+      })
+
+      if (divMode != "s") // Segmente angleichen
+      {
+        let equal_normals = function (typeA: string, indexA: number, typeB: string, indexB: number) {
+          let meshA = null;
+
+          for (let i = 0; i < that.meshData.length; i++) {
+            if (that.meshData[i].type == typeA && that.meshData[i].index == indexA) meshA = that.meshData[i];
+            // kein break...es soll das letzte gefunden werden, was den Suchkriterien entspricht -> linkes Mesh seitlich der Fuge
+          }
+
+          let meshB = that.meshData.find(function (e) {
+            return e.type == typeB && e.index == indexB;
+          });
+
+          if (meshA && meshB) {
+            CMesh.equalNormals(meshA, meshB);
+            return true;
+          }
+
+          return false;
+        }
+
+        let index = 0;
+        while (1) {
+          if (!equal_normals("back", index, "back", index + 1))
+            break;
+          index++;
+        }
+      }
+
+      if (divMode == "s") // Segmentierter Ring: Normalen Mat1-Mat2 horizontal angleichen
+      {
+        let frontMeshes: iMeshData[] = [];
+        that.meshData.forEach(function (e) {
+          if (e.type == "front")
+            frontMeshes.push(e);
+        })
+
+        if (frontMeshes.length == 2) {
+          let A = frontMeshes[0];
+          let B = frontMeshes[1];
+          let normalsA = A.normals;
+          let normalsB = B.normals;
+          let iA, iB, nAx, nBx;
+
+          let loop = [
+            {
+              // @ts-ignore
+              rowA: A.rows[0],
+              // @ts-ignore
+              rowB: B.rows[B.rows.length - 1],
+            },
+            {
+              // @ts-ignore
+              rowB: B.rows[0],
+              // @ts-ignore
+              rowA: A.rows[A.rows.length - 1],
+            },
+          ];
+
+          loop.forEach(function (e) {
+            let i_l = e.rowA.length < e.rowB.length ? e.rowA.length : e.rowB.length;
+
+            for (let i = 0; i < i_l; i++) {
+              iA = e.rowA[i].i;
+              iB = e.rowB[i].i;
+
+              nAx = iA * 3;
+              nBx = iB * 3;
+              normalsA[nAx] = (normalsA[nAx] + normalsB[nBx]) * 0.5;
+              normalsA[nAx + 1] = (normalsA[nAx + 1] + normalsB[nBx + 1]) * 0.5;
+              normalsA[nAx + 2] = (normalsA[nAx + 2] + normalsB[nBx + 2]) * 0.5;
+              normalsB[nBx] = normalsA[nAx];
+              normalsB[nBx + 1] = normalsA[nAx + 1];
+              normalsB[nBx + 2] = normalsA[nAx + 2];
+            }
+          });
+        }
+      }
+
+      // create babylon meshes
+      // pivot
+      that.pivot.rotation.y = AppComponent.app.data.webglSettings.ringRotationY[that.ringData.index] * Math.PI / 180.0;
+      that.pivot.position.x = that.position.x;
+      that.pivot.position.z = that.position.z;// + this.posZOffset;
+      that.pivot.position.y = (that.ringData.ringSize / Math.PI / 2 + that.ringData.ringHeight) / 1000;
+
+      // shadow
+      let radius = that.ringData.ringSize / Math.PI / 2 + that.ringData.ringHeight;
+      let plane = CreatePlane("shadow", {
+        width: (that.ringData.ringWidth * 5.5) / 1000,
+        height: (radius * 4) / 1000
+      }, webgl.scene);
+      that.meshes.push(plane);
+      plane.position.y = -that.pivot.position.y;
+      plane.rotation.x = 90 * Math.PI / 180.0;
+      plane.material = webgl.matShadow;
+      plane.parent = that.pivot;
+
+      // meshes
+      let vertexData = new VertexData();
+      let frontMeshes = [];
+      let gapMeshes = [];
+
+      for (let i = 0; i < that.meshData.length; i++) {
+        let M = that.meshData[i];
+        if (1) // Debug: Meshfilter...
+        {
+          // if (!M.type.includes("frontChannel") && !M.type.includes("frontCut") && !M.type.includes("helper")) continue;
+          // if (!M.type.startsWith("bevel") && M.type != "gap") continue;
+          // if (!M.type.includes("Bevel") && M.type != "gap") continue;
+          // if (!M.type.includes("sideBevel") && M.type != "helper") continue;
+          // if (!M.type.includes("sideChannel") && M.type !== "back") continue;
+          // if (!M.type.includes("sideChannel") && !M.type.includes("cut") && M.type !== "helper") continue;
+          // if (M.type != "bevel" && M.type != "helper") continue;
+          // if (M.type != "bevel" && M.type != "helper" && M.type != "gap") continue;
+          // if (M.type != "helper" && M.type != "gap") continue;
+          // if (M.type != "bevel") continue;
+          // if (M.type != "helper") continue;
+          // if (M.type != "front" || M.type != "helper") continue;
+          // if (M.type != "back") continue;
+          // if (M.type == "back") continue;
+          // if (M.type != "gap" && M.type != "front") continue;
+          // if (M.type != "helper") continue;
+          // if (!M.type.includes("frontCut") && M.type !== "helper") continue;
+
+          // if (M.type == "front") continue;
+
+          // console.log(M.type);
+        }
+
+        let name = "";
+        if (M.type == "front") name = "f" + M.index;
+        else if (M.type == "back") name = "b" + M.index;
+        // else if (M.type == "bevel") name = "bevel" + M.index;
+        else name = M.type;
+
+        let mesh = new Mesh(name, webgl.scene);
+        mesh.setEnabled(true);
+        that.meshes.push(mesh);
+
+        // Die Geometriedaten werden mit dem Faktor 1000 erzeugt: -> runterskalieren...
+        for (let j = 0; j < M.positions.length; j++)
+          M.positions[j] *= 0.001;
+
+        vertexData.positions = M.positions;
+        vertexData.indices = M.indices;
+
+        if (!M.normals) {
+          let normals: number[] = [];
+          VertexData.ComputeNormals(M.positions, M.indices, normals);
+          vertexData.normals = normals;
+        } else
+          vertexData.normals = M.normals;
+
+        /*
+        Die Texturen sind in doppelter Größe angelegt.
+        Die Albedo Textur liegt links. Die "ursprüngliche" Textur liegt mittig darin und wird
+        nach oben und nach unten vervielfältigt.
+        Ein UV Wert mit 0:0 wird dann zu 0:25 und ein UV Wert it 1:1 wird zu 0.5:0.75
+        */
+        let uv = M.uvs, j_l = uv.length, offset = 0.0;
+        if (M.type == "back" || M.type.includes("sideChannel"))
+          offset = 0.5;
+
+        for (let j = 0; j < j_l; j += 2) {
+          // optimierte map() function
+          uv[j] = uv[j] * 0.5 + offset;
+          uv[j + 1] = 0.25 + 0.5 * uv[j + 1];
+        }
+
+        vertexData.uvs = M.uvs;
+        vertexData.applyToMesh(mesh, true);
+
+        if (M.type == "front") frontMeshes.push(mesh);
+        else if (M.type == "gap") gapMeshes.push(mesh);
+        mesh.parent = that.pivot;
+      }
+
+      return that.meshes.length > 0;
+    }
+    let calcPivotData = function () {
+      let v1 = TEMP.Vertex_1;
+      let v2 = TEMP.Vertex_2;
+      let v3 = TEMP.Vertex_3;
+      let v4 = TEMP.Vertex_4;
+      let v5 = TEMP.Vertex_5;
+      let a = that.ringData.ringWidth / 1000;
+      let b = (that.ringData.ringSize / Math.PI / 2 + that.ringData.ringHeight) / 1000;
+      that.cameraData.radius = b;
+      let rot = AppComponent.app.data.webglSettings.ringRotationY[that.ringData.index] * Math.PI / 180.0; // deg -> rad
+
+      let camPosZ = -b * 5;
+      // => Kameraposition für die Screenshots berechnen
+      let left = false;
+
+      let rotCamera = -Math.PI / 6;
+      if (left) rotCamera = -rotCamera;
+
+      v1.assign(0, 0, 0); // Pivot Position (z=0)
+      v2.assign(0, 0, 0); // Kamera Ziel (z=Mitte Ring)
+      v3.assign(0, 0, 0); // Hilfspunkt
+      v4.assign(0, 0, 0); // Kameraposition
+      v5.assign(0, 0, 0);
+
+      if (rot <= 0.0) {
+        v3.x = -a / 2;
+        v3.z = b;
+
+        v4.z = camPosZ;
+        v4.rotateY(rotCamera, v1);
+
+        v1.rotateY(rot, v3);
+        v4.rotateY(rot, v3);
+
+        v1.x -= v3.x;
+        v1.x += 0.2;
+        v1.z += AppComponent.app.data.webglSettings.ringOffsetZ[that.ringData.index]; // Pivot
+        v4.x -= v3.x;
+        v4.x += 0.2;
+        v4.z += AppComponent.app.data.webglSettings.ringOffsetZ[that.ringData.index]; // Pivot
+
+        v5.x = a;
+      } else {
+        v3.x = a / 2;
+        v3.z = b;
+
+        v4.z = camPosZ;
+        v4.rotateY(rotCamera, v1);
+
+        v1.rotateY(rot, v3);
+        v4.rotateY(rot, v3);
+
+        v1.x -= v3.x;
+        v1.x -= 0.2;
+        v1.z += AppComponent.app.data.webglSettings.ringOffsetZ[that.ringData.index]; // Pivot
+        v4.x -= v3.x;
+        v4.x -= 0.2;
+        v4.z += AppComponent.app.data.webglSettings.ringOffsetZ[that.ringData.index]; // Pivot
+
+        v5.x = -a;
+      }
+
+      v5.z = -b;
+      v5.rotateY(rot, v1);
+
+      // this.position = v1; => funktioniert nicht in JS !!
+      v1.toRef(that.position);
+
+      v2 = v1;
+      v2.y = b; // Ringmittelpunkt -> Kameratarget
+      v2.toRef(that.cameraData.target);
+
+      v4.y = b * 3;
+      v4.z += AppComponent.app.data.webglSettings.ringOffsetZ[that.ringData.index]; // Kameraposition für Screenshot
+      v4.toRef(that.cameraData.position);
+
+      that.cameraData.distance_x = v5.x;
+    }
+
+    let createTextures = function (): boolean {
+      if (that.meshes.length == 0 || that.meshData.length == 0)
+        return false;
+
+      let divMode = that.ringData.divPreset.substring(0, 1).toLowerCase();
+      let textureSize = WebglComponent.WEBGL.maxTextureSize,
+        textureSize_half = textureSize / 2,
+        textureSizeAlpha = WebglComponent.WEBGL.maxAlphaTextureSize,
+        textureSizeAlpha_half = textureSizeAlpha / 2,
+        vec: CVertex[],
+        i, i_l,
+        u, v;
+
+      // Farben ermitteln
+      let colors: string[] = [];
+      that.ringData.material.forEach(function (e: number) {
+        let mat = AppComponent.app.data.material.find(function (e2) {
+          return e2.id == e;
+        })
+        if (mat)
+          colors.push(mat.color3d);
+        else
+          colors.push('#0000ff');
+      })
+
+      let ctx = that.textures.albedo.getContext();
+      ctx.save();
+
+      ctx.translate(0, textureSize_half);
+      // ctx.lineWidth = 1;
+      ctx.lineWidth = 0.1;
+
+      if (divMode != "s" && divMode != "h") {
+        that.meshData.forEach(function (e) {
+          if (e.outline && e.type != "gap" && !e.type.includes("Bevel") && !e.type.includes("hannel")) {
+            vec = e.outline;
+            ctx.fillStyle = colors[e.index];
+            ctx.strokeStyle = colors[e.index];
+
+            ctx.beginPath();
+            ctx.moveTo(Math.round(vec[0].u * textureSize), Math.round(vec[0].v * textureSize));
+
+            i_l = vec.length;
+            for (i = 1; i < i_l; i++) {
+              u = Math.round(vec[i].u * textureSize);
+              v = Math.round(vec[i].v * textureSize);
+              ctx.lineTo(u, v);
+            }
+
+            ctx.closePath();
+            ctx.fill();
+          }
+        })
+
+        // Fugen mit Weißgold extra zeichnen
+        let mat = AppComponent.app.data.material.find(function (e2) {
+          return e2.id == 1;
+        })
+        let color = mat ? mat.color3d : '#0000ff';
+        let materialAr = that.ringData.material;
+
+        // let that = this;
+        that.meshData.forEach(function (e) {
+          if (e.outline && e.type == "gap" && e.index != -1) {
+            if (materialAr[e.index] == 1 || materialAr[e.index + 1] == 1) {
+              vec = e.outline;
+              ctx.fillStyle = color;
+              ctx.strokeStyle = color;
+
+              ctx.beginPath();
+              // ctx.moveTo(Math.round(vec[0].u * textureSize), Math.round(vec[0].v * textureSize));
+
+              i_l = vec.length;
+              for (i = 0; i < i_l; i++) {
+                u = Math.round(vec[i].u * textureSize);
+                v = Math.round(vec[i].v * textureSize);
+                if (i == 0)
+                  ctx.moveTo(u, v);
+                else
+                  ctx.lineTo(u, v);
+              }
+
+              ctx.closePath();
+              ctx.fill();
+            }
+          }
+        })
+      } else if (divMode == "s") {
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(textureSize + 1, 0);
+        ctx.lineTo(textureSize + 1, textureSize / 2 + 1);
+        ctx.lineTo(0, textureSize / 2 + 1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = colors[1];
+        ctx.beginPath();
+        ctx.moveTo(0, textureSize / 2 + 1);
+        ctx.lineTo(textureSize + 1, textureSize / 2 + 1);
+        ctx.lineTo(textureSize + 1, textureSize + 1);
+        ctx.lineTo(0, textureSize + 1);
+        ctx.closePath();
+        ctx.fill();
+      } else if (divMode == "h") {
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(textureSize + 1, 0);
+        ctx.lineTo(textureSize + 1, textureSize + 1);
+        ctx.lineTo(0, textureSize + 1);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.restore();
+
+      // Kopien der Texturdaten nach oben und unten anfertigen
+      let imageData = ctx.getImageData(0, textureSize_half, textureSize, textureSize_half);
+      ctx.putImageData(imageData, 0, textureSize + textureSize_half);
+      imageData = ctx.getImageData(0, textureSize, textureSize, textureSize_half);
+      ctx.putImageData(imageData, 0, 0);
+
+      if (divMode != "h") {
+        // Kopie nach rechts für den Innenring
+        imageData = ctx.getImageData(0, 0, textureSize, textureSize * 2);
+        ctx.putImageData(imageData, textureSize, 0);
+      } else {
+        // mit Frontmaterial füllen
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.moveTo(textureSize, 0);
+        ctx.lineTo(textureSize * 2, 0);
+        ctx.lineTo(textureSize * 2, textureSize * 2);
+        ctx.lineTo(textureSize, textureSize * 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // "outline" mit Backmaterial füllen
+        let md = that.meshData.find(function (e) {
+          return e.type == "back";
+        });
+
+        if (1 && md) {
+          vec = md.outline as CVertex[];
+          ctx.fillStyle = colors[1];
+
+          ctx.beginPath();
+          ctx.moveTo(Math.round(vec[0].u * textureSize) + textureSize, Math.round(vec[0].v * textureSize) + textureSize_half);
+
+          i_l = vec.length;
+          for (i = 1; i < i_l; i++) {
+            u = Math.round(vec[i].u * textureSize) + textureSize;
+            v = Math.round(vec[i].v * textureSize) + textureSize_half;
+            ctx.lineTo(u, v);
+          }
+
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Kopien der Texturdaten nach oben und unten anfertigen
+        let imageData = ctx.getImageData(textureSize, textureSize_half, textureSize, textureSize_half);
+        ctx.putImageData(imageData, textureSize, textureSize + textureSize_half);
+        imageData = ctx.getImageData(textureSize, textureSize, textureSize, textureSize_half);
+        ctx.putImageData(imageData, textureSize, 0);
+      }
+
+      if (1 && that.textures.roughnessEngraving) // Gravur: NEU: Nicht als Bump-Map, sondern als metallicRoughness Textur
+      {
+        let ctxEngraving = that.textures.roughnessEngraving.getContext();
+        ctxEngraving.save();
+        // ctxEngraving.lineWidth = 0.1;
+        ctxEngraving.strokeStyle = "#0ff";
+        ctxEngraving.fillStyle = ctxEngraving.strokeStyle
+
+        ctxEngraving.fillRect(textureSize, 0, textureSize, textureSize * 2);
+
+        ctxEngraving.strokeStyle = "#00ff80";
+        ctxEngraving.fillStyle = ctxEngraving.strokeStyle;
+
+        ctxEngraving.translate(textureSize_half * 3, textureSize);
+        ctxEngraving.rotate(-Math.PI / 2.0);
+
+        let xPos = 0;
+
+        // @ts-ignore
+        let cy = that.maxVerticeLength * textureSize / that.ringData.ringSize;
+        let scaleHeight = textureSize / cy;
+        ctxEngraving.scale(1.0, scaleHeight);
+
+        // @ts-ignore
+        let fs = 1000 * textureSize / that.maxVerticeLength / scaleHeight; // 1mm
+
+        if (that.ringData.engraving.length > 0) {
+          let fsEgt = fs;
+          let t = that.ringData.ringWidth / 2 - 0.5;
+          if (t > 2500) fsEgt *= 2.2;
+          else if (t < 1500) fsEgt *= 1.5;
+          else fsEgt *= 2.0;
+
+          ctxEngraving.font = fsEgt + 'px "engraving-' + that.ringData.engravingFont + '"';
+          let egt = decodeURI(that.ringData.engraving);
+          let sizeEGT = ctxEngraving.measureText(egt);
+
+          xPos = -sizeEGT.width / 2;
+          // @ts-ignore
+          ctxEngraving.fillText(egt, xPos, (sizeEGT.actualBoundingBoxAscent - sizeEGT.actualBoundingBoxDescent) / 2);
+        }
+
+        // Punzierung
+        let divMode = that.ringData.divPreset.substring(0, 1).toLowerCase();
+        let n = that.ringData.materialDiv.length;
+        if (divMode == "h" || divMode == "s") n = 2;
+        let a = [], textPunzierung, m;
+        let finenessAr = that.ringData.fineness;
+        let materialAr = that.ringData.material;
+        for (let i = 0; i < n; i++) {
+          m = AppComponent.app.data.material[materialAr[i]];
+          if (m) {
+            textPunzierung = m.symbol + finenessAr[i];
+            if (a.indexOf(textPunzierung) === -1) a.push(textPunzierung);
+          }
+        }
+        textPunzierung = "";
+        for (let i = 0; i < a.length; i++) {
+          if (i > 0)
+            textPunzierung += "/";
+          textPunzierung += a[i];
+        }
+
+        textPunzierung += "  ";
+
+        fs *= 0.8;
+        ctxEngraving.font = fs + 'px Arial';
+        // c.font = (fs * 0.8) + 'px Arial';
+        let sizePunzierung = ctxEngraving.measureText(textPunzierung);
+
+        if (xPos == 0)
+          xPos = -sizePunzierung.width / 2;
+        else
+          xPos -= sizePunzierung.width + (fs * 2);
+        // @ts-ignore
+        ctxEngraving.fillText(textPunzierung, xPos, (sizePunzierung.fontBoundingBoxAscent - sizePunzierung.fontBoundingBoxDescent) / 2);
+        ctxEngraving.restore();
+        that.textures.roughnessEngraving.update(false);
+
+        let link = document.getElementById('download_texture_roughnessMetallic');
+        if (link) {
+          link.setAttribute('download', 'albedo.png');
+          link.setAttribute('href', ctxEngraving.canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+        }
+      }
+      //else // Gravur: NEU: Nicht als Bump-Map, sondern in die Albedo geschrieben
+      /*
+            {
+              ctx.save();
+              ctx.translate(textureSize_half * 3, textureSize);
+              ctx.rotate(-Math.PI / 2.0);
+              ctx.strokeStyle = AppComponent.app.data.engraving.color;
+              ctx.fillStyle = AppComponent.app.data.engraving.color;
+
+              let xPos = 0;
+
+              // @ts-ignore
+              let cy = this.GL.profile.maxVerticeLength * textureSize / that.ringData.ringSize;
+              let scaleHeight = textureSize / cy;
+              ctx.scale(1.0, scaleHeight);
+
+              // @ts-ignore
+              let fs = 1000 * textureSize / that.maxVerticeLength / scaleHeight; // 1mm
+
+              if (that.ringData.engraving.length > 0) {
+                let fsEgt = fs;
+                let t = that.ringData.ringWidth / 2 - 0.5;
+                if (t > 2500) fsEgt *= 2.2;
+                else if (t < 1500) fsEgt *= 1.5;
+                else fsEgt *= 2.0;
+
+                ctx.font = fsEgt + 'px "engraving-' + this.ringData.engravingFont + '"';
+                let egt = decodeURI(this.ringData.engraving);
+                let sizeEGT = ctx.measureText(egt);
+
+                xPos = -sizeEGT.width / 2;
+                // @ts-ignore
+                ctx.fillText(egt, xPos, (sizeEGT.actualBoundingBoxAscent - sizeEGT.actualBoundingBoxDescent) / 2);
+              }
+
+              // Punzierung
+              let divMode = this.ringData.divPreset.substring(0, 1).toLowerCase();
+              let n = this.ringData.materialDiv.length;
+              if (divMode == "h" || divMode == "s") n = 2;
+              let a = [], textPunzierung, m;
+              let finenessAr = this.ringData.fineness;
+              let materialAr = this.ringData.material;
+              for (let i = 0; i < n; i++) {
+                m = AppComponent.app.data.material[materialAr[i]];
+                if (m) {
+                  textPunzierung = m.symbol + finenessAr[i];
+                  if (a.indexOf(textPunzierung) === -1) a.push(textPunzierung);
+                }
+              }
+              textPunzierung = "";
+              for (let i = 0; i < a.length; i++) {
+                if (i > 0)
+                  textPunzierung += "/";
+                textPunzierung += a[i];
+              }
+
+              textPunzierung += "  ";
+
+              fs *= 0.8;
+              ctx.font = fs + 'px Arial';
+              // c.font = (fs * 0.8) + 'px Arial';
+              let sizePunzierung = ctx.measureText(textPunzierung);
+
+              if (xPos == 0)
+                xPos = -sizePunzierung.width / 2;
+              else
+                xPos -= sizePunzierung.width + (fs * 2);
+              // @ts-ignore
+              ctx.fillText(textPunzierung, xPos, (sizePunzierung.fontBoundingBoxAscent - sizePunzierung.fontBoundingBoxDescent) / 2);
+              ctx.restore();
+            }
+      */
+
+      that.textures.albedo.update(false);
+
+      // erzeuge Downloadlink der Textur
+      // if (that.generateTextureDownloads && that.ringData.index === 0) {
+      //   let link = document.getElementById('download_texture_albedo');
+      //   if (link) {
+      //     link.setAttribute('download', 'albedo.png');
+      //     link.setAttribute('href', ctx.canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+      //   }
+      // }
+
+      // => Alpha
+      /*
+      Die UV-Koordinaten werden bereits in der createMeshes() Funktion umgerechten
+       */
+      let ctxAlpha = that.textures.alpha.getContext();
+      ctxAlpha.fillStyle = "#fff";
+      ctxAlpha.strokeStyle = "#fff";
+      // ctxAlpha.lineWidth = 1;
+      ctxAlpha.lineWidth = 0.1;
+      ctxAlpha.fillRect(0, 0, textureSizeAlpha * 2, textureSizeAlpha * 2);
+      // ctxAlpha.beginPath();
+      // ctxAlpha.moveTo(0, 0);
+      // ctxAlpha.lineTo(0, textureSize * 2);
+      // ctxAlpha.lineTo(textureSize * 2, textureSize * 2);
+      // ctxAlpha.lineTo(textureSize * 2, 0);
+      // ctxAlpha.closePath();
+      // ctxAlpha.fill();
+
+      ctxAlpha.save();
+
+      // ctxAlpha.translate(0.5, 0.5);
+      // ctxAlpha.translate(0, textureSize_half);
+      ctxAlpha.fillStyle = "#000";
+      ctxAlpha.strokeStyle = "#000";
+
+      that.meshes.forEach(function (e) {
+        if (e.name.includes("Bevel")) {
+          let uv = e.getVerticesData(VertexBuffer.UVKind);
+          if (uv) {
+            i_l = uv.length;
+            for (i = 0; i < i_l; i += 2) {
+              uv[i] = 0.5 * uv[i];
+              uv[i + 1] = 0.25 + 0.5 * uv[i + 1];
+            }
+            e.updateVerticesData(VertexBuffer.UVKind, uv);
+
+            // i_l / 3 ---> Bevel besteht aus 3 Vertex-Reihen...gehe zur 2. Reihe
+            let iBegin = i_l / 3, iEnd = iBegin * 2;
+            let min = 1.0, max = 0.0, t;
+
+            let doOffset = false;
+
+            for (i = iBegin; i < iEnd; i += 2) {
+              t = uv[i + 1];
+              if (t < min) min = t;
+              else if (t > max) max = t
+            }
+            if (max - min > 0.25)
+              doOffset = true;
+
+            ctxAlpha.beginPath();
+            for (i = iBegin; i < iEnd; i += 2) {
+              u = Math.round(uv[i] * textureSizeAlpha * 2);
+              if (doOffset) {
+                t = uv[i + 1];
+                if (t < 0.25)
+                  t += 0.5;
+                v = Math.round((t) * textureSizeAlpha * 2);
+              } else
+                v = Math.round(uv[i + 1] * textureSizeAlpha * 2);
+
+              if (i == iBegin)
+                ctxAlpha.moveTo(u, v);
+              else
+                ctxAlpha.lineTo(u, v);
+            }
+            ctxAlpha.closePath();
+            ctxAlpha.fill();
+          }
+        } else if (e.name.includes("frontCut")) {
+          let pointsPerRow = parseInt(e.name.substring(9));
+
+          let uv = e.getVerticesData(VertexBuffer.UVKind);
+          if (uv) {
+            i_l = uv.length;
+            let numRows = i_l / (pointsPerRow * 2);
+
+            let getUVIndex = function (x: number, y: number): number {
+              return y * 2 * pointsPerRow + x * 2;
+            }
+
+            ctxAlpha.beginPath();
+
+            u = Math.round(uv[0] * textureSizeAlpha * 2);
+            v = Math.round(uv[1] * textureSizeAlpha * 2);
+            ctxAlpha.moveTo(u, v);
+
+            for (let i = 1; i < numRows; i++) {
+              let j = getUVIndex(0, i);
+              u = Math.round(uv[j] * textureSizeAlpha * 2);
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+
+            for (let i = numRows - 1; i >= 0; i--) {
+              let j = getUVIndex(pointsPerRow - 1, i);
+              u = Math.round(uv[j] * textureSizeAlpha * 2);
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+
+            ctxAlpha.closePath();
+            ctxAlpha.fill();
+          }
+        } else if (e.name.includes("sideChannel")) {
+          let uv = e.getVerticesData(VertexBuffer.UVKind);
+          if (uv) {
+            // Eine Reihe vom sideChannel besteht aus 6 Punkten
+
+            i_l = uv.length;
+            let numRows = i_l / 12;
+
+            let getUVIndex = function (x: number, y: number): number {
+              return y * 2 * 6 + x * 2;
+            }
+
+            ctxAlpha.beginPath();
+
+            u = Math.round(uv[0] * textureSizeAlpha * 2);
+            v = Math.round(uv[1] * textureSizeAlpha * 2);
+            ctxAlpha.moveTo(u, v);
+
+
+            for (let i = 1; i < numRows; i++) {
+              let j = getUVIndex(0, i);
+              u = Math.round(uv[j] * textureSizeAlpha * 2);
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+
+            for (let i = numRows - 1; i >= 0; i--) {
+              let j = getUVIndex(5, i);
+              u = Math.round(uv[j] * textureSizeAlpha * 2);
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+
+            ctxAlpha.closePath();
+            ctxAlpha.fill();
+          }
+        } else if (e.name == "frontChannel") {
+          let uv = e.getVerticesData(VertexBuffer.UVKind);
+          if (uv) {
+            // Eine Reihe vom frontChannel besteht aus 7 Punkten
+
+            i_l = uv.length;
+            let numRows = i_l / 14;
+
+            let getUVIndex = function (x: number, y: number): number {
+              return y * 2 * 7 + x * 2;
+            }
+
+            ctxAlpha.beginPath();
+
+            u = Math.round(uv[0] * textureSizeAlpha * 2);
+            v = Math.round(uv[1] * textureSizeAlpha * 2);
+            ctxAlpha.moveTo(u, v);
+
+
+            for (let i = 1; i < numRows; i++) {
+              let j = getUVIndex(0, i);
+              u = Math.round(uv[j] * textureSizeAlpha * 2);
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+
+            for (let i = numRows - 1; i >= 0; i--) {
+              let j = getUVIndex(5, i);
+              u = Math.round(uv[j] * textureSizeAlpha * 2);
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+
+            ctxAlpha.closePath();
+            ctxAlpha.fill();
+          }
+        } else if (e.name == "frontChannel_H") {
+          let uv = e.getVerticesData(VertexBuffer.UVKind);
+          // console.log(uv);
+          if (uv) {
+            i_l = uv.length;
+            let numRows = 2;
+            let pointsPerRow = i_l / numRows;
+
+            // Front
+            ctxAlpha.beginPath();
+            // links unten
+            u = 0;
+            v = Math.round(uv[1] * textureSizeAlpha * 2);
+            ctxAlpha.moveTo(u, v);
+            // links hoch
+            for (let i = 1; i < numRows; i++) {
+              let j = i * pointsPerRow;
+              u = 0;
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+            // oben
+            for (let i = 0; i < pointsPerRow; i += 2) {
+              let j = i_l - pointsPerRow + i;
+              u = Math.round(uv[j] * textureSizeAlpha * 2);
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+            ctxAlpha.lineTo(textureSizeAlpha, v);
+            //rechts
+            for (let i = 0; i < numRows; i++) {
+              let j = (numRows - 1 - i) * pointsPerRow;
+              u = textureSizeAlpha;
+              v = Math.round(uv[j + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+            //unten
+            for (let i = pointsPerRow - 2; i >= 0; i -= 2) {
+              u = Math.round(uv[i] * textureSizeAlpha * 2);
+              v = Math.round(uv[i + 1] * textureSizeAlpha * 2);
+              ctxAlpha.lineTo(u, v);
+            }
+            ctxAlpha.lineTo(0, v);
+
+            ctxAlpha.closePath();
+            ctxAlpha.fill();
+
+            // Back
+            if (1) {
+              let uvBack = [];
+              uvBack.push(textureSizeAlpha, Math.round(uv[1] * textureSizeAlpha * 2));
+              uvBack.push(textureSizeAlpha, Math.round(uv[pointsPerRow + 1] * textureSizeAlpha * 2));
+              uvBack.push(textureSizeAlpha + Math.round(uv[pointsPerRow] * textureSizeAlpha * 2), Math.round(uv[pointsPerRow + 1] * textureSizeAlpha * 2));
+              uvBack.push(textureSizeAlpha + Math.round(uv[0] * textureSizeAlpha * 2), Math.round(uv[1] * textureSizeAlpha * 2));
+
+              ctxAlpha.beginPath();
+              for (let i = 0; i < uvBack.length; i += 2) {
+                ctxAlpha.lineTo(uvBack[i], uvBack[i + 1]);
+              }
+
+              ctxAlpha.closePath();
+              ctxAlpha.fill();
+
+              uvBack = [];
+              uvBack.push(textureSizeAlpha * 2, Math.round(uv[pointsPerRow - 1] * textureSizeAlpha * 2));
+              uvBack.push(textureSizeAlpha * 2, Math.round(uv[i_l - 1] * textureSizeAlpha * 2));
+              uvBack.push(textureSizeAlpha + Math.round(uv[i_l - 2] * textureSizeAlpha * 2), Math.round(uv[i_l - 1] * textureSizeAlpha * 2));
+              uvBack.push(textureSizeAlpha + Math.round(uv[pointsPerRow - 2] * textureSizeAlpha * 2), Math.round(uv[pointsPerRow - 1] * textureSizeAlpha * 2));
+
+              ctxAlpha.beginPath();
+              for (let i = 0; i < uvBack.length; i += 2) {
+                ctxAlpha.lineTo(uvBack[i], uvBack[i + 1]);
+              }
+
+              ctxAlpha.closePath();
+              ctxAlpha.fill();
+            }
+          }
+        }
+      })
+
+      // Kopien der Texturdaten nach oben und unten anfertigen
+      let imageDataTop = ctxAlpha.getImageData(0, 0, textureSizeAlpha * 2, textureSizeAlpha_half + 1);
+      let imageDataBottom = ctxAlpha.getImageData(0, textureSizeAlpha - 1, textureSizeAlpha * 2, textureSizeAlpha_half + 1);
+      let dataTop = imageDataTop.data, dataBottom = imageDataBottom.data;
+      i_l = Math.min(dataTop.length, dataBottom.length);
+      let a, b;
+      for (i = 0; i < i_l; i++) {
+        a = dataTop[i];
+        b = dataBottom[i];
+
+        if (a !== 255 || b !== 255)
+          dataBottom[i] = a < b ? a : b;
+      }
+      ctxAlpha.putImageData(imageDataBottom, 0, textureSizeAlpha);
+
+      that.textures.alpha.update(false);
+
+      // erzeuge Downloadlink der Textur
+      // if (that.generateTextureDownloads && that.ringData.index === 0) {
+      //   let link = document.getElementById('download_texture_alpha');
+      //   if (link) {
+      //     link.setAttribute('download', 'alpha.png');
+      //     link.setAttribute('href', ctxAlpha.canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+      //   }
+      // }
+      // <= Alpha
+
+      // => Bevel Alpha
+      /*
+            let hasChannel = false;
+            that.ringData.stone.forEach(function (e: iPresetStone) {
+              if (e.mode == 30)
+                hasChannel = true;
+            })
+
+            if (USE_BEVEL_ALPHA && this.GL.doubledTextures.alphaBevel) {
+              ctxAlpha = this.GL.doubledTextures.alphaBevel.getContext();
+              ctxAlpha.fillStyle = "#fff";
+              ctxAlpha.strokeStyle = "#fff";
+              ctxAlpha.lineWidth = 0.1;
+              ctxAlpha.beginPath();
+              ctxAlpha.moveTo(0, 0);
+              ctxAlpha.lineTo(0, textureSizeAlpha * 2);
+              ctxAlpha.lineTo(textureSizeAlpha * 2, textureSizeAlpha * 2);
+              ctxAlpha.lineTo(textureSizeAlpha * 2, 0);
+              ctxAlpha.closePath();
+              ctxAlpha.fill();
+
+              ctxAlpha.save();
+
+              ctxAlpha.translate(0, textureSizeAlpha_half);
+              ctxAlpha.fillStyle = "#000";
+              ctxAlpha.strokeStyle = "#000";
+
+              if (!hasChannel) {
+                this.GL.meshData.forEach(function (e) {
+                  if (e.outline && e.type == "gap") {
+                    // alpha für Bevel
+                    vec = e.outline;
+                    ctxAlpha.beginPath();
+
+                    i_l = vec.length;
+                    for (i = 1; i < i_l; i++) {
+                      u = Math.round(vec[i].u * textureSizeAlpha);
+                      v = Math.round(vec[i].v * textureSizeAlpha);
+                      if (i == 0)
+                        ctxAlpha.moveTo(u, v);
+                      else
+                        ctxAlpha.lineTo(u, v);
+                    }
+
+                    ctxAlpha.closePath();
+                    ctxAlpha.fill();
+                  }
+                })
+              }
+
+              ctxAlpha.restore();
+
+              // Kopien der Texturdaten nach oben und unten anfertigen
+              imageData = ctxAlpha.getImageData(0, textureSizeAlpha_half, textureSizeAlpha, textureSizeAlpha_half);
+              ctxAlpha.putImageData(imageData, 0, textureSizeAlpha + textureSizeAlpha_half);
+              imageData = ctxAlpha.getImageData(0, textureSizeAlpha, textureSizeAlpha, textureSizeAlpha_half);
+              ctxAlpha.putImageData(imageData, 0, 0);
+
+              this.GL.doubledTextures.alphaBevel.update(false);
+
+              // erzeuge Downloadlink der Textur
+              if (this.GL.generateTextureDownloads && this.ringData.index === 0) {
+                let link = document.getElementById('download_texture_alpha_bevel');
+                if (link) {
+                  link.setAttribute('download', 'alpha_bevel.png');
+                  link.setAttribute('href', ctxAlpha.canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+                }
+              }
+              // <=
+            }
+      */
+
+      let surfaceId: number;
+      let type: string;
+      that.meshes.forEach(function (e) {
+        // @ts-ignore
+        type = e.name.substring(0, 1);
+
+        if (e.name.startsWith("frontBevel")) {
+          type = "bev";
+          surfaceId = -2;
+        } else if (e.name.startsWith("frontChannel")) {
+          type = "frontChannel";
+          surfaceId = -2;
+        } else if (e.name.startsWith("frontCut") || e.name.startsWith("krabbe")) {
+          type = "frontCut";
+          surfaceId = -3;
+        } else if (e.name.startsWith("sideBevel") || e.name.startsWith("sideChannel")) {
+          type = "";
+          surfaceId = -2;
+        } else if (type == "f")
+          surfaceId = that.ringData.surface[parseInt(e.name.substring(1))];
+        else if (type == "b")
+          surfaceId = -1;
+        else if (e.name == "sl" || e.name == "sr")
+          surfaceId = 0;
+        else if (e.name == "gap")
+          surfaceId = that.ringData.gapSurface;
+        else
+          surfaceId = -99;
+
+        if (surfaceId >= -3) {
+          let mat = that.material.find(function (e) {
+            return e.surfaceId == surfaceId;
+          });
+
+          if (mat) {
+            if (mat.material.bumpTexture) {
+              //@ts-ignore
+              mat.material.bumpTexture.uScale = that.ringData.ringWidth * mat.uScale / 1000;
+              //@ts-ignore
+              mat.material.bumpTexture.vScale = that.ringData.ringSize * mat.vScale / 1000;
+              //@ts-ignore
+              mat.material.bumpTexture.vOffset = 0.5;
+            }
+
+            if (DEBUG_UV_MAP_ENABLED) { // @ts-ignore
+              mat.material._albedoTexture = webgl.textureUV;
+            } else
+              mat.material._albedoTexture = that.textures.albedo;
+
+            if (type === "f" || e.name == "gap" || type == "b") {
+              mat.material.opacityTexture = that.textures.alpha;
+              mat.material.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
+              mat.material.needDepthPrePass = true;
+            }
+            if (type === "frontChannel" || type == "frontCut") {
+              mat.material.opacityTexture = null;
+              mat.material.backFaceCulling = false;
+              // mat.material.transparencyMode = Material.MATERIAL_ALPHATEST;//ANDBLEND;
+              // mat.material.needDepthPrePass = false;
+            }
+            if (USE_BEVEL_ALPHA && type === "bev") {
+              mat.material.opacityTexture = that.textures.alphaBevel;
+              mat.material.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
+              mat.material.needDepthPrePass = false;
+            }
+
+            e.material = mat.material;
+          }
+        } else if (e.name == "helper") { // @ts-ignore
+          e.material = webgl.matWireframe;
+        }
+      })
+
+      return true;
+    }
+
+    if (mode == "all") {
+
+      // create meshes
+      that.flags = eRingFlags.IsValid;
+      that.disposeMeshes();
+      that.frontVertices = [];
+      that.frontVerticeLength = 1;
+      that.backVertices = [];
+      that.backVerticeLength = 1;
+      that.maxVerticeLength = 1;
+      that.stepLeftVertices = [];
+      that.stepRightVertices = [];
+      that.middleVertexBack = [0, 0];
+      that.profileArea = 0;
+      that.sideLength = [0, 0];
+
+      if (createProfileVertices()) {
+        checkPlausibility();
+        calcGapDiv();
+        adaptGapDiv();
+
+        createMeshes();
+        calcPivotData();
+      } else
+        return false;
+    }
+
+    if (createTextures()) {
+      WebglComponent.WEBGL.renderFrame(AppComponent.app.data.webglSettings.forceFrames);
+      return true;
+    }
+
+    return false;
+  }
+
+  interpolateVertex(xPos: number, vecArray: CVertex[], startIndex: number = 0/*, range: number = 50*/): iInterpolateResult {
+    let vecArrayIndex = 0, i;
+    if (startIndex < 0) startIndex = 0;
+    if (startIndex >= vecArray.length - 1) startIndex = 0;
+    for (i = startIndex; i < vecArray.length; i++) {
+      if (vecArray[i].x > xPos)
+        break;
+      vecArrayIndex = i;
+    }
+
+    let indexA = vecArrayIndex;
+    let indexB = vecArrayIndex >= vecArray.length - 1 ? indexA : vecArrayIndex + 1;
+
+    if (indexA == indexB) {
+      return {
+        x: xPos,
+        z: vecArray[indexA].z,
+        indexVectorA: indexA,
+        indexVectorB: indexB,
+        startIndex: startIndex,
+        uv_u: vecArray[indexA].u,
+      }
+    } else {
+      let pA = vecArray[indexA];
+      let pB = vecArray[indexB];
+
+      let AX = xPos - pA.x;
+      let XB = pB.x - xPos;
+      let AB = pB.x - pA.x;
+
+      let v1 = TEMP.Vertex_1;
+      let scale = AX / AB;
+      pA.lerpToRef(pB, scale, v1);
+
+      let fA = AX / AB, fB = XB / AB;
+      if (fA < 0.25) {
+        if (indexA > 0) {
+          indexA--;
+        }
+      } else if (fB < 0.25) {
+        if (indexB < vecArray.length - 1) {
+          indexB++;
+        }
+      }
+
+      return {
+        x: v1.x,
+        z: v1.z,
+        indexVectorA: indexA,
+        indexVectorB: indexB,
+        startIndex: startIndex,
+        uv_u: v1.u,
+      }
+    }
+  }
+}

@@ -1,0 +1,58 @@
+@import "../../default";
+
+x-local-storage {
+  @include flexbox();
+  @include flex-direction(column);
+  @include justify-content(center);
+  @include align-items(center);
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 3000;
+
+  .local-storage-wrapper {
+    max-width: 540px;
+    background-color: #f2f2f2;
+    box-shadow: 5px 5px 18px -6px rgb(0 0 0 / 60%);
+    padding:20px;
+    margin:0 10px;
+
+    h6.title {
+      margin-bottom: 20px;
+      font-size:26px;
+      font-weight:600;
+      color:#ab3333;
+      padding-bottom:20px;
+      border-bottom:1px solid #000;
+    }
+
+    .button-wrapper {
+      @include flexbox();
+      @include flex-direction(row);
+      margin:0 -10px;
+    }
+
+    .button {
+      @include flex-grow(1);
+      padding: 9px 15px;
+      //height: 40px;
+      background-color: #ab3333;
+      color: white;
+      cursor: pointer;
+      //border-radius: 20px;
+      width: 100%;
+      margin: 20px 10px 0 10px;
+      text-align: center;
+
+      &.yes {
+
+      }
+
+      &.no {
+        background-color:#000;
+      }
+    }
+  }
+}
