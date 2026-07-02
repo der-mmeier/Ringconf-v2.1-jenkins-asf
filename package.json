@@ -2,10 +2,9 @@
   "name": "ringconf-v2.1",
   "version": "2.6.6",
   "scripts": {
-    "start": "ng serve --host 192.168.178.125",
-    "start & open": "ng serve --open",
+    "start": "ng serve --host 127.0.0.1 --port 4200",
+    "start & open": "ng serve --host 127.0.0.1 --port 4200 --open",
     "build": "ng build",
-    "buildShopware5": "ng build --configuration=shopware5 && node postbuild.shopware5.js",
     "buildWoocommerce": "ng build --configuration=woocommerce && node postbuild.woocommerce.js"
   },
   "private": true,

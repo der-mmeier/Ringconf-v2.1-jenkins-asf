@@ -1,5 +1,7 @@
 # Repository Inventory
 
+> Historische Baseline vor Entfernung der Shopware-Unterstuetzung. Dieses Dokument beschreibt den analysierten Ausgangsstand und ist nicht die aktuelle Support-Matrix.
+
 ## 1. Executive Summary
 
 Diese Inventur wurde auf Branch `chore/repository-inventory` statisch erstellt. Der Working Tree war zu Beginn sauber, `git pull --ff-only origin chore/repository-inventory` meldete `Already up to date`. Es gibt nur eine Repository-Anweisung, `AGENTS.md`, gueltig fuer das gesamte Repository.
