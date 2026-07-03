@@ -31,13 +31,6 @@ export class AppComponent implements OnInit {
 
   // baseUrl = "";
 
-  /*
-  Shopware 5:
-  zusätzlich ist die Variable 'asset-root' in der default.scss Datei anzupassen
-  $asset-root:"/custom/plugins/OneRingconf2v1/Resources/dist";
-  */
-  // isShopware5 = environment.isShopware5;
-
 
   state = {
     build: info.version,
@@ -4420,10 +4413,6 @@ export class AppComponent implements OnInit {
     }
 
     this.state.browsertab_id = "_" + Math.floor(Math.random() * 1000000);
-    document.addEventListener('visibilitychange', function (event) {
-      if (!document.hidden)
-        shopware_setTabId().then();
-    });
 
     this.dataSafeJson = JSON.stringify(this.data);
 
@@ -5013,11 +5002,8 @@ export interface iDetails {
 }
 
 function makeHttpHeaders(): HttpHeaders {
-  let csrf = document.getElementsByName("__csrf_token");
-
   return new HttpHeaders({
     'Content-Type': 'application/x-www-form-urlencoded',
-    'X-CSRF-TOKEN': csrf.length ? (<HTMLInputElement>csrf[0]).value : AppComponent.getCookie('__csrf_token-1'),
   });
 }
 
@@ -5027,27 +5013,17 @@ function makeHttpParams(rpc: string, rpp: any[]): HttpParams {
       "rpc": rpc,
       "rpp": JSON.stringify(rpp),
       "tabId": AppComponent.app.state.browsertab_id,
-      // "isShopware5": AppComponent.app.isShopware5
     }
   })
 }
 
-// TODO: Der Port wurde auf 8081 umgestellt. Alle Anfragen an Port 80 werden an diesen umgeleitet.
 function getDistRootUrl() {
-  let result = "";
-  if (window.location.hostname.indexOf("192.168") > -1) {
-    result = window.location.protocol + '//' + window.location.hostname + ":8081/";
-  } else {
-    result = window.location.protocol + '//' + window.location.hostname + window.location.pathname;
+  let result = window.location.protocol + '//' + window.location.hostname + window.location.pathname;
 
-    if (!window.location.pathname.endsWith('/'))
-      result += '/';
-  }
+  if (!window.location.pathname.endsWith('/'))
+    result += '/';
 
-  if (environment.isShopware5)
-    result += 'api'
-  else
-    result += 'api.php';
+  result += 'api.php';
 
   // console.log('distUrl: ' + result);
   return result;
@@ -5538,25 +5514,17 @@ async function dbResetStdPreset() {
 
 export async function uploadFile(path: string, filename: string, formData: FormData, formDataSelector: string) {
   let url = getDistRootUrl();
-  let csrf = document.getElementsByName("__csrf_token");
+  let headers = new HttpHeaders();
 
-  let headers = new HttpHeaders({
-    'X-CSRF-TOKEN': csrf.length ? (<HTMLInputElement>csrf[0]).value : AppComponent.getCookie('__csrf_token-1'),
-  });
-
-  let response = AppComponent.app.http.post(url, formData, {headers});
   formData.append("rpc", "uploadFile");
   formData.append("rpp", JSON.stringify([path, filename, formDataSelector]));
+  let response = AppComponent.app.http.post(url, formData, {headers});
   await lastValueFrom(response).then();
 }
 
 export async function restoreEnvTexture() {
   let url = getDistRootUrl();
-  let csrf = document.getElementsByName("__csrf_token");
-
-  let headers = new HttpHeaders({
-    'X-CSRF-TOKEN': csrf.length ? (<HTMLInputElement>csrf[0]).value : AppComponent.getCookie('__csrf_token-1'),
-  });
+  let headers = new HttpHeaders();
 
   let params = makeHttpParams("restoreEnvTexture", []);
   let response = AppComponent.app.http.post(url, params, {headers});
@@ -5600,206 +5568,17 @@ export async function dbGetEnvironmentPresetList() {
   return result;
 }
 
-async function shopware_beforeAddArticle() {
-  let url = getDistRootUrl();
-  let headers = makeHttpHeaders();
-  let params = makeHttpParams("shopware_beforeAddArticle", [AppComponent.app.state.preset_id, RingData.list[0], RingData.list[1]]);
-  let response = AppComponent.app.http.post(url, params, {headers});
-  return await lastValueFrom(response);
-}
-
-async function shopware_setTabId() {
-  let url = getDistRootUrl();
-  let headers = makeHttpHeaders();
-  let params = makeHttpParams("shopware_setTabId", []);
-  let response = AppComponent.app.http.post(url, params, {headers});
-  return lastValueFrom(response);
-}
-
 export async function addToCart() {
+  await dbSavePreset(true);
 
-  // Shopware 5
-  // dbSavePreset().then(f => {
-  //   shopware_beforeAddArticle().then(f => {
-  //     let ok = false;
-  //     let form = <HTMLFormElement>document.getElementById("rcfgAddToBasket"); // --> index.tpl
-  //     if (form) {
-  //       let presetId = <HTMLInputElement>document.getElementById("preset_id");
-  //       if (presetId) {
-  //         presetId.value = AppComponent.app.state.preset_id;
-  //         let buyBtn = <HTMLButtonElement>document.getElementById("rcfgBuyBtn");
-  //         if (buyBtn) {
-  //           buyBtn.click();
-  //           ok = true;
-  //         }
-  //       }
-  //     }
-  //
-  //     if (!ok)
-  //       Log("error", "Fehler beim hinzufügen zum Warenkorb");
-  //   });
-  // })
-
-  const result = await dbSavePreset();
-  const formAction = '/checkout/line-item/add';
-  // template container für das line item
-  let lineItemConf: { [key: string]: string | number } = {
-    "id": "",
-    "type": "product",
-    "referencedId": "",
-    "stackable": "1",
-    "removable": "1",
-    "quantity": "1"
+  if (environment.isWooCommerce) {
+    window.dispatchEvent(new CustomEvent('oneringconf:add-to-cart', {
+      detail: {
+        presetId: AppComponent.app.state.preset_id,
+        rings: RingData.list
+      }
+    }));
   }
 
-  // erzeuge ein für Shopware 6 geeignetes Formular für die addToCart Funktion
-  const form = <HTMLFormElement>document.querySelector('#ring-config-form');
-  if (!form) {
-    return;
-  }
-
-  form.innerHTML = "";
-
-  // setze html Attribute, um das Formular auf die richtige Route zeigen zu lassen
-  form.setAttribute('action', formAction);
-  form.setAttribute('method', 'post');
-  form.setAttribute('data-add-to-cart', 'true');
-
-  // definiere das line item anhand der lineItemConf JSON
-  lineItemConf['id'] = '018fdd73ffca7ca8bc22690290c41fc7';
-  lineItemConf['referencedId'] = '018fdd73ffca7ca8bc22690290c41fc7';
-  for (const lineItemDataPoint in lineItemConf) {
-    form.appendChild(addLineItem(lineItemDataPoint, lineItemConf[lineItemDataPoint]));
-  }
-
-  // Testringe bestellen?
-  const lineItemTestringe = <HTMLInputElement>document.querySelector('#line-item-testringe');
-  if (lineItemTestringe && lineItemTestringe.checked) {
-    lineItemConf['id'] = '125e3178d9ed4ed08e1c154e23110102';
-    lineItemConf['referencedId'] = '125e3178d9ed4ed08e1c154e23110102';
-    for (const lineItemDataPoint in lineItemConf) {
-      form.appendChild(addLineItem_Testringe(lineItemDataPoint, lineItemConf[lineItemDataPoint]));
-    }
-  }
-
-  // Ringmassband bestellen?
-  const lineItemRingmass = <HTMLInputElement>document.querySelector('#line-item-ringmass');
-  if (lineItemRingmass && lineItemRingmass.checked) {
-    lineItemConf['id'] = '6493907c7a9f4a25834fa69ef8007811';
-    lineItemConf['referencedId'] = '6493907c7a9f4a25834fa69ef8007811';
-    for (const lineItemDataPoint in lineItemConf) {
-      form.appendChild(addLineItem_Ringmassband(lineItemDataPoint, lineItemConf[lineItemDataPoint]));
-    }
-  }
-
-  // Standard Lieferung ?
-  const lineItemLieferung_0 = <HTMLInputElement>document.querySelector('#line-item-lieferung-0');
-  if (lineItemLieferung_0 && lineItemLieferung_0.checked)
-    form.appendChild(add_selectedProductionTime('96953791df1b4d9fb02011224f15b304'));
-
-  // Light Express Lieferung ?
-  const lineItemLieferung_1 = <HTMLInputElement>document.querySelector('#line-item-lieferung-1');
-  if (lineItemLieferung_1 && lineItemLieferung_1.checked)
-    form.appendChild(add_selectedProductionTime('f1697234768940e4a24d4e78a28d2e8e'));
-
-  // Express Lieferung ?
-  const lineItemLieferung_2 = <HTMLInputElement>document.querySelector('#line-item-lieferung-2');
-  if (lineItemLieferung_2 && lineItemLieferung_2.checked)
-    form.appendChild(add_selectedProductionTime('41cfdf663e064b40919edf0537ca0152'));
-
-  // Super Express Lieferung ?
-  const lineItemLieferung_3 = <HTMLInputElement>document.querySelector('#line-item-lieferung-3');
-  if (lineItemLieferung_3 && lineItemLieferung_3.checked)
-    form.appendChild(add_selectedProductionTime('8e9843aa5d7c497f81b170888014051a'));
-
-
-  // einige form-Daten fehlen noch: 1.) der redirect intent
-  const inputRedirect = document.createElement('input');
-  inputRedirect.setAttribute('type', 'hidden');
-  inputRedirect.setAttribute('name', 'redirectTo');
-  // redirect zur cart page
-  inputRedirect.setAttribute('value', 'frontend.cart.offcanvas');
-
-  const payloadParams = document.createElement('input');
-  payloadParams.setAttribute('type', 'hidden');
-  payloadParams.setAttribute('name', 'ring-conf-key');
-  payloadParams.setAttribute('value', AppComponent.app.state.preset_id);
-
-  // beide Zusatzfelder müssen an das Formular angehangen werden
-  form.appendChild(inputRedirect);
-  form.appendChild(payloadParams);
-
-  //form.submit(); kein submit
-  // Formular serialisieren
-  const formData = new FormData(form);
-
-  // Offcanvas Plugin laden
-  // je nach dem wie strict du typisieren musst: getPluginInstance sollte ein Objekt zurückgeben
-  // @ts-ignore
-  if (window.PluginManager) {
-    // @ts-ignore
-    const offCanvasCartInstances = window.PluginManager.getPluginInstances('OffCanvasCart');
-
-    // @ts-ignore
-    fireOffCanvasCart(offCanvasCartInstances, instance => {
-      instance.openOffCanvas(formAction, formData, () => {
-        // hier könnte ein return gemacht werden
-        console.log('submitted');
-      });
-    });
-  } else console.log("unknown: 'window.PluginManager'");
-}
-
-// @ts-ignore
-function fireOffCanvasCart(source, callback) {
-  // minimalisierte iterate Funktion aus dem Shopware 6 Iterator
-  if (source instanceof Object) {
-    return Object.keys(source).forEach(key => {
-      callback(source[key], key)
-    });
-  }
-  throw new Error(`The element type ${typeof source} is not iterable!`);
-}
-
-function addLineItem(dataPointIndent: string, val: string | number): HTMLInputElement {
-  const input: HTMLInputElement = document.createElement('input');
-
-  input.setAttribute('type', 'hidden');
-  input.setAttribute('id', 'ring-config-form-' + dataPointIndent);
-  input.setAttribute('name', `lineItems[018fc886be1b789a978e5c6ac206338a][${dataPointIndent}]`);
-  input.setAttribute('value', String(val));
-
-  return input;
-}
-
-function addLineItem_Testringe(dataPointIndent: string, val: string | number): HTMLInputElement {
-  const input: HTMLInputElement = document.createElement('input');
-
-  input.setAttribute('type', 'hidden');
-  input.setAttribute('id', 'ring-config-form-' + dataPointIndent);
-  input.setAttribute('name', `lineItems[125e3178d9ed4ed08e1c154e23110102][${dataPointIndent}]`);
-  input.setAttribute('value', String(val));
-
-  return input;
-}
-
-function addLineItem_Ringmassband(dataPointIndent: string, val: string | number): HTMLInputElement {
-  const input: HTMLInputElement = document.createElement('input');
-
-  input.setAttribute('type', 'hidden');
-  input.setAttribute('id', 'ring-config-form-' + dataPointIndent);
-  input.setAttribute('name', `lineItems[6493907c7a9f4a25834fa69ef8007811][${dataPointIndent}]`);
-  input.setAttribute('value', String(val));
-
-  return input;
-}
-
-function add_selectedProductionTime(val: string): HTMLInputElement {
-  const input: HTMLInputElement = document.createElement('input');
-
-  input.setAttribute('type', 'hidden');
-  input.setAttribute('name', 'selectedProductionTime');
-  input.setAttribute('value', val);
-
-  return input;
+  Log("info", "Konfiguration gespeichert");
 }

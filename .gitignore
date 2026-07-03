@@ -7,8 +7,7 @@
 /coverage/
 /out-tsc/
 
-# Generated shop builds
-/_shop/shopware5/OneRingconf/Resources/dist/
+# Generated WooCommerce builds
 /_shop/woocommerce/OneRingconf/dist/
 
 # PhpStorm
@@ -19,6 +18,7 @@
 .env
 .env.*
 !.env.example
+/src/php/config.local.php
 
 # Logs
 *.log

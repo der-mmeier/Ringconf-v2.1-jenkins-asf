@@ -1,119 +1,36 @@
-# Build and Deployment Matrix
+# Build And Deployment Matrix
 
-Alle Angaben sind statisch aus `package.json`, `angular.json`, Environment-Dateien und Buildskripten verifiziert. Es wurden keine Builds ausgefuehrt.
+Current supported targets are standalone and WooCommerce. Historical build targets from the baseline inventory are no longer supported.
 
-## npm-Skripte
+## Npm Scripts
 
-| Skript | Befehl | Mutierend | Status |
+| Script | Command | Purpose | Mutates tracked files |
 |---|---|---|---|
-| `start` | `ng serve --host 192.168.178.125` | nein, aber feste LAN-IP | nicht ausgefuehrt |
-| `start & open` | `ng serve --open` | nein | nicht ausgefuehrt |
-| `build` | `ng build` | erzeugt `dist/` | nicht ausgefuehrt |
-| `buildShopware5` | `ng build --configuration=shopware5 && node postbuild.shopware5.js` | ja, Postbuild schreibt CSS/JS und `plugin.xml` | nicht ausgefuehrt |
-| `buildWoocommerce` | `ng build --configuration=woocommerce && node postbuild.woocommerce.js` | ja, Postbuild schreibt CSS/JS | nicht ausgefuehrt |
+| `start` | `ng serve --host 127.0.0.1 --port 4200` | Local Angular dev server | No |
+| `start & open` | `ng serve --host 127.0.0.1 --port 4200 --open` | Local dev server with browser open | No |
+| `build` | `ng build` | Default production build | No |
+| `buildWoocommerce` | `ng build --configuration=woocommerce && node postbuild.woocommerce.js` | Legacy WooCommerce build command until replaced by the local test harness | Writes generated files under `_shop/woocommerce/OneRingconf/dist` |
 
-`package.json.backup` enthielt mutierende `node prebuild.js`-Aufrufe; aktuelle `package.json` nicht. `prebuild.js` bleibt dennoch riskant, da es `package.json` inkrementiert.
+## Angular Build Targets
 
-## Buildmatrix
+| Target | Angular configuration | Environment | Output | Assets | Consumer | Verification |
+|---|---|---|---|---|---|---|
+| development | `development` | `src/environments/environment.ts` | `dist/ringconf-v2.1` | `src/assets`, PHP bridge files from `src/php` | Local dev/build smoke | Not yet executed in this branch |
+| production | `production` | `src/environments/environment.ts` | `dist/ringconf-v2.1` | `src/assets`, PHP bridge files from `src/php` | Standalone PHP-capable web server | Not yet executed in this branch |
+| woocommerce | `woocommerce` | `src/environments/environment.woocommerce.ts` | `_shop/woocommerce/OneRingconf/dist` | `src/assets`, PHP bridge files from `src/php` | WooCommerce plugin | Not yet executed in this branch |
 
-| Ziel | Befehl | Angular-Konfiguration | Environment | Output | Postbuild | veraenderte Dateien | Verbraucher | Risiken |
-|---|---|---|---|---|---|---|---|---|
-| standalone production | `npm run build` oder `ng build` | `production` wegen `defaultConfiguration` | `src/environments/environment.ts` | `dist/ringconf-v2.1` | keiner | generierte Dist-Dateien | Standalone/PHP | Node 20 inkompatibel; PHP config copy nutzt Shopware config |
-| development | `npx ng build --configuration development` | `development` | `environment.ts` | `dist/ringconf-v2.1` | keiner | generierte Dist-Dateien + sourcemaps | Baseline-Diagnose | nicht ausgefuehrt; sourcemaps nur dev |
-| production explizit | `npx ng build --configuration production` | `production` | `environment.ts` | `dist/ringconf-v2.1` | keiner | generierte Dist-Dateien | Standalone | nicht ausgefuehrt |
-| shopware5 | `npm run buildShopware5` | `shopware5` | `environment.shopware5.ts` | `_shop/shopware5/OneRingconf/Resources/dist` | `postbuild.shopware5.js` | CSS/JS URL-Rewrites, `plugin.xml` Version | Shopware Plugin | `_shop` fehlt; Postbuild mutiert |
-| woocommerce | `npm run buildWoocommerce` | `woocommerce` | `environment.woocommerce.ts` | `_shop/woocommerce/OneRingconf/dist` | `postbuild.woocommerce.js` | CSS/JS URL-Rewrites | WP/Woo Plugin | `_shop` fehlt; keine Hooks getrackt |
+## PHP Configuration
 
-## Angular-Konfigurationen
+`angular.json` copies `src/php/config.php` to the build root. The file reads `ONERINGCONF_DB_DSN`, `ONERINGCONF_DB_USERNAME`, `ONERINGCONF_DB_PASSWORD`, `ONERINGCONF_TABLE_DATA`, and `ONERINGCONF_TABLE_PRESET`, with optional local overrides in ignored `src/php/config.local.php`.
 
-Gemeinsame Build-Optionen:
+`src/php/config.local.example.php` is a safe template and contains no production credentials.
 
-| Option | Wert |
-|---|---|
-| Builder | `@angular-devkit/build-angular:browser` |
-| `outputPath` | `dist/ringconf-v2.1` |
-| `index` | `src/index2.html` |
-| `main` | `src/main.ts` |
-| `polyfills` | `zone.js` |
-| `tsConfig` | `tsconfig.app.json` |
-| Styles | `src/styles.scss` |
-| Scripts | `[]` |
-| `inlineStyleLanguage` | `scss` |
-| `allowedCommonJsDependencies` | `lodash` |
-| defaultConfiguration | `production` |
+## Known Mutable Steps
 
-Assets, in alle Buildziele kopiert:
+`postbuild.woocommerce.js` is still the legacy postbuild script at this point in the branch. It rewrites generated CSS/JS asset paths under `_shop/woocommerce/OneRingconf/dist`. The next build-harness phase should replace it with an idempotent script that writes a manifest for the WordPress plugin.
 
-| Glob/Input | Output | Bemerkung |
-|---|---|---|
-| `src/favicon.ico` | root | Standard |
-| `src/assets` | `assets/` | alle 3D/UI/Fonts |
-| `src/php/api.php` | root | PHP RPC |
-| `src/php/browsers.json` | root | Browser-Gate |
-| `src/php/shopware5/config.php` | root `config.php` | auch in Standalone/Woo kopiert; enthaelt maskiert dokumentierte Secrets |
-| `src/php/database.php` | root | PDO |
-| `src/php/index.php` | root | Browser-Gate |
+## Reproducibility Notes
 
-Production:
-
-| Option | Wert |
-|---|---|
-| Budgets initial | warning 5000 KB, error 10 MB |
-| Budgets component style | warning 6000 KB, error 10000 KB |
-| `outputHashing` | `all` |
-
-Development:
-
-| Option | Wert |
-|---|---|
-| `buildOptimizer` | false |
-| `optimization` | false |
-| `vendorChunk` | true |
-| `extractLicenses` | false |
-| `sourceMap` | true |
-| `namedChunks` | true |
-
-Shopware/Woo:
-
-| Ziel | Spezifische Optionen |
-|---|---|
-| `shopware5` | `outputHashing: all`, `deleteOutputPath: true`, outputPath Shopware, replacement `environment.ts -> environment.shopware5.ts` |
-| `woocommerce` | `outputHashing: all`, `deleteOutputPath: true`, outputPath Woo, replacement `environment.ts -> environment.woocommerce.ts` |
-
-## Prebuild/Postbuild
-
-| Skript | Verhalten | Risiko |
-|---|---|---|
-| `prebuild.js` | liest `package.json`, inkrementiert letzte Versionsstelle, schreibt `package.json` | mutiert Dependency-/Metadatei; in diesem Auftrag nicht ausgefuehrt |
-| `postbuild.shopware5.js` | findet CSS/JS im Shopware-Dist, ersetzt `url(/assets/` durch `/custom/plugins/OneRingconf/Resources/dist/assets/`, schreibt `plugin.xml` Version aus `package.json` | mutiert generierte Dateien und nicht vorhandenes `plugin.xml` |
-| `postbuild.woocommerce.js` | findet CSS/JS im Woo-Dist, ersetzt `url(/assets/` durch `/wp-content/plugins/OneRingconf/dist/assets/` | mutiert generierte Dateien; Plugin-XML-Code auskommentiert |
-| `browserslist.js` | schreibt `src/php/browsers.json` aus Browserslist | wuerde getrackte PHP-Daten aendern; nicht ausgefuehrt |
-
-## Serverpfade und Runtime-URLs
-
-| Umgebung | `assetFolderLocation` | API-Endung in `getDistRootUrl()` |
-|---|---|---|
-| Standalone | `""` | `api.php` |
-| Shopware5 | `/custom/plugins/OneRingconf/Resources/dist/` | `api` |
-| WooCommerce | `/wp-content/plugins/OneRingconf/dist/` | `api.php` |
-| Lokales LAN | Start host `192.168.178.125`; API bei `192.168.*` auf Port `8081` | `http(s)://host:8081/api.php` bzw. `api` |
-
-## Reproduzierbarkeit
-
-| Thema | Befund |
-|---|---|
-| Lockfile | npm lockfileVersion 2 vorhanden |
-| Cache | Angular CLI cache deaktiviert (`cli.cache.enabled: false`) |
-| Node Version | keine `.nvmrc`/`.node-version`; AGENTS nennt Node 18.20.x, lokal Node 20.16.0 |
-| CI/Jenkins | kein `Jenkinsfile` getrackt; Repo-Name nennt Jenkins, aber keine CI-Konfiguration vorhanden |
-| Buildausgaben | `dist/`, `.angular/`, `_shop/**/dist` ignoriert |
-| Shopquellen | `_shop/**` nicht vorhanden; Postbuild nicht reproduzierbar aus Checkout allein |
-
-## Verifikationsstatus je Ziel
-
-| Ziel | Status | Befehl | Ergebnis/Blocker |
-|---|---|---|---|
-| development | nicht ausgefuehrt | `npx ng build --configuration development` | Node `v20.16.0` nicht kompatibel mit Angular 15.0.x; keine Installation vorhanden/verwendet |
-| production | nicht ausgefuehrt | `npx ng build --configuration production` | gleicher Blocker |
-| shopware5 | statisch analysiert | `npm run buildShopware5` | Postbuild mutierend; `_shop` Struktur fehlt |
-| woocommerce | statisch analysiert | `npm run buildWoocommerce` | Postbuild mutierend; `_shop` Struktur fehlt |
+- Host Node `v20.16.0` is not compatible with the Angular 15 baseline.
+- Docker is available and should be used for compatible Node runtimes if no local version manager is installed.
+- Generated WooCommerce dist files remain ignored and must not be committed.

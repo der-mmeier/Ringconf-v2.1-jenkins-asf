@@ -11,6 +11,10 @@ class Database extends PDO
     public function __construct()
     {
         try {
+            if (DB_DSN === '') {
+                throw new PDOException('Missing ONERINGCONF_DB_DSN configuration');
+            }
+
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

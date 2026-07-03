@@ -263,7 +263,7 @@ new class {
 //      $db = $this->getDB();
 //      $doAsfBackup = true;
 //
-//      $pdo = new \PDO('mysql:host=dedi2432.your-server.de;dbname=asf_verwaltung;charset=utf8', 'asf_verwaltung', 'g3kdbgJJJAhidN2m', array(
+//      Legacy price database connection removed; use the configured Database instance.
 //        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
 //      ));
 //
