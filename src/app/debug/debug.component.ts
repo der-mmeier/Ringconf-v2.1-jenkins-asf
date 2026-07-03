@@ -5,9 +5,10 @@ import {WebglComponent} from "../webgl/webgl.component";
 import {cRing} from "../webgl/cRing";
 
 @Component({
-  selector: 'x-debug',
-  templateUrl: './debug.component.html',
-  styleUrls: ['./debug.component.scss'],
+    selector: 'x-debug',
+    templateUrl: './debug.component.html',
+    styleUrls: ['./debug.component.scss'],
+    standalone: false
 })
 
 export class DebugComponent {

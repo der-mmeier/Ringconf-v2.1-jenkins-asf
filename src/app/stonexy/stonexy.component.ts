@@ -7,11 +7,11 @@ import {iFreeStone, iMaterial} from "../app.interfaces";
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-stonexy',
-  templateUrl: './stonexy.component.html',
-  styleUrls: ['./stonexy.component.scss'],
-  encapsulation: ViewEncapsulation.None,
-
+    selector: 'x-stonexy',
+    templateUrl: './stonexy.component.html',
+    styleUrls: ['./stonexy.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class StonexyComponent //

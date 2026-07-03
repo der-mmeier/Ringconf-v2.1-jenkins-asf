@@ -2,10 +2,11 @@ import {Component, ViewEncapsulation} from '@angular/core';
 import {AppComponent} from "../app.component";
 
 @Component({
-  selector: 'x-logger',
-  templateUrl: './logger.component.html',
-  styleUrls: ['./logger.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-logger',
+    templateUrl: './logger.component.html',
+    styleUrls: ['./logger.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class LoggerComponent

@@ -4,10 +4,11 @@ import {WebglComponent} from "../webgl/webgl.component";
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-tools',
-  templateUrl: './tools.component.html',
-  styleUrls: ['./tools.component.scss'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'x-tools',
+    templateUrl: './tools.component.html',
+    styleUrls: ['./tools.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 export class ToolsComponent
 {

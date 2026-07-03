@@ -17,10 +17,11 @@ import {StonexyComponent} from "../stonexy/stonexy.component";
 import {stoneCalc_addFreeStone} from "../webgl/stoneCalc";
 
 @Component({
-  selector: 'x-config-stone',
-  templateUrl: './config-stone.component.html',
-  styleUrls: ['./config-stone.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-stone',
+    templateUrl: './config-stone.component.html',
+    styleUrls: ['./config-stone.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class ConfigStoneComponent implements OnInit {

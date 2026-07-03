@@ -9,10 +9,11 @@ import {ConfigStoneComponent} from "../config-stone/config-stone.component";
 import {getStoneMode} from "../app.definitions";
 
 @Component({
-  selector: 'x-config-gap',
-  templateUrl: './config-gap.component.html',
-  styleUrls: ['./config-gap.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-gap',
+    templateUrl: './config-gap.component.html',
+    styleUrls: ['./config-gap.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class ConfigGapComponent

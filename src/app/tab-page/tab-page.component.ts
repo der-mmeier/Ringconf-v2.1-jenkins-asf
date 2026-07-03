@@ -2,9 +2,10 @@ import {Component, EventEmitter, HostBinding, Input, Output, ViewEncapsulation} 
 import {TabControlComponent} from "../tab-control/tab-control.component";
 
 @Component({
-  selector: 'x-tab-page',
-  templateUrl: './tab-page.component.html',
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-tab-page',
+    templateUrl: './tab-page.component.html',
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class TabPageComponent

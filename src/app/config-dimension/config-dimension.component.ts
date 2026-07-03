@@ -6,10 +6,11 @@ import {onRingDataPropertyChange} from "../property-sync-dialog/property-sync-di
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-config-dimension',
-  templateUrl: './config-dimension.component.html',
-  styleUrls: ['./config-dimension.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-dimension',
+    templateUrl: './config-dimension.component.html',
+    styleUrls: ['./config-dimension.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class ConfigDimensionComponent

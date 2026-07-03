@@ -1,10 +1,11 @@
 import {Component, EventEmitter, HostBinding, Input, Output, ViewEncapsulation} from '@angular/core';
 
 @Component({
-  selector: 'x-checkbox',
-  templateUrl: './checkbox.component.html',
-  styleUrls: ['./checkbox.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-checkbox',
+    templateUrl: './checkbox.component.html',
+    styleUrls: ['./checkbox.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class CheckboxComponent

@@ -5,10 +5,11 @@ import {Log} from "../logger/logger.component";
 import {bootstrapApplication} from "@angular/platform-browser";
 
 @Component({
-  selector: 'x-local-storage',
-  templateUrl: './local-storage.component.html',
-  styleUrls: ['./local-storage.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-local-storage',
+    templateUrl: './local-storage.component.html',
+    styleUrls: ['./local-storage.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class LocalStorageComponent

@@ -4,10 +4,11 @@ import {RingData} from "../app.ringdata";
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-config-profile',
-  templateUrl: './config-profile.component.html',
-  styleUrls: ['./config-profile.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-profile',
+    templateUrl: './config-profile.component.html',
+    styleUrls: ['./config-profile.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 export class ConfigProfileComponent
 {

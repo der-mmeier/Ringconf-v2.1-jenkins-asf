@@ -4,10 +4,11 @@ import {RingData} from "../app.ringdata";
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-ring-details',
-  templateUrl: './ring-details.component.html',
-  styleUrls: ['./ring-details.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-ring-details',
+    templateUrl: './ring-details.component.html',
+    styleUrls: ['./ring-details.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class RingDetailsComponent

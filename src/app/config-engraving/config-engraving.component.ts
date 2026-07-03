@@ -5,10 +5,11 @@ import {onRingDataPropertyChange} from "../property-sync-dialog/property-sync-di
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-config-engraving',
-  templateUrl: './config-engraving.component.html',
-  styleUrls: ['./config-engraving.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-engraving',
+    templateUrl: './config-engraving.component.html',
+    styleUrls: ['./config-engraving.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class ConfigEngravingComponent

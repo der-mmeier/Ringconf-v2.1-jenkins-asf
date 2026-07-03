@@ -15,9 +15,10 @@ import {iEnvironmentPreset} from "../app.interfaces";
 import {lastValueFrom} from "rxjs";
 
 @Component({
-  selector: 'x-config-diamond',
-  templateUrl: './config-diamond.component.html',
-  styleUrls: ['./config-diamond.component.scss']
+    selector: 'x-config-diamond',
+    templateUrl: './config-diamond.component.html',
+    styleUrls: ['./config-diamond.component.scss'],
+    standalone: false
 })
 export class ConfigDiamondComponent {
 

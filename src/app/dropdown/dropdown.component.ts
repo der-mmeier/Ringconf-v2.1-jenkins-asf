@@ -1,10 +1,11 @@
 import {Component, EventEmitter, Input, Output, ViewEncapsulation} from '@angular/core';
 
 @Component({
-  selector: 'x-dropdown',
-  templateUrl: './dropdown.component.html',
-  styleUrls: ['./dropdown.component.scss'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'x-dropdown',
+    templateUrl: './dropdown.component.html',
+    styleUrls: ['./dropdown.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 export class DropdownComponent
 {

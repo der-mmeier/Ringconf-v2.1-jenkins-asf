@@ -1,10 +1,11 @@
 import {Component, EventEmitter, Input, Output, ViewEncapsulation} from '@angular/core';
 
 @Component({
-  selector: 'x-textbox',
-  templateUrl: './textbox.component.html',
-  styleUrls: ['./textbox.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-textbox',
+    templateUrl: './textbox.component.html',
+    styleUrls: ['./textbox.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 export class TextboxComponent
 {

@@ -19,11 +19,11 @@ require("./pdf/Montserrat-SemiBold-normal.js");
 require("./pdf/Arial-Gravur-normal.js");
 
 @Component({
-  selector: 'x-app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
-  host: {'id': 'ONE'},
-  // encapsulation: ViewEncapsulation.None
+    selector: 'x-app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.scss'],
+    host: { 'id': 'ONE' },
+    standalone: false
 })
 
 export class AppComponent implements OnInit {

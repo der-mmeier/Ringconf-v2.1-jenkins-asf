@@ -5,10 +5,11 @@ import {exportObj, WebglComponent} from "../webgl/webgl.component";
 import { saveAs } from 'file-saver';
 
 @Component({
-  selector: 'x-config-admin',
-  templateUrl: './config-admin.component.html',
-  styleUrls: ['./config-admin.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-admin',
+    templateUrl: './config-admin.component.html',
+    styleUrls: ['./config-admin.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class ConfigAdminComponent {

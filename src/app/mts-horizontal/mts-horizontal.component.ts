@@ -6,11 +6,12 @@ import {iMaterial} from "../app.interfaces";
 import {AppComponent} from "../app.component";
 
 @Component({
-  selector: 'x-mts-horizontal',
-  // imports: [NgFor, NgIf],
-  templateUrl: './mts-horizontal.component.html',
-  styleUrls: ['./mts-horizontal.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-mts-horizontal',
+    // imports: [NgFor, NgIf],
+    templateUrl: './mts-horizontal.component.html',
+    styleUrls: ['./mts-horizontal.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 export class MtsHorizontalComponent implements AfterViewInit, OnInit {
 

@@ -3,10 +3,11 @@ import {AppComponent, dbLoadPreset, dbSavePreset} from "../app.component";
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-save-load',
-  templateUrl: './save-load.component.html',
-  styleUrls: ['./save-load.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-save-load',
+    templateUrl: './save-load.component.html',
+    styleUrls: ['./save-load.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class SaveLoadComponent

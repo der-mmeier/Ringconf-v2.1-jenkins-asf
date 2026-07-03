@@ -7,10 +7,11 @@ import {environment} from "../../environments/environment";
 import {DropdownComponent} from "../dropdown/dropdown.component";
 
 @Component({
-  selector: 'x-config-material',
-  templateUrl: './config-material.component.html',
-  styleUrls: ['./config-material.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-material',
+    templateUrl: './config-material.component.html',
+    styleUrls: ['./config-material.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 
 export class ConfigMaterialComponent {
