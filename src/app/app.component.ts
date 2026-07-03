@@ -4,7 +4,7 @@ import {iAppData, iDBSaveItem, iEnvironmentPreset} from "./app.interfaces";
 import {RingData} from "./app.ringdata";
 import {collectRingScreenshots, createScreenshot, WebglComponent} from "./webgl/webgl.component";
 import {Log} from "./logger/logger.component";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import {a4pdfbg} from "./pdf/a4pdfbg";
 import {pdfFemaleHeader} from "./pdf/pdfFemaleHeader";
 import {pdfMaleHeader} from "./pdf/pdfMaleHeader";

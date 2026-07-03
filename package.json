@@ -27,12 +27,12 @@
     "@babylonjs/materials": "5.25.0",
     "@babylonjs/serializers": "5.25.0",
     "browserslist-useragent-regexp": "^4.0.0",
-    "jspdf": "^2.5.1",
+    "file-saver": "2.0.5",
+    "jspdf": "4.2.1",
     "pepjs": "^0.5.3",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
-    "zone.js": "~0.15.1",
-    "file-saver": "2.0.5"
+    "zone.js": "~0.15.1"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^22.0.5",
