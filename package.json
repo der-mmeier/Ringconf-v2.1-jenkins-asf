@@ -2,7 +2,7 @@
   "name": "ringconf-v2.1",
   "version": "2.6.6",
   "scripts": {
-    "start": "ng serve --host 127.0.0.1 --port 4200",
+    "start": "ng serve --host 127.0.0.1 --port 4200 --proxy-config proxy.conf.json",
     "start & open": "ng serve --host 127.0.0.1 --port 4200 --open",
     "build": "ng build",
     "buildWoocommerce": "ng build --configuration=woocommerce && node postbuild.woocommerce.js"

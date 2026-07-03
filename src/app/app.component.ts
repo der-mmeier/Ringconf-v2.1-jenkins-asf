@@ -5019,7 +5019,7 @@ function makeHttpParams(rpc: string, rpp: any[]): HttpParams {
 }
 
 function getDistRootUrl() {
-  let result = window.location.protocol + '//' + window.location.hostname + window.location.pathname;
+  let result = window.location.protocol + '//' + window.location.host + window.location.pathname;
 
   if (!window.location.pathname.endsWith('/'))
     result += '/';
