@@ -8,7 +8,7 @@ import jsPDF from "jspdf";
 import {a4pdfbg} from "./pdf/a4pdfbg";
 import {pdfFemaleHeader} from "./pdf/pdfFemaleHeader";
 import {pdfMaleHeader} from "./pdf/pdfMaleHeader";
-import {HttpClient, HttpHeaders, HttpParams} from "@angular/common/http";
+import { HttpClient, HttpHeaders, HttpParams } from "@angular/common/http";
 import {firstValueFrom, isObservable, lastValueFrom, Observable} from "rxjs";
 import {environment} from "../environments/environment";
 

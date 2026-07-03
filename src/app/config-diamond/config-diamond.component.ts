@@ -9,7 +9,7 @@ import {
 import {saveAs} from "file-saver";
 import {WebglComponent} from "../webgl/webgl.component";
 import {environment} from "../../environments/environment";
-import {HttpClient} from "@angular/common/http";
+import { HttpClient } from "@angular/common/http";
 import {Matrix} from "@babylonjs/core";
 import {iEnvironmentPreset} from "../app.interfaces";
 import {lastValueFrom} from "rxjs";
