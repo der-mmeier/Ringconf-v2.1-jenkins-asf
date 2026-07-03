@@ -8,6 +8,10 @@
     "buildWoocommerce": "ng build --configuration=woocommerce && node postbuild.woocommerce.js"
   },
   "private": true,
+  "engines": {
+    "node": ">=24.15.0 <25",
+    "npm": ">=11 <12"
+  },
   "dependencies": {
     "@angular/animations": "^22.0.5",
     "@angular/common": "^22.0.5",
