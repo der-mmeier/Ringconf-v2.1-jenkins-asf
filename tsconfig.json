@@ -20,10 +20,6 @@
     "target": "ES2015",
     "module": "ES2015",
     "useDefineForClassFields": false,
-    "lib": [
-      "ES2015",
-      "dom"
-    ],
     "resolveJsonModule": true,
     "esModuleInterop": true
   },
