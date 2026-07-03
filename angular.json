@@ -117,10 +117,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "Ringconf-v2.1:build:production"
+              "buildTarget": "Ringconf-v2.1:build:production"
             },
             "development": {
-              "browserTarget": "Ringconf-v2.1:build:development"
+              "buildTarget": "Ringconf-v2.1:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -128,7 +128,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "Ringconf-v2.1:build"
+            "buildTarget": "Ringconf-v2.1:build"
           }
         },
         "test": {
