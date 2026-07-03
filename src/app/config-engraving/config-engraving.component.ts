@@ -1,4 +1,4 @@
-import {Component, ElementRef, Input, ViewEncapsulation} from '@angular/core';
+import {Component, ElementRef, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {onRingDataPropertyChange} from "../property-sync-dialog/property-sync-dialog.component";
@@ -9,6 +9,7 @@ import {environment} from "../../environments/environment";
     templateUrl: './config-engraving.component.html',
     styleUrls: ['./config-engraving.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

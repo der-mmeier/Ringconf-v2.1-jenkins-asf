@@ -1,4 +1,4 @@
-import {Component, ElementRef} from '@angular/core';
+import {Component, ElementRef, ChangeDetectionStrategy} from '@angular/core';
 import {IsFullscreen, ToggleFullscreen} from "../../main";
 import {AppComponent, dbLoadPreset} from "../app.component";
 import {
@@ -34,6 +34,7 @@ import {cRing} from "./cRing";
     selector: 'x-webgl',
     templateUrl: './webgl.component.html',
     styleUrls: ['./webgl.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

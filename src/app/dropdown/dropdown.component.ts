@@ -1,10 +1,11 @@
-import {Component, EventEmitter, Input, Output, ViewEncapsulation} from '@angular/core';
+import {Component, EventEmitter, Input, Output, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 
 @Component({
     selector: 'x-dropdown',
     templateUrl: './dropdown.component.html',
     styleUrls: ['./dropdown.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class DropdownComponent

@@ -1,4 +1,4 @@
-import {Component, ViewEncapsulation} from '@angular/core';
+import {Component, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent, dbSaveStdPreset, dbSetAppData} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {exportObj, WebglComponent} from "../webgl/webgl.component";
@@ -9,6 +9,7 @@ import { saveAs } from 'file-saver';
     templateUrl: './config-admin.component.html',
     styleUrls: ['./config-admin.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

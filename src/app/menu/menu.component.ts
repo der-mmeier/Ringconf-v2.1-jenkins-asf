@@ -1,4 +1,4 @@
-import {Component, Input, ViewEncapsulation} from '@angular/core';
+import {Component, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {environment} from "../../environments/environment";
 
@@ -7,6 +7,7 @@ import {environment} from "../../environments/environment";
     templateUrl: './menu.component.html',
     styleUrls: ['./menu.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

@@ -1,6 +1,6 @@
 import {NgModule} from '@angular/core';
 import {BrowserModule} from '@angular/platform-browser';
-import {provideHttpClient, withInterceptorsFromDi} from "@angular/common/http";
+import {provideHttpClient, withInterceptorsFromDi, withXhr} from "@angular/common/http";
 
 import {AppComponent} from './app.component';
 import {MenuComponent} from './menu/menu.component';
@@ -73,7 +73,7 @@ import {MtsHorizontalComponent} from "./mts-horizontal/mts-horizontal.component"
   imports: [
     BrowserModule,
   ],
-  providers: [provideHttpClient(withInterceptorsFromDi())],
+  providers: [provideHttpClient(withXhr(), withInterceptorsFromDi())],
   bootstrap: [AppComponent]
 })
 export class AppModule

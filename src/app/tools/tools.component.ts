@@ -1,4 +1,4 @@
-import {Component, HostBinding, Input, ViewEncapsulation} from '@angular/core';
+import {Component, HostBinding, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent, dbLoadPreset} from "../app.component";
 import {WebglComponent} from "../webgl/webgl.component";
 import {environment} from "../../environments/environment";
@@ -8,6 +8,7 @@ import {environment} from "../../environments/environment";
     templateUrl: './tools.component.html',
     styleUrls: ['./tools.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ToolsComponent

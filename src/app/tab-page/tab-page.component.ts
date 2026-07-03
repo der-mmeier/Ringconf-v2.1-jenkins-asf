@@ -1,10 +1,11 @@
-import {Component, EventEmitter, HostBinding, Input, Output, ViewEncapsulation} from '@angular/core';
+import {Component, EventEmitter, HostBinding, Input, Output, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {TabControlComponent} from "../tab-control/tab-control.component";
 
 @Component({
     selector: 'x-tab-page',
     templateUrl: './tab-page.component.html',
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

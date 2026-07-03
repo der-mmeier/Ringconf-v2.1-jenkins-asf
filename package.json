@@ -9,14 +9,14 @@
   },
   "private": true,
   "dependencies": {
-    "@angular/animations": "^21.2.17",
-    "@angular/common": "^21.2.17",
-    "@angular/compiler": "^21.2.17",
-    "@angular/core": "^21.2.17",
-    "@angular/forms": "^21.2.17",
-    "@angular/platform-browser": "^21.2.17",
-    "@angular/platform-browser-dynamic": "^21.2.17",
-    "@angular/router": "^21.2.17",
+    "@angular/animations": "^22.0.5",
+    "@angular/common": "^22.0.5",
+    "@angular/compiler": "^22.0.5",
+    "@angular/core": "^22.0.5",
+    "@angular/forms": "^22.0.5",
+    "@angular/platform-browser": "^22.0.5",
+    "@angular/platform-browser-dynamic": "^22.0.5",
+    "@angular/router": "^22.0.5",
     "@babylonjs/core": "5.25.0",
     "@babylonjs/inspector": "5.25.0",
     "@babylonjs/loaders": "5.25.0",
@@ -31,18 +31,19 @@
     "file-saver": "2.0.5"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^21.2.18",
-    "@angular/cli": "~21.2.18",
-    "@angular/compiler-cli": "^21.2.17",
+    "@angular-devkit/build-angular": "^22.0.5",
+    "@angular/cli": "~22.0.5",
+    "@angular/compiler-cli": "^22.0.5",
+    "@types/file-saver": "2.0.5",
     "@types/jasmine": "~4.3.0",
     "browserslist": "^4.21.4",
+    "istanbul-lib-instrument": "^6.0.3",
     "jasmine-core": "~4.5.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.1.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.0.0",
-    "typescript": "~5.9.3",
-    "@types/file-saver": "2.0.5"
+    "typescript": "~6.0.3"
   }
 }

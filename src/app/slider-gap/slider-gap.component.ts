@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
     selector: 'x-slider-gap',
     templateUrl: './slider-gap.component.html',
     styleUrls: ['./slider-gap.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class SliderGapComponent {
@@ -14,6 +15,7 @@ export class SliderGapComponent {
     selector: 'x-slider',
     templateUrl: './slider-gap.component.html',
     styleUrls: ['./slider-gap.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class SliderComponent {

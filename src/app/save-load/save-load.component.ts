@@ -1,4 +1,4 @@
-import {Component, ViewEncapsulation} from '@angular/core';
+import {Component, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent, dbLoadPreset, dbSavePreset} from "../app.component";
 import {environment} from "../../environments/environment";
 
@@ -7,6 +7,7 @@ import {environment} from "../../environments/environment";
     templateUrl: './save-load.component.html',
     styleUrls: ['./save-load.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

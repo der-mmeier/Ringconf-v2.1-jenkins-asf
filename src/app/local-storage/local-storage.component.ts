@@ -1,4 +1,4 @@
-import {Component, HostBinding, ViewEncapsulation} from '@angular/core';
+import {Component, HostBinding, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {RingData} from "../app.ringdata";
 import {AppComponent, dbCheckIdExist, dbLoadPreset} from "../app.component";
 import {Log} from "../logger/logger.component";
@@ -9,6 +9,7 @@ import {bootstrapApplication} from "@angular/platform-browser";
     templateUrl: './local-storage.component.html',
     styleUrls: ['./local-storage.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

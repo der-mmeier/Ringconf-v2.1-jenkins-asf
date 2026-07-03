@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {
   AppComponent,
   dbGetEnvironmentPresetList,
@@ -18,6 +18,7 @@ import {lastValueFrom} from "rxjs";
     selector: 'x-config-diamond',
     templateUrl: './config-diamond.component.html',
     styleUrls: ['./config-diamond.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ConfigDiamondComponent {

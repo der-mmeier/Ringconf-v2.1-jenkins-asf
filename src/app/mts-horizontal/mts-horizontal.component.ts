@@ -1,4 +1,4 @@
-import {Component, ElementRef, ViewChild, AfterViewInit, OnInit, Input, Output, EventEmitter, ViewEncapsulation, IterableDiffer} from '@angular/core';
+import {Component, ElementRef, ViewChild, AfterViewInit, OnInit, Input, Output, EventEmitter, ViewEncapsulation, IterableDiffer, ChangeDetectionStrategy} from '@angular/core';
 // import {NgFor, NgIf} from '@angular/common';
 import {environment} from "../../environments/environment";
 import {cRing} from "../webgl/cRing";
@@ -11,6 +11,7 @@ import {AppComponent} from "../app.component";
     templateUrl: './mts-horizontal.component.html',
     styleUrls: ['./mts-horizontal.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class MtsHorizontalComponent implements AfterViewInit, OnInit {

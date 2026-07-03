@@ -1,4 +1,4 @@
-import {Component, ElementRef, OnInit} from '@angular/core';
+import {Component, ElementRef, OnInit, ChangeDetectionStrategy} from '@angular/core';
 import "./app.ringdata";
 import {iAppData, iDBSaveItem, iEnvironmentPreset} from "./app.interfaces";
 import {RingData} from "./app.ringdata";
@@ -23,6 +23,7 @@ require("./pdf/Arial-Gravur-normal.js");
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
     host: { 'id': 'ONE' },
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

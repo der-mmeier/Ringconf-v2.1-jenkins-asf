@@ -1,4 +1,4 @@
-import {Component, ElementRef, Input, Output, ViewChild, ViewEncapsulation} from '@angular/core';
+import {Component, ElementRef, Input, Output, ViewChild, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {map} from "../app.helper";
@@ -11,6 +11,7 @@ import {environment} from "../../environments/environment";
     templateUrl: './stonexy.component.html',
     styleUrls: ['./stonexy.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

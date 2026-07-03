@@ -1,4 +1,4 @@
-import {Component, ElementRef, Input, ViewEncapsulation} from '@angular/core';
+import {Component, ElementRef, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {iGapMode, iProfile, iSurface} from "../app.interfaces";
@@ -13,6 +13,7 @@ import {getStoneMode} from "../app.definitions";
     templateUrl: './config-gap.component.html',
     styleUrls: ['./config-gap.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 

@@ -1,4 +1,4 @@
-import {Component, ElementRef, Input, ViewChild, ViewEncapsulation} from '@angular/core';
+import {Component, ElementRef, Input, ViewChild, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {iDivPreset, iMaterial, iProfile, iSurface} from "../app.interfaces";
@@ -11,6 +11,7 @@ import {DropdownComponent} from "../dropdown/dropdown.component";
     templateUrl: './config-material.component.html',
     styleUrls: ['./config-material.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 
