@@ -1,4 +1,4 @@
-import {Component, Input, ViewEncapsulation} from '@angular/core';
+import {Component, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {iProfile} from "../app.interfaces";
@@ -6,10 +6,12 @@ import {onRingDataPropertyChange} from "../property-sync-dialog/property-sync-di
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-config-dimension',
-  templateUrl: './config-dimension.component.html',
-  styleUrls: ['./config-dimension.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-dimension',
+    templateUrl: './config-dimension.component.html',
+    styleUrls: ['./config-dimension.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class ConfigDimensionComponent

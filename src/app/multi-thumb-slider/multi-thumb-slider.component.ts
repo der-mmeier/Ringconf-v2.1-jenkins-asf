@@ -1,13 +1,15 @@
-import {Component, ElementRef, Input} from '@angular/core';
+import {Component, ElementRef, Input, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {iMaterial, iStoneSize} from "../app.interfaces";
 import {cRing} from "../webgl/cRing";
 
 @Component({
-  selector: 'x-multi-thumb-slider',
-  templateUrl: './multi-thumb-slider.component.html',
-  styleUrls: ['./multi-thumb-slider.component.scss']
+    selector: 'x-multi-thumb-slider',
+    templateUrl: './multi-thumb-slider.component.html',
+    styleUrls: ['./multi-thumb-slider.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class MultiThumbSliderComponent {

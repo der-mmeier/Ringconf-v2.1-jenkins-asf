@@ -1,13 +1,15 @@
-import {Component, ElementRef, HostBinding, Input, ViewEncapsulation} from '@angular/core';
+import {Component, ElementRef, HostBinding, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-property-sync-dialog',
-  templateUrl: './property-sync-dialog.component.html',
-  styleUrls: ['./property-sync-dialog.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-property-sync-dialog',
+    templateUrl: './property-sync-dialog.component.html',
+    styleUrls: ['./property-sync-dialog.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class PropertySyncDialogComponent {

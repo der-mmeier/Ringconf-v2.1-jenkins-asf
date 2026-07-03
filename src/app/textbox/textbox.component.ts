@@ -1,10 +1,12 @@
-import {Component, EventEmitter, Input, Output, ViewEncapsulation} from '@angular/core';
+import {Component, EventEmitter, Input, Output, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 
 @Component({
-  selector: 'x-textbox',
-  templateUrl: './textbox.component.html',
-  styleUrls: ['./textbox.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-textbox',
+    templateUrl: './textbox.component.html',
+    styleUrls: ['./textbox.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class TextboxComponent
 {

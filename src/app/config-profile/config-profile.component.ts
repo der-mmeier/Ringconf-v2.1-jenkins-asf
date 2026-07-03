@@ -1,13 +1,15 @@
-import {Component, ViewEncapsulation} from '@angular/core';
+import {Component, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-config-profile',
-  templateUrl: './config-profile.component.html',
-  styleUrls: ['./config-profile.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-profile',
+    templateUrl: './config-profile.component.html',
+    styleUrls: ['./config-profile.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class ConfigProfileComponent
 {

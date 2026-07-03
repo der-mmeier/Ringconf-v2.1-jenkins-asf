@@ -1,13 +1,15 @@
-import {Component, HostBinding, Input, ViewEncapsulation} from '@angular/core';
+import {Component, HostBinding, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {navigation} from "../menu/menu.component";
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 
 @Component({
-  selector: 'x-config',
-  templateUrl: './config.component.html',
-  styleUrls: ['./config.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config',
+    templateUrl: './config.component.html',
+    styleUrls: ['./config.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class ConfigComponent {
   navigation = navigation;

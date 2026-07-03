@@ -1,11 +1,13 @@
-import {Component, Input, ViewEncapsulation} from '@angular/core';
+import {Component, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {TabPageComponent} from "../tab-page/tab-page.component";
 
 @Component({
-  selector: 'x-tab-control',
-  templateUrl: './tab-control.component.html',
-  styleUrls: ['./tab-control.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-tab-control',
+    templateUrl: './tab-control.component.html',
+    styleUrls: ['./tab-control.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class TabControlComponent

@@ -1,4 +1,4 @@
-import {Component, Input, OnInit, ViewChild, ViewEncapsulation} from '@angular/core';
+import {Component, Input, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {
@@ -17,10 +17,12 @@ import {StonexyComponent} from "../stonexy/stonexy.component";
 import {stoneCalc_addFreeStone} from "../webgl/stoneCalc";
 
 @Component({
-  selector: 'x-config-stone',
-  templateUrl: './config-stone.component.html',
-  styleUrls: ['./config-stone.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-config-stone',
+    templateUrl: './config-stone.component.html',
+    styleUrls: ['./config-stone.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class ConfigStoneComponent implements OnInit {

@@ -1,4 +1,4 @@
-import {Component, ElementRef} from '@angular/core';
+import {Component, ElementRef, ChangeDetectionStrategy} from '@angular/core';
 import {IsFullscreen, ToggleFullscreen} from "../../main";
 import {AppComponent, dbLoadPreset} from "../app.component";
 import {
@@ -31,9 +31,11 @@ import {initCamera, USE_ORTHO_CAMERA, zoomExtends} from "./camera";
 import {cRing} from "./cRing";
 
 @Component({
-  selector: 'x-webgl',
-  templateUrl: './webgl.component.html',
-  styleUrls: ['./webgl.component.scss']
+    selector: 'x-webgl',
+    templateUrl: './webgl.component.html',
+    styleUrls: ['./webgl.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class WebglComponent {
@@ -795,7 +797,7 @@ export class WebglComponent {
 
     // draw helper overlay
     if (0) {
-      const canvas = <HTMLCanvasElement>document.getElementById("helperOverlay");
+      const canvas = document.getElementById("helperOverlay") as unknown as HTMLCanvasElement;
 
       if (canvas) {
         canvas.width = canvas.clientWidth;

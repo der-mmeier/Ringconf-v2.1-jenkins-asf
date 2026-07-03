@@ -1,13 +1,15 @@
-import {Component, ViewEncapsulation} from '@angular/core';
+import {Component, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {RingData} from "../app.ringdata";
 import {AppComponent, addToCart} from "../app.component";
 import {environment} from "../../environments/environment";
 
 @Component({
-  selector: 'x-footer',
-  templateUrl: './footer.component.html',
-  styleUrls: ['./footer.component.scss'],
-  encapsulation: ViewEncapsulation.None
+    selector: 'x-footer',
+    templateUrl: './footer.component.html',
+    styleUrls: ['./footer.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class FooterComponent {
   app = AppComponent.app;

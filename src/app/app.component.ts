@@ -1,4 +1,4 @@
-import {Component, ElementRef, OnInit} from '@angular/core';
+import {Component, ElementRef, OnInit, ChangeDetectionStrategy} from '@angular/core';
 import "./app.ringdata";
 import {iAppData, iDBSaveItem, iEnvironmentPreset} from "./app.interfaces";
 import {RingData} from "./app.ringdata";
@@ -8,7 +8,7 @@ import jsPDF from "jspdf";
 import {a4pdfbg} from "./pdf/a4pdfbg";
 import {pdfFemaleHeader} from "./pdf/pdfFemaleHeader";
 import {pdfMaleHeader} from "./pdf/pdfMaleHeader";
-import {HttpClient, HttpHeaders, HttpParams} from "@angular/common/http";
+import { HttpClient, HttpHeaders, HttpParams } from "@angular/common/http";
 import {firstValueFrom, isObservable, lastValueFrom, Observable} from "rxjs";
 import {environment} from "../environments/environment";
 
@@ -19,11 +19,12 @@ require("./pdf/Montserrat-SemiBold-normal.js");
 require("./pdf/Arial-Gravur-normal.js");
 
 @Component({
-  selector: 'x-app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
-  host: {'id': 'ONE'},
-  // encapsulation: ViewEncapsulation.None
+    selector: 'x-app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.scss'],
+    host: { 'id': 'ONE' },
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class AppComponent implements OnInit {
@@ -5018,7 +5019,7 @@ function makeHttpParams(rpc: string, rpp: any[]): HttpParams {
 }
 
 function getDistRootUrl() {
-  let result = window.location.protocol + '//' + window.location.hostname + window.location.pathname;
+  let result = window.location.protocol + '//' + window.location.host + window.location.pathname;
 
   if (!window.location.pathname.endsWith('/'))
     result += '/';

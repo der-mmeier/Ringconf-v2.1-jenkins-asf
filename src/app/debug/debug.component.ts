@@ -1,13 +1,15 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {WebglComponent} from "../webgl/webgl.component";
 import {cRing} from "../webgl/cRing";
 
 @Component({
-  selector: 'x-debug',
-  templateUrl: './debug.component.html',
-  styleUrls: ['./debug.component.scss'],
+    selector: 'x-debug',
+    templateUrl: './debug.component.html',
+    styleUrls: ['./debug.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 
 export class DebugComponent {

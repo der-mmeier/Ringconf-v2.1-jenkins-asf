@@ -3,6 +3,7 @@
   "compileOnSave": false,
   "compilerOptions": {
     "baseUrl": "./",
+    "ignoreDeprecations": "6.0",
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -13,16 +14,13 @@
     "sourceMap": false,
     "declaration": false,
     "downlevelIteration": true,
+    "skipLibCheck": true,
     "experimentalDecorators": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2015",
     "module": "ES2015",
     "useDefineForClassFields": false,
-    "lib": [
-      "ES2015",
-      "dom"
-    ],
     "resolveJsonModule": true,
     "esModuleInterop": true
   },

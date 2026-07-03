@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ChangeDetectionStrategy} from '@angular/core';
 import {
   AppComponent,
   dbGetEnvironmentPresetList,
@@ -9,15 +9,17 @@ import {
 import {saveAs} from "file-saver";
 import {WebglComponent} from "../webgl/webgl.component";
 import {environment} from "../../environments/environment";
-import {HttpClient} from "@angular/common/http";
+import { HttpClient } from "@angular/common/http";
 import {Matrix} from "@babylonjs/core";
 import {iEnvironmentPreset} from "../app.interfaces";
 import {lastValueFrom} from "rxjs";
 
 @Component({
-  selector: 'x-config-diamond',
-  templateUrl: './config-diamond.component.html',
-  styleUrls: ['./config-diamond.component.scss']
+    selector: 'x-config-diamond',
+    templateUrl: './config-diamond.component.html',
+    styleUrls: ['./config-diamond.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    standalone: false
 })
 export class ConfigDiamondComponent {
 
