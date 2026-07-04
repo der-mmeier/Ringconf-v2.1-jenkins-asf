@@ -41,32 +41,7 @@
             "inlineStyleLanguage": "scss",
             "assets": [
               "src/favicon.ico",
-              "src/assets",
-              {
-                "glob": "api.php",
-                "input": "src/php",
-                "output": "."
-              },
-              {
-                "glob": "browsers.json",
-                "input": "src/php",
-                "output": "."
-              },
-              {
-                "glob": "config.php",
-                "input": "src/php",
-                "output": "."
-              },
-              {
-                "glob": "database.php",
-                "input": "src/php",
-                "output": "."
-              },
-              {
-                "glob": "index.php",
-                "input": "src/php",
-                "output": "."
-              }
+              "src/assets"
             ],
             "styles": [
               "src/styles.scss"
