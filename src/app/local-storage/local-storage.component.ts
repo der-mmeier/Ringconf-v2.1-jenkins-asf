@@ -1,72 +1,84 @@
-import {Component, HostBinding, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
-import {RingData} from "../app.ringdata";
-import {AppComponent, dbCheckIdExist, dbLoadPreset} from "../app.component";
-import {Log} from "../logger/logger.component";
-import {bootstrapApplication} from "@angular/platform-browser";
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostBinding,
+  OnInit,
+  ViewEncapsulation
+} from '@angular/core';
+import { AppComponent, dbCheckIdExist, dbLoadPreset } from '../app.component';
+import { Log } from '../logger/logger.component';
 
 @Component({
-    selector: 'x-local-storage',
-    templateUrl: './local-storage.component.html',
-    styleUrls: ['./local-storage.component.scss'],
-    encapsulation: ViewEncapsulation.None,
-    changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+  selector: 'x-local-storage',
+  templateUrl: './local-storage.component.html',
+  styleUrls: ['./local-storage.component.scss'],
+  encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  standalone: false
 })
-
-export class LocalStorageComponent
-{
+export class LocalStorageComponent implements OnInit {
   static that: LocalStorageComponent;
-  ringconf = [] as RingData[];
-  ringconfId = "";
-  isVisible = false;
 
-  constructor()
-  {
+  ringconfId = '';
+  isVisible = false;
+  isClosed = false;
+
+  @HostBinding('style.display')
+  get hostDisplay(): string {
+    return this.isClosed ? 'none' : '';
+  }
+
+  @HostBinding('style.pointer-events')
+  get hostPointerEvents(): string {
+    return this.isVisible ? 'auto' : 'none';
+  }
+
+  constructor() {
     LocalStorageComponent.that = this;
   }
 
-  ngAfterViewInit() {
-    // @ts-ignore
-    if (AppComponent.app.state.urlParams["id"] !== undefined) {
+  ngOnInit(): void {
+    if (AppComponent.app.state.urlParams['id'] !== undefined) {
       this.close();
       return;
     }
 
-    this.ringconfId = localStorage.getItem("ringconfId") || "";
-    let that = this;
+    this.ringconfId = localStorage.getItem('ringconfId') || '';
 
-    // console.log(this.ringconfId);
-
-    dbCheckIdExist(this.ringconfId).then(function (result: boolean)
-    {
-      if (!result)
-      {
-        that.close();
-      }
-      else
-        that.isVisible = true;
-    });
-  }
-
-  restoreConfiguration()
-  {
-    this.close();
-    dbLoadPreset(this.ringconfId).then().catch(err =>
-    {
-      console.log("error in restoreConfiguration(): ", err);
-    });
-  }
-
-  close()
-  {
-    let e = document.getElementsByTagName("x-local-storage");
-    if (e)
-    {
-      for (let i = 0, len = e.length; i != len; ++i)
-      {
-        if (e[0].parentNode)
-          e[0].parentNode.removeChild(e[0]);
-      }
+    if (this.ringconfId.length < 9) {
+      this.close();
+      return;
     }
+
+    dbCheckIdExist(this.ringconfId)
+      .then((exists: boolean) => {
+        if (!exists) {
+          this.close();
+          return;
+        }
+
+        this.isClosed = false;
+        this.isVisible = true;
+      })
+      .catch(err => {
+        console.log('error in LocalStorageComponent dbCheckIdExist(): ', err);
+        this.close();
+      });
+  }
+
+  restoreConfiguration(): void {
+    const id = this.ringconfId;
+
+    this.close();
+
+    dbLoadPreset(id).catch(err => {
+      console.log('error in restoreConfiguration(): ', err);
+      Log('error', 'Die gespeicherte Konfiguration konnte nicht geladen werden.');
+    });
+  }
+
+  close(): void {
+    this.isVisible = false;
+    this.isClosed = true;
   }
 }
