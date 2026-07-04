@@ -20,7 +20,6 @@
 !.env.example
 /src/php/config.local.php
 /src/php/user-verification.config.local.php
-/src/php/appdata-admin.config.local.php
 
 # Logs
 *.log
