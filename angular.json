@@ -77,6 +77,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/development-admin/admin-entry.ts",
+                  "with": "src/app/development-admin/admin-entry.disabled.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
@@ -99,6 +105,10 @@
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.woocommerce.ts"
+                },
+                {
+                  "replace": "src/app/development-admin/admin-entry.ts",
+                  "with": "src/app/development-admin/admin-entry.disabled.ts"
                 }
               ]
             },

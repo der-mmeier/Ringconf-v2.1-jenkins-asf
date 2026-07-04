@@ -95,6 +95,7 @@ export class WebglComponent {
   constructor(private elem: ElementRef) {
     if (WebglComponent.WEBGL) throw("WebglComponent already exist");
     WebglComponent.WEBGL = this;
+    (window as any).__oneRingconfWebgl = this;
 
     let that = this;
     let intervalId = setInterval(function () {
@@ -107,7 +108,7 @@ export class WebglComponent {
   }
 
   getBuildString() {
-    let result = this.app.state.build;
+    let result = "Build " + this.app.state.build + " · AppData " + this.app.state.appDataVersionLabel;
     if (this.app.state.debug)
       result += " DEBUG";
     return result;

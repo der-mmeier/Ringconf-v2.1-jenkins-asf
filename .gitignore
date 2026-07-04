@@ -19,6 +19,8 @@
 .env.*
 !.env.example
 /src/php/config.local.php
+/src/php/user-verification.config.local.php
+/src/php/appdata-admin.config.local.php
 
 # Logs
 *.log
@@ -27,3 +29,7 @@ npm-debug.log*
 # Operating system
 .DS_Store
 Thumbs.db
+
+# Diffs to wordpress
+/reference/*
+/sql/*
