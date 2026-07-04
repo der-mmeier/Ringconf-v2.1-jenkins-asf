@@ -1,82 +1,98 @@
-import {Component, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
-import {AppComponent, dbSaveStdPreset, dbSetAppData} from "../app.component";
-import {RingData} from "../app.ringdata";
-import {exportObj, WebglComponent} from "../webgl/webgl.component";
-import { saveAs } from 'file-saver';
+import { ChangeDetectionStrategy, Component, ViewEncapsulation } from '@angular/core';
+import { AppComponent, dbSaveStdPreset, dbSetAppData } from '../app.component';
+import { RingData } from '../app.ringdata';
+import { exportObj, WebglComponent } from '../webgl/webgl.component';
 
 @Component({
-    selector: 'x-config-admin',
-    templateUrl: './config-admin.component.html',
-    styleUrls: ['./config-admin.component.scss'],
-    encapsulation: ViewEncapsulation.None,
-    changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+  selector: 'x-config-admin',
+  templateUrl: './config-admin.component.html',
+  styleUrls: ['./config-admin.component.scss'],
+  encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.Eager,
+  standalone: false
 })
-
 export class ConfigAdminComponent {
   app = AppComponent.app;
   ringData = RingData.list;
 
-  setStdPreset() {
-    dbSaveStdPreset().then(r => {
-    }).catch(err => {
-      console.log("error in setStdPreset(): ", err);
+  setStdPreset(): void {
+    dbSaveStdPreset().catch(err => {
+      console.log('error in setStdPreset(): ', err);
     });
-    ;
   }
 
-  toggleWireframe() {
-    let webgl = WebglComponent.WEBGL;
-    if (webgl) {
-      webgl.scene.forceWireframe = !webgl.scene.forceWireframe;
-      webgl.renderFrame();
+  toggleWireframe(): void {
+    const webgl = WebglComponent.WEBGL;
+
+    if (!webgl) {
+      return;
     }
+
+    webgl.scene.forceWireframe = !webgl.scene.forceWireframe;
+    webgl.renderFrame();
   }
 
-  dbSetAppData() {
+  dbSetAppData(): void {
     dbSetAppData().then();
   }
 
-  exportObj() {
+  exportObj(): void {
     exportObj();
   }
 
-  downloadCfg() {
-    // let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppComponent.app.data));
-    // let dlAnchorElem = document.getElementById('downloadAnchorElem');
-    // if (dlAnchorElem) {
-    //   dlAnchorElem.setAttribute("href", dataStr);
-    //   dlAnchorElem.setAttribute("download", "config.json");
-    //   dlAnchorElem.click();
-    // }
-
-    let fileName = 'config.json';
-
-    let fileToSave = new Blob([JSON.stringify(AppComponent.app.data)], {
+  downloadCfg(): void {
+    const fileName = 'config.json';
+    const fileToSave = new Blob([JSON.stringify(AppComponent.app.data)], {
       type: 'application/json'
     });
 
-    saveAs(fileToSave, fileName);
+    this.saveBlob(fileToSave, fileName);
   }
 
-  uploadCfg() {
-    // @ts-ignore
-    let files = document.getElementById('selectFiles').files;
-    if (!files || files.length <= 0) return;
+  uploadCfg(): void {
+    const input = document.getElementById('selectFiles') as HTMLInputElement | null;
+    const file = input?.files?.item(0);
 
-    let fr = new FileReader();
-
-    fr.onload = function (e) {
-      // @ts-ignore
-      let result = JSON.parse(e.target.result);
-
-      // @ts-ignore
-      AppComponent.app.dataSafeJson = <string> e.target.result;
-      dbSetAppData().then(e => {
-      //  location.reload();
-      })
+    if (!file) {
+      return;
     }
 
-    fr.readAsText(files.item(0));
+    const reader = new FileReader();
+
+    reader.onload = event => {
+      const content = event.target?.result;
+
+      if (typeof content !== 'string') {
+        console.log('error in uploadCfg(): Dateiinhalt konnte nicht gelesen werden.');
+        return;
+      }
+
+      try {
+        JSON.parse(content);
+      } catch (err) {
+        console.log('error in uploadCfg(): Ungültige JSON-Datei.', err);
+        return;
+      }
+
+      AppComponent.app.dataSafeJson = content;
+      dbSetAppData().then();
+    };
+
+    reader.readAsText(file);
+  }
+
+  private saveBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
   }
 }
