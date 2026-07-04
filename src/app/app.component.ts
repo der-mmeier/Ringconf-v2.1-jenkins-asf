@@ -35,6 +35,8 @@ export class AppComponent implements OnInit {
 
   state = {
     build: info.version,
+    appDataVersionLabel: "unversioned",
+    appDataHash: "",
     configMode: 2, // 0=female, 1=male, 2=pair
     ready: false, // show wait overlay...
     saveLoad: false, // show save/load Dialog

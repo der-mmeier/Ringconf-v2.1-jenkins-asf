@@ -1,0 +1,170 @@
+<button class="admin-gear" type="button" (click)="toggle()" aria-label="Development Admin öffnen">
+  ⚙
+</button>
+
+<aside class="admin-panel" [class.open]="open" *ngIf="open">
+  <header class="admin-header">
+    <div>
+      <h2>AppData und WebGL-Settings</h2>
+      <p>Build {{build.version_label}} · AppData {{activeVersion?.version_label || 'unversioned'}}</p>
+    </div>
+    <button type="button" (click)="toggle()" aria-label="Panel schließen">×</button>
+  </header>
+
+  <nav class="admin-tabs" aria-label="Admin-Bereiche">
+    <button type="button" [class.active]="activeTab === 'appdata'" (click)="activeTab = 'appdata'">AppData</button>
+    <button type="button" [class.active]="activeTab === 'webgl'" (click)="activeTab = 'webgl'">WebGL-Settings</button>
+    <button type="button" [class.active]="activeTab === 'tools'" (click)="activeTab = 'tools'">Werkzeuge</button>
+    <button type="button" [class.active]="activeTab === 'versions'" (click)="activeTab = 'versions'">Versionen und Freigaben</button>
+  </nav>
+
+  <div class="admin-status" [attr.data-type]="statusType">
+    {{statusMessage}}
+  </div>
+
+  <section class="admin-body" *ngIf="activeTab === 'appdata'">
+    <div class="section-grid">
+      <button type="button" *ngFor="let section of appDataSections" (click)="selectedJsonPath = section.keys[0]">
+        <strong>{{section.title}}</strong>
+        <span *ngFor="let key of section.keys">{{key}}: {{getSectionCount(key)}}</span>
+      </button>
+    </div>
+
+    <label class="field">
+      <span>JSON-Pfad</span>
+      <select [(ngModel)]="selectedJsonPath">
+        <optgroup *ngFor="let section of appDataSections" [label]="section.title">
+          <option *ngFor="let key of section.keys" [value]="key">{{key}}</option>
+        </optgroup>
+      </select>
+    </label>
+
+    <textarea class="json-editor" [ngModel]="getJsonValue(selectedJsonPath)" (ngModelChange)="updateJsonValue(selectedJsonPath, $event)" spellcheck="false"></textarea>
+
+    <div class="dynamic-list">
+      <h3>Dynamische Einträge: {{selectedJsonPath}}</h3>
+      <div class="dynamic-row" *ngFor="let item of getArray(selectedJsonPath); let index = index">
+        <span>{{index + 1}}</span>
+        <strong>{{identify(item)}}</strong>
+        <code>{{item | json}}</code>
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-body" *ngIf="activeTab === 'webgl'">
+    <details *ngFor="let group of webglGroups" open>
+      <summary>{{group.title}}</summary>
+      <label class="range-field" *ngFor="let field of group.fields">
+        <span>
+          {{field.label}}
+          <em *ngIf="field.reload">Neuladen erforderlich</em>
+        </span>
+        <input type="range" [min]="field.min" [max]="field.max" [step]="field.step" [ngModel]="getField(field.path)" (ngModelChange)="updateWebglField(field, $event)">
+        <input type="number" [min]="field.min" [max]="field.max" [step]="field.step" [ngModel]="getField(field.path)" (ngModelChange)="updateWebglField(field, $event)">
+      </label>
+    </details>
+  </section>
+
+  <section class="admin-body" *ngIf="activeTab === 'tools'">
+    <h3>OBJ-Validator und Canvas-Vorschau</h3>
+    <p>Nur Vorschau: OBJ-Dateinamen und AppData-Referenzen werden lokal validiert; Uploads oder Assetänderungen erfolgen hier nicht.</p>
+
+    <h3>Live-Vorschau</h3>
+    <p [class.warn]="requiresReload">{{requiresReload ? 'Teilweise Neuladen erforderlich' : 'Live angewendet'}}</p>
+
+    <h3>AppData-Validierung</h3>
+    <ul class="validation errors" *ngIf="validation.errors.length">
+      <li *ngFor="let error of validation.errors">{{error}}</li>
+    </ul>
+    <ul class="validation warnings" *ngIf="validation.warnings.length">
+      <li *ngFor="let warning of validation.warnings">{{warning}}</li>
+    </ul>
+    <p *ngIf="!validation.errors.length && !validation.warnings.length">Keine lokalen Validierungsbefunde.</p>
+
+    <h3>Änderungsvergleich</h3>
+    <p>{{diff.length}} Änderung(en)</p>
+    <div class="diff-list">
+      <article *ngFor="let entry of diff">
+        <strong>{{entry.path}}</strong>
+        <span>{{entry.impact}}</span>
+        <code>{{entry.before | json}} → {{entry.after | json}}</code>
+      </article>
+    </div>
+  </section>
+
+  <section class="admin-body" *ngIf="activeTab === 'versions'">
+    <div class="version-summary">
+      <div>
+        <h3>Aktuelle Version</h3>
+        <p>{{activeVersion?.version_label || 'keine versionierte AppData'}} · {{activeVersion?.state || 'unversioned'}}</p>
+        <code>{{activeHash}}</code>
+      </div>
+      <div>
+        <h3>Build-Kompatibilität</h3>
+        <p>{{build.version_label}} · {{build.git_commit || 'Git unbekannt'}}</p>
+      </div>
+    </div>
+
+    <label class="field">
+      <span>Versionshistorie</span>
+      <select [(ngModel)]="selectedVersionId">
+        <option value="">Version auswählen</option>
+        <option *ngFor="let version of versions" [value]="version.id">{{version.version_label}} · {{version.state}}</option>
+      </select>
+    </label>
+    <button type="button" (click)="loadVersion()">Version laden</button>
+
+    <label class="field">
+      <span>Kompatibilitätsstatus</span>
+      <select [(ngModel)]="selectedCompatibilityStatus">
+        <option value="compatible">compatible</option>
+        <option value="incompatible">incompatible</option>
+      </select>
+    </label>
+    <button type="button" (click)="openAuth('setCompatibility')" [disabled]="!activeVersion">Kompatibilität speichern</button>
+
+    <h3>Produktionsfreigabe</h3>
+    <button type="button" (click)="openAuth('approveVersion')" [disabled]="!activeVersion">Für Produktion freigeben</button>
+    <button type="button" (click)="openAuth('retireVersion')" [disabled]="!activeVersion">Version stilllegen</button>
+
+    <h3>Ziel-/Kundenzuordnung</h3>
+    <label class="field">
+      <span>Ziel</span>
+      <select [(ngModel)]="selectedTargetKey">
+        <option *ngFor="let target of targets" [value]="target.target_key">{{target.target_name}} · {{target.environment}}</option>
+      </select>
+    </label>
+    <button type="button" (click)="openAuth('assignTarget')" [disabled]="!activeVersion">Ziel zuordnen</button>
+    <button type="button" (click)="openAuth('rollbackTarget')" [disabled]="!activeVersion">Rollback-Historie fortschreiben</button>
+
+    <h3>Baseline</h3>
+    <button type="button" (click)="openAuth('importCurrentBaseline')" [disabled]="versions.length > 0">Aktuelle AppData als Baseline importieren</button>
+  </section>
+
+  <footer class="admin-actions">
+    <button type="button" (click)="reset()" [disabled]="!dirty">Änderungen zurücksetzen</button>
+    <button type="button" (click)="openAuth('saveVersion')" [disabled]="validation.errors.length > 0 || !dirty">Neue AppData-Version speichern</button>
+  </footer>
+</aside>
+
+<div class="auth-backdrop" *ngIf="authAction">
+  <form class="auth-dialog" (ngSubmit)="confirmAuth()" autocomplete="off">
+    <h2>{{authTitle}}</h2>
+    <label>
+      <span>Interner Login</span>
+      <input name="admin-login" [(ngModel)]="auth.username" autocomplete="off" required>
+    </label>
+    <label>
+      <span>Mitarbeiter-PIN</span>
+      <input name="admin-pin" type="password" [(ngModel)]="auth.pin" autocomplete="off" required>
+    </label>
+    <label>
+      <span>{{authReasonLabel}}</span>
+      <textarea name="admin-reason" [(ngModel)]="auth.reason" required></textarea>
+    </label>
+    <div>
+      <button type="button" (click)="cancelAuth()">Abbrechen</button>
+      <button type="submit">Bestätigen</button>
+    </div>
+  </form>
+</div>

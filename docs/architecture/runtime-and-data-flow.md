@@ -67,3 +67,32 @@ The former direct shop form submission has been removed. `addToCart()` now saves
 - Missing PHP DB configuration now throws a clear `Missing ONERINGCONF_DB_DSN configuration` server error.
 - API calls still depend on the legacy RPC dispatcher in `src/php/api.php`.
 - WebGL lifecycle and context-loss risks remain as documented in `risk-register.md`.
+
+## Development AppData Admin Flow
+
+The AppData/WebGL admin is mounted from `src/main.ts` by calling `bootstrapDevelopmentAdmin(...)`. In the `development` build this resolves to `src/app/development-admin/admin-entry.ts`, which creates `DevelopmentAdminComponent` outside the main `AppModule` template. Production and WooCommerce replace that file with `admin-entry.disabled.ts`, so admin components and labels do not enter those dependency graphs.
+
+```mermaid
+sequenceDiagram
+  participant Main as src/main.ts
+  participant Entry as admin-entry.ts
+  participant Admin as DevelopmentAdminComponent
+  participant Api as /appdata-admin.php
+  participant Verify as Internal verification service
+  participant Db as AppData version tables
+
+  Main->>Entry: bootstrapDevelopmentAdmin(moduleRef)
+  Entry->>Admin: createComponent
+  Admin->>Api: POST bootstrap / saveVersion / approveVersion
+  Api->>Verify: HTTPS POST with X-Internal-Verification-Key
+  Verify-->>Api: verified + permissions
+  Api->>Db: transaction, hash, diff, audit
+  Db-->>Api: immutable snapshot / assignment
+  Api-->>Admin: JSON result without secrets
+```
+
+`AppDataAdminService` only uses relative `/appdata-admin.php` requests. Login and PIN are in-memory dialog fields, sent in JSON request bodies for sensitive actions, then cleared. They are never stored in browser storage.
+
+The local endpoint implements the versioning contract from `ringcfg_appdata_build`, `ringcfg_appdata_version`, `ringcfg_appdata_build_compatibility`, `ringcfg_appdata_target`, `ringcfg_appdata_release_history`, and `ringcfg_appdata_audit_log`. It keeps the legacy `TABLE_DATA/appdata` entry as runtime fallback and only mirrors an assigned snapshot back there for the `local-development` target.
+
+The canvas build label is now a build/AppData pair: `WebglComponent.getBuildString()` renders `Build <build> · AppData <version>`. `AppComponent.state.appDataVersionLabel` is updated by the development admin when a versioned snapshot is loaded.
