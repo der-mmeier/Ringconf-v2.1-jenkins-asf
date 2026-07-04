@@ -1,4 +1,4 @@
-@import "../default";
+﻿@use "../default" as *;
 
 :host {
   position: relative;
@@ -80,4 +80,5 @@
 //    display:block;
 //  }
 //}
+
 

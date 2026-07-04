@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-config-stone {
   width: 100%;
@@ -181,3 +181,4 @@ x-config-stone {
   }
 
 }
+

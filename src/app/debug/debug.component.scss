@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 .debug {
   @include flexbox();
@@ -13,3 +13,4 @@
     max-width: calc(50% - 50px);
   }
 }
+

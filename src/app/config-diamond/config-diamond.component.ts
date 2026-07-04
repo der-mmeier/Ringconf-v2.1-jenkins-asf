@@ -6,7 +6,7 @@ import {
   dbSetAppData, dbSetCurrentAppData, restoreEnvTexture,
   uploadFile
 } from "../app.component";
-import {saveAs} from "file-saver";
+
 import {WebglComponent} from "../webgl/webgl.component";
 import {environment} from "../../environments/environment";
 import { HttpClient } from "@angular/common/http";
@@ -384,7 +384,7 @@ export class ConfigDiamondComponent {
       type: 'application/json'
     });
 
-    saveAs(fileToSave, fileName);
+    this.saveBlob(fileToSave, fileName);
   }
 
   upload_appData() {
@@ -394,4 +394,20 @@ export class ConfigDiamondComponent {
   restore_appData() {
     dbSetAppData().then();
   }
+
+  private saveBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  }
+
 }

@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-image-card {
   @include flexbox();
@@ -34,3 +34,4 @@ x-image-card {
     opacity: 0.5;
   }
 }
+

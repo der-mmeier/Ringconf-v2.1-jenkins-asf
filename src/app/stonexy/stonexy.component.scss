@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-stonexy {
   display:inline-block;
@@ -36,3 +36,4 @@ x-stonexy {
     margin:10px 0 10px 35px;
   }
 }
+

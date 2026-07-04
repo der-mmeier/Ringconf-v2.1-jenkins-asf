@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-logger {
   @include flexbox();
@@ -57,3 +57,4 @@ x-logger {
     }
   }
 }
+

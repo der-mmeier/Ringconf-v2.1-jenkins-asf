@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 .menu {
   @include flexbox;
@@ -192,3 +192,4 @@
     }
   }
 }
+

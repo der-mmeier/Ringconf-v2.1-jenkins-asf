@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-config-material {
   width: 100%;
@@ -96,6 +96,7 @@ x-config-material {
     }
   }
 }
+
 
 
 

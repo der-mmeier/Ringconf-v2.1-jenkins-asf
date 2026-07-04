@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-dropdown {
   position: relative;
@@ -96,3 +96,4 @@ x-dropdown {
     display: none;
   }
 }
+

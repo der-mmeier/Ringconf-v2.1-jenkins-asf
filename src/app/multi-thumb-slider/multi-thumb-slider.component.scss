@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 .mts {
   width: 100%;
@@ -175,5 +175,6 @@
     margin-top: 80px;
   }
 }
+
 
 

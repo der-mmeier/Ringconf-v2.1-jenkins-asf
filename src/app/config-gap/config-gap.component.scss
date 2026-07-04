@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-config-gap {
   width: 100%;
@@ -200,3 +200,4 @@ x-config-gap {
     }
   }
 }
+

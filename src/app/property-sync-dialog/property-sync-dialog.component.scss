@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-property-sync-dialog {
   display: none;
@@ -48,3 +48,4 @@ x-property-sync-dialog {
     @include flexbox();
   }
 }
+
