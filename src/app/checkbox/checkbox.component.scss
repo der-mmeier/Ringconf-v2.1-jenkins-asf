@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-checkbox {
   @include flexbox();
@@ -25,3 +25,4 @@ x-checkbox {
   .text {
   }
 }
+

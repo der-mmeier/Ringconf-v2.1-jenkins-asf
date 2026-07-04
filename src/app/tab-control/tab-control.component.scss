@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-tab-control {
   @include flexbox();
@@ -176,6 +176,7 @@ x-tab-control {
     }
   }
 }
+
 
 
 

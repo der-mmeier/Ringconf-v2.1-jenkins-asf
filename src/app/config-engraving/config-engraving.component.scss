@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-config-engraving {
   width: 100%;
@@ -47,3 +47,4 @@ x-config-engraving {
     }
   }
 }
+

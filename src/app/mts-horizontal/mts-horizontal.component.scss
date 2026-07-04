@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 .slider-component {
   //@font-face {
@@ -127,3 +127,4 @@
 
   }
 }
+

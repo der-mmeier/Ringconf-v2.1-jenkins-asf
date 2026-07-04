@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-local-storage {
   @include flexbox();
@@ -56,3 +56,4 @@ x-local-storage {
     }
   }
 }
+

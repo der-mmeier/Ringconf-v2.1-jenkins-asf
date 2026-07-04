@@ -1,6 +1,7 @@
-@import "default.scss";
+﻿@use "default" as *;
 
 body {
   padding: 0;
   margin: 0;
 }
+

@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 .webgl {
   position: relative;
@@ -97,3 +97,4 @@
     height: 200px;
   }
 }
+

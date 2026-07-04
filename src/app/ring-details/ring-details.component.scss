@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-ring-details {
   @include flexbox();
@@ -174,3 +174,4 @@ x-ring-details {
   }
 
 }
+

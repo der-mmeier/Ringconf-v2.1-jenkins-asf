@@ -1,4 +1,4 @@
-@import "../../default";
+﻿@use "../../default" as *;
 
 x-config-profile {
   @include flexbox();
@@ -61,6 +61,7 @@ x-config-profile {
     }
   }
 }
+
 
 
 

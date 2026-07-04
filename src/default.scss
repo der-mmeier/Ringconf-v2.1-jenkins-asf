@@ -1,4 +1,5 @@
-@import "flex.scss";
+﻿@forward "flex";
+@use "flex" as *;
 
 $asset-root: "";
 
@@ -167,4 +168,5 @@ button {
     transform: rotate(360deg);
   }
 }
+
 
