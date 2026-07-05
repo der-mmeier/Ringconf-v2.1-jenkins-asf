@@ -680,6 +680,10 @@ export class WebglComponent {
     this.resizeViewport();
   }
 
+  resizeAndRender() {
+    this.resizeViewport();
+  }
+
   resizeViewport() {
     this.engine?.resize();
     if (this.engine && this.canvas && this.scene && this.camera) {

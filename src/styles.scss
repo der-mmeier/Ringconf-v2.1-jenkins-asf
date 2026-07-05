@@ -18,6 +18,27 @@ body {
     overscroll-behavior: none;
   }
 
+  body.mobile-panel-open x-webgl .webgl {
+    height: var(--mobile-canvas-height-open);
+  }
+
+  body.mobile-panel-closed x-webgl .webgl {
+    height: var(--mobile-canvas-height-closed);
+  }
+
+  body.mobile-panel-open .mobile-config-row {
+    border-top: 1px solid #d5d8d8;
+  }
+
+  body.mobile-panel-closed .mobile-config-row {
+    border-top: 0;
+    background-color: transparent;
+  }
+
+  body.mobile-panel-open x-config.show-if-mobile {
+    height: var(--mobile-panel-height-open);
+  }
+
   // Mobile rule: short option lists use horizontal strips; long lists stay compact pickers.
   .mobile-option-strip {
     display: flex;
