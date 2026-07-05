@@ -1,3 +1,9 @@
+@if (isMobilePanelOpen()) {
+  <button type="button" class="mobile-panel-collapse" aria-label="Panel schliessen" (mousedown)="closePanel()">
+    <span></span>
+  </button>
+}
+
 <x-config-profile *ngIf="navigation.currentHash=='profil'"></x-config-profile>
 
 <div class="config-wrapper" *ngIf="navigation.currentHash=='masse'" >

@@ -32,12 +32,21 @@ export class MenuComponent
   selectMobileItem(hash: string)
   {
     this.mobileExpanded = false;
-    this.changeHash(hash);
+    if (this.isMobileItemActive(hash)) {
+      closeNavigationPanel();
+      return;
+    }
+    setNavigationHash(hash, true);
   }
 
   isMobileMoreActive()
   {
     return navigation.currentHash === 'more' || this.mobileMoreItems.some(item => item.hash === navigation.currentHash);
+  }
+
+  isMobileItemActive(hash: string)
+  {
+    return hash === 'more' ? this.isMobileMoreActive() : navigation.currentHash === hash;
   }
 
   requestResize()
@@ -132,6 +141,8 @@ export let navigation = {
 
 window.addEventListener('hashchange', hashChanged);
 
+const MOBILE_BREAKPOINT = 768;
+
 const hashAliases: {[key: string]: string} = {
   profile: "profil",
   profil: "profil",
@@ -170,18 +181,38 @@ export function setNavigationHash(hash: string, updateUrl: boolean = false)
   if (updateUrl)
   {
     let url = new URL(window.location.href);
-    url.hash = canonicalHashes[parsed] || "profile";
+    if (parsed) {
+      url.hash = canonicalHashes[parsed] || "profile";
+    } else {
+      url.hash = "";
+    }
     window.history.replaceState(window.history.state, "", url);
   }
 
+  updateMobilePanelState();
+  requestWebglResize();
+}
+
+export function closeNavigationPanel()
+{
+  navigation.currentHash = isMobileViewport() ? "" : "profil";
+  let url = new URL(window.location.href);
+  url.hash = "";
+  window.history.replaceState(window.history.state, "", url);
+  updateMobilePanelState();
   requestWebglResize();
 }
 
 function parseNavigationHash(hash: string)
 {
-  let cleaned = decodeURIComponent((hash || "").replace(/^#/, "")).toLowerCase();
-  if (cleaned === "") return "profil";
-  return hashAliases[cleaned] || "profil";
+  let cleaned = "";
+  try {
+    cleaned = decodeURIComponent((hash || "").replace(/^#/, "")).toLowerCase();
+  } catch {
+    cleaned = "";
+  }
+  if (cleaned === "") return isMobileViewport() ? "" : "profil";
+  return hashAliases[cleaned] || (isMobileViewport() ? "" : "profil");
 }
 
 function hashChanged()
@@ -191,23 +222,37 @@ function hashChanged()
 
 hashChanged();
 
+const mobileMediaQuery = window.matchMedia("(max-width: " + MOBILE_BREAKPOINT + "px)");
+mobileMediaQuery.addEventListener("change", function () {
+  setNavigationHash(window.location.hash, false);
+});
+
 function requestWebglResize()
 {
-  window.setTimeout(function () {
+  let resize = function () {
     const webgl = (window as any).__oneRingconfWebgl;
-    if (webgl && typeof webgl.resizeViewport === "function") {
+    if (webgl && typeof webgl.resizeAndRender === "function") {
+      webgl.resizeAndRender();
+    } else if (webgl && typeof webgl.resizeViewport === "function") {
       webgl.resizeViewport();
     } else if (webgl && typeof webgl.resize === "function") {
       webgl.resize();
     }
-  }, 0);
+  };
 
-  window.setTimeout(function () {
-    const webgl = (window as any).__oneRingconfWebgl;
-    if (webgl && typeof webgl.resizeViewport === "function") {
-      webgl.resizeViewport();
-    } else if (webgl && typeof webgl.resize === "function") {
-      webgl.resize();
-    }
-  }, 240);
+  window.requestAnimationFrame(resize);
+  window.setTimeout(resize, 180);
+  window.setTimeout(resize, 360);
+}
+
+function isMobileViewport()
+{
+  return window.matchMedia("(max-width: " + MOBILE_BREAKPOINT + "px)").matches;
+}
+
+function updateMobilePanelState()
+{
+  let panelOpen = isMobileViewport() && navigation.currentHash !== "";
+  document.body.classList.toggle("mobile-panel-open", panelOpen);
+  document.body.classList.toggle("mobile-panel-closed", isMobileViewport() && !panelOpen);
 }
