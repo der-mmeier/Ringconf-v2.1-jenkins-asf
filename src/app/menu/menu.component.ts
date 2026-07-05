@@ -19,11 +19,30 @@ export class MenuComponent
 
   navigation = navigation;
   mobileExpanded=false;
+  mobilePrimaryItems = navigation.items.filter(item => ['profil', 'masse', 'material', 'steinbesatz'].indexOf(item.hash) !== -1)
+    .map(item => item.hash === 'steinbesatz' ? {...item, title: 'Steine'} : item);
+  mobileMoreItems = navigation.items.filter(item => ['fugen', 'gravur'].indexOf(item.hash) !== -1);
 
   changeHash(hash: string)
   {
     this.mobileExpanded = false;
-    window.location.hash = hash;
+    setNavigationHash(hash, true);
+  }
+
+  selectMobileItem(hash: string)
+  {
+    this.mobileExpanded = false;
+    this.changeHash(hash);
+  }
+
+  isMobileMoreActive()
+  {
+    return navigation.currentHash === 'more' || this.mobileMoreItems.some(item => item.hash === navigation.currentHash);
+  }
+
+  requestResize()
+  {
+    requestWebglResize();
   }
 
   isFirstNavItem()
@@ -108,19 +127,87 @@ export let navigation = {
       img: "icon-gravur.svg"
     },
   ],
-  currentHash: window.location.hash,
+  currentHash: "profil",
 };
 
 window.addEventListener('hashchange', hashChanged);
 
+const hashAliases: {[key: string]: string} = {
+  profile: "profil",
+  profil: "profil",
+  dimension: "masse",
+  masse: "masse",
+  "ma\u00dfe": "masse",
+  material: "material",
+  stone: "steinbesatz",
+  steine: "steinbesatz",
+  steinbesatz: "steinbesatz",
+  more: "more",
+  mehr: "more",
+  fugen: "fugen",
+  gravur: "gravur",
+  admin: "admin",
+  diamond: "diamond"
+};
+
+const canonicalHashes: {[key: string]: string} = {
+  profil: "profile",
+  masse: "dimension",
+  material: "material",
+  steinbesatz: "stone",
+  more: "more",
+  fugen: "fugen",
+  gravur: "gravur",
+  admin: "admin",
+  diamond: "diamond"
+};
+
+export function setNavigationHash(hash: string, updateUrl: boolean = false)
+{
+  let parsed = parseNavigationHash(hash);
+  navigation.currentHash = parsed;
+
+  if (updateUrl)
+  {
+    let url = new URL(window.location.href);
+    url.hash = canonicalHashes[parsed] || "profile";
+    window.history.replaceState(window.history.state, "", url);
+  }
+
+  requestWebglResize();
+}
+
+function parseNavigationHash(hash: string)
+{
+  let cleaned = decodeURIComponent((hash || "").replace(/^#/, "")).toLowerCase();
+  if (cleaned === "") return "profil";
+  return hashAliases[cleaned] || "profil";
+}
+
 function hashChanged()
 {
-  let index = navigation.items.findIndex(function (e)
-  {
-    return ('#'+e.hash) === window.location.hash
-  });
-  if (index == -1 && (window.location.hash !== '#admin' && window.location.hash !== '#diamond')) window.location.hash = navigation.items[0].hash;
-  navigation.currentHash = window.location.hash.substring(1);
+  setNavigationHash(window.location.hash, false);
 }
 
 hashChanged();
+
+function requestWebglResize()
+{
+  window.setTimeout(function () {
+    const webgl = (window as any).__oneRingconfWebgl;
+    if (webgl && typeof webgl.resizeViewport === "function") {
+      webgl.resizeViewport();
+    } else if (webgl && typeof webgl.resize === "function") {
+      webgl.resize();
+    }
+  }, 0);
+
+  window.setTimeout(function () {
+    const webgl = (window as any).__oneRingconfWebgl;
+    if (webgl && typeof webgl.resizeViewport === "function") {
+      webgl.resizeViewport();
+    } else if (webgl && typeof webgl.resize === "function") {
+      webgl.resize();
+    }
+  }, 240);
+}

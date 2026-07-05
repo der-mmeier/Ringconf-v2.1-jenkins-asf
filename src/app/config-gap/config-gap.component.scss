@@ -199,5 +199,82 @@ x-config-gap {
       }
     }
   }
-}
 
+  @media (max-width: $breakpoint-mobile) {
+    x-tab-control.inner {
+      .header {
+        min-height: 38px;
+        padding: 6px 8px;
+        font-size: 12px;
+
+        &.gap::before,
+        &.step::before {
+          width: 22px;
+          height: 16px;
+          margin-right: 6px;
+          background-size: contain;
+        }
+      }
+
+      .content {
+        x-tab-page {
+          padding: 6px;
+
+          .image-card-wrapper {
+            @include flex-wrap(nowrap);
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            gap: 8px;
+            scroll-snap-type: x proximity;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+
+            x-image-card {
+              @include flex-grow(0);
+              @include flex-shrink(0);
+              flex-basis: 82px;
+              width: 82px;
+              min-height: 82px;
+              scroll-snap-align: start;
+
+              img {
+                width: 38px;
+                height: 38px;
+              }
+            }
+          }
+
+          x-dropdown {
+            width: 100%;
+            margin: 8px 0 0 0;
+          }
+
+          > h6.title {
+            margin: 10px 0 6px 0;
+            font-size: 12px;
+          }
+
+          .gap-item {
+            margin: 0;
+            padding: 6px 8px;
+
+            .title {
+              font-size: 12px;
+            }
+          }
+
+          .gapDiv-plus {
+            margin: 10px 0 0 0;
+
+            .icon {
+              width: 30px;
+              height: 30px;
+            }
+          }
+        }
+      }
+    }
+  }
+}

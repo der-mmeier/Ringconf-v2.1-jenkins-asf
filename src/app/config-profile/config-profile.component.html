@@ -19,6 +19,7 @@
 <div class="contentWrapper">
   <x-image-card *ngFor="let prf of app.data.profile;trackBy:trackByFn" (mousedown)="setProfile(prf.name)" title="{{prf.name}}"
                 [image]="isProfileSelected(prf.name) ? env.assetFolderLocation+'/assets/imgui/'+(prf.name | lowercase) +'-fill.svg' : env.assetFolderLocation+'/assets/imgui/'+(prf.name | lowercase)+'-contour.svg'"
+                [class.active]="isProfileSelected(prf.name)"
                 [class.female]="isProfileSelected(prf.name, 0)" [class.male]="isProfileSelected(prf.name, 1)">
   </x-image-card>
 </div>

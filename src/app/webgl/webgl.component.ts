@@ -658,6 +658,12 @@ export class WebglComponent {
       // LocalStorageComponent.that.show();
       // dbLoadPreset(AppComponent.app.state.preset_id).then(r => {});
       dbLoadPreset("0000-0000").then(r => {
+        window.setTimeout(function () {
+          that.resizeViewport();
+        }, 0);
+        window.setTimeout(function () {
+          that.resizeViewport();
+        }, 250);
       });
     })
   }
@@ -671,12 +677,25 @@ export class WebglComponent {
   }
 
   resize() {
+    this.resizeViewport();
+  }
+
+  resizeViewport() {
     this.engine?.resize();
+    if (this.engine && this.canvas && this.scene && this.camera) {
+      zoomExtends(this.engine, this.canvas, this.scene, this.camera);
+    }
     this.cameraChanged = true;
-    this.renderFrame();
+    this.renderFrame(2);
   }
 
   renderFrame(forceFrames: number = 0) {
+
+    if (!this.camera || !this.camera.target) {
+      if (this.forceFrames < forceFrames)
+        this.forceFrames = forceFrames;
+      return;
+    }
 
     let t = [] as boolean[];
     RingData.list.forEach(function (e) {
@@ -693,7 +712,7 @@ export class WebglComponent {
         let ring = cRing.list.find(function (e) {
           return e.ringData.index == 0;
         })
-        if (ring) {
+        if (ring && ring.cameraData && ring.cameraData.target) {
           this.camera.target.x = ring.cameraData.target.x;
           this.camera.target.y = ring.cameraData.target.y;
           this.camera.target.z = ring.cameraData.target.z;
@@ -706,7 +725,7 @@ export class WebglComponent {
         let ring = cRing.list.find(function (e) {
           return e.ringData.index == 1;
         })
-        if (ring) {
+        if (ring && ring.cameraData && ring.cameraData.target) {
           this.camera.target.x = ring.cameraData.target.x;
           this.camera.target.y = ring.cameraData.target.y;
           this.camera.target.z = ring.cameraData.target.z;
@@ -723,13 +742,12 @@ export class WebglComponent {
 
         let x = 0;
 
-        if (ring_0 && ring_1) {
+        if (ring_0 && ring_1 && ring_0.cameraData && ring_0.cameraData.target && ring_1.cameraData && ring_1.cameraData.target) {
           x = (ring_0.cameraData.target.x + ring_1.cameraData.target.x) / 2;
+          this.camera.target.x = x;
+          this.camera.target.y = 10;
+          this.camera.target.z = 0;
         }
-
-        this.camera.target.x = x;
-        this.camera.target.y = 10;
-        this.camera.target.z = 0;
       }
     } //
     // else //

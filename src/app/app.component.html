@@ -6,10 +6,10 @@
 <!--  <div data-sm-id="8e9843aa5d7c497f81b170888014051a" data-sm-desc="Super Express - 1 - 4 Arbeitstage (+120€)"></div>-->
 <!--</div>-->
 
-<x-menu mode="desktop"></x-menu>
+<x-menu class="app-header" mode="desktop"></x-menu>
 
-<div class="flex-row break">
-  <div class="flex-grow max40">
+<div class="flex-row break app-main">
+  <div class="flex-grow max40 viewport-column">
     <x-webgl></x-webgl>
     <x-menu mode="mobile"></x-menu>
   </div>
@@ -17,10 +17,10 @@
     <x-config class="show-if-desktop"></x-config>
   </div>
 </div>
-<div class="flex-row">
+<div class="flex-row mobile-config-row">
   <x-config class="show-if-mobile"></x-config>
 </div>
-<div class="flex-row break">
+<div class="flex-row break auxiliary-row">
   <div class="flex-grow">
     <x-tools mode="normal"></x-tools>
   </div>

@@ -95,5 +95,31 @@ x-dropdown {
   .selectHide {
     display: none;
   }
-}
 
+  @media (max-width: $breakpoint-mobile) {
+    font-size: 12px;
+
+    h6.title {
+      margin-bottom: 4px;
+      font-size: 12px;
+      line-height: 15px;
+    }
+
+    .selected {
+      min-height: 44px;
+      height: 44px;
+      padding: 8px 34px 8px 10px;
+      touch-action: manipulation;
+    }
+
+    .items {
+      max-height: min(48dvh, 260px);
+
+      div {
+        min-height: 44px;
+        height: 44px;
+        padding: 8px 10px;
+      }
+    }
+  }
+}

@@ -95,6 +95,112 @@ x-config-material {
       }
     }
   }
+
+  .mobile-material-strip,
+  .mobile-surface-strip {
+    display: none;
+  }
+
+  @media (max-width: $breakpoint-mobile) {
+    h6.title {
+      margin: 6px 0 2px 0;
+      font-size: 12px;
+    }
+
+    .close {
+      top: 0;
+    }
+
+    .preset-wrapper {
+      @include flex-wrap(nowrap);
+      width: 100%;
+      max-width: 100%;
+      margin: 0 0 6px 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      gap: 8px;
+      scroll-snap-type: x proximity;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+
+      x-image-card {
+        @include flex-grow(0);
+        @include flex-shrink(0);
+        flex-basis: 88px;
+        width: 88px;
+        min-height: 88px;
+        margin: 0;
+        scroll-snap-align: start;
+
+        h6.title {
+          font-size: 11px;
+          margin-top: 4px;
+        }
+
+        img {
+          width: 42px;
+          height: 42px;
+          object-fit: contain;
+        }
+      }
+    }
+
+    .materialindex-wrapper {
+      margin: 0 0 6px 0;
+
+      .item {
+        height: 30px;
+        border-width: 3px;
+      }
+    }
+
+    .desktop-material-dropdown {
+      display: none;
+    }
+
+    .mobile-material-strip,
+    .mobile-surface-strip {
+      display: block;
+    }
+
+    .material-chip {
+      min-width: 86px;
+      max-width: 110px;
+      padding: 6px;
+    }
+
+    .material-swatch,
+    .surface-icon {
+      display: block;
+      width: 32px;
+      height: 32px;
+      margin: 0 auto 4px;
+      border-radius: 3px;
+      box-shadow: inset 0 12px 18px -14px rgb(255 255 255 / 85%), inset 0 -14px 18px -14px rgb(0 0 0 / 55%);
+    }
+
+    .surface-icon {
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      border-radius: 50%;
+    }
+
+    .fineness-wrapper {
+      @include flex-wrap(nowrap);
+      margin: 0;
+      gap: 8px;
+
+      .item {
+        width: auto;
+        min-width: 48px;
+        height: 34px;
+        margin: 0;
+        line-height: 34px;
+      }
+    }
+  }
 }
 
 
