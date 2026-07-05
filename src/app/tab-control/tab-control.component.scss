@@ -175,6 +175,38 @@ x-tab-control {
       }
     }
   }
+
+  @media (max-width: $breakpoint-mobile) {
+    min-height: 0;
+
+    > .header {
+      .item {
+        min-height: 44px;
+        padding: 7px 4px;
+        touch-action: manipulation;
+
+        &.female::before,
+        &.pair::before,
+        &.male::before {
+          height: 16px;
+        }
+
+        h6.title {
+          font-size: 12px;
+          line-height: 15px;
+        }
+      }
+    }
+
+    > .content {
+      min-height: 0;
+
+      x-tab-page {
+        padding: 8px;
+        min-height: 0;
+      }
+    }
+  }
 }
 
 

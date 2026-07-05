@@ -6,6 +6,10 @@ x-config-dimension {
   margin:10px;
 }
 
+.mobile-control {
+  display: none;
+}
+
 .row {
   width: 100%;
   @include flexbox();
@@ -24,3 +28,40 @@ x-config-dimension {
   }
 }
 
+@media (max-width: $breakpoint-mobile) {
+  x-config-dimension {
+    margin: 6px 0;
+  }
+
+  .row {
+    margin-bottom: 8px;
+    min-height: 48px;
+
+    > img {
+      width: 32px;
+      margin-right: 10px;
+    }
+  }
+
+  .desktop-control {
+    display: none;
+  }
+
+  .mobile-control {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .dimension-strip {
+    h6.title {
+      margin: 0 0 2px 0;
+      font-size: 12px;
+    }
+
+    .mobile-option-item {
+      min-width: 68px;
+      padding: 7px 10px;
+    }
+  }
+}

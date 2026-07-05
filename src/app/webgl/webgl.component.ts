@@ -658,6 +658,12 @@ export class WebglComponent {
       // LocalStorageComponent.that.show();
       // dbLoadPreset(AppComponent.app.state.preset_id).then(r => {});
       dbLoadPreset("0000-0000").then(r => {
+        window.setTimeout(function () {
+          that.resizeViewport();
+        }, 0);
+        window.setTimeout(function () {
+          that.resizeViewport();
+        }, 250);
       });
     })
   }
@@ -671,9 +677,16 @@ export class WebglComponent {
   }
 
   resize() {
+    this.resizeViewport();
+  }
+
+  resizeViewport() {
     this.engine?.resize();
+    if (this.engine && this.canvas && this.scene && this.camera) {
+      zoomExtends(this.engine, this.canvas, this.scene, this.camera);
+    }
     this.cameraChanged = true;
-    this.renderFrame();
+    this.renderFrame(2);
   }
 
   renderFrame(forceFrames: number = 0) {

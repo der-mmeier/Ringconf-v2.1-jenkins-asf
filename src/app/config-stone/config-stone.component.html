@@ -21,15 +21,29 @@
 <ng-template
   [ngIf]="ringData[ringId].stone[curStoneGroup()].mode > 0 && ringData[ringId].stone[curStoneGroup()].mode != 11">
   <div class="stone-wrapper">
-    <x-dropdown title="Schliff / Ausrichting"
+    <x-dropdown class="desktop-stone-select" title="Schliff / Ausrichting"
                 [options]="app.data.stoneType"
                 [value]="getValue_stoneType()"
                 [onValueFormat]="onValueFormat_stoneType"
                 [onValueHidden]="onValueHidden_stoneType"
                 [that]="this"
                 (onSelect)="onSelect_stoneType($event)"></x-dropdown>
+    <div class="mobile-stone-strip">
+      <h6 class="title">Schliff</h6>
+      <div class="mobile-option-strip">
+        @for (item of app.data.stoneType; track item.id) {
+          <div class="mobile-option-item stone-type-chip"
+               [class.active]="getValue_stoneType()?.id === item.id"
+               [class.disabled]="onValueHidden_stoneType(this, item)"
+               (mousedown)="onSelect_stoneType(item)">
+            <img class="mobile-option-icon" src="{{env.assetFolderLocation}}/assets/imgui/{{item.img}}" alt="">
+            <span class="mobile-option-label">{{item.name}}</span>
+          </div>
+        }
+      </div>
+    </div>
 
-    <x-dropdown title="Steingröße / Carat"
+    <x-dropdown class="desktop-stone-select" title="Steingr&ouml;&szlig;e / Carat"
                 [options]="getOptions_stoneSize()"
                 [value]="getValue_stoneSize()"
                 [onValueFormat]="onValueFormat_stoneSize"
@@ -37,6 +51,19 @@
                 [that]="this"
                 (onSelect)="onSelect_stoneSize($event)">
     </x-dropdown>
+    <div class="mobile-stone-strip">
+      <h6 class="title">Gr&ouml;&szlig;e</h6>
+      <div class="mobile-option-strip">
+        @for (item of getOptions_stoneSize(); track item.size) {
+          <div class="mobile-option-item"
+               [class.active]="getValue_stoneSize()?.size === item.size"
+               [class.disabled]="onValueHidden_stoneSize(this, item)"
+               (mousedown)="onSelect_stoneSize(item)">
+            {{onValueFormat_stoneSize(item)}}
+          </div>
+        }
+      </div>
+    </div>
 
   </div>
 

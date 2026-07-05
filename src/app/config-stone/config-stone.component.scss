@@ -68,6 +68,10 @@ x-config-stone {
     margin-top:15px;
   }
 
+  .mobile-stone-strip {
+    display: none;
+  }
+
   x-checkbox {
     .box {
       margin-right:10px;
@@ -177,6 +181,104 @@ x-config-stone {
     }
     .title {
       margin:0;
+    }
+  }
+
+  @media (max-width: $breakpoint-mobile) {
+    h6.title {
+      margin: 6px 0 4px 0;
+      font-size: 12px;
+    }
+
+    .close {
+      top: 0;
+    }
+
+    .mode-wrapper {
+      @include flex-wrap(nowrap);
+      width: 100%;
+      max-width: 100%;
+      margin: 0 0 8px 0;
+      gap: 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x proximity;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+
+      x-image-card {
+        @include flex-grow(0);
+        @include flex-shrink(0);
+        flex-basis: 82px;
+        width: 82px;
+        min-height: 82px;
+        scroll-snap-align: start;
+
+        h6.title {
+          font-size: 11px;
+          margin-top: 4px;
+        }
+
+        img {
+          width: 38px;
+          height: 38px;
+          object-fit: contain;
+        }
+      }
+    }
+
+    .stone-wrapper,
+    .division-wrapper {
+      @include flex-direction(column);
+      margin-bottom: 8px;
+
+      x-dropdown {
+        width: 100%;
+        margin: 4px 0 8px 0;
+      }
+    }
+
+    .desktop-stone-select {
+      display: none;
+    }
+
+    .mobile-stone-strip {
+      display: block;
+      min-width: 0;
+    }
+
+    .stone-type-chip {
+      min-width: 82px;
+      max-width: 108px;
+    }
+
+    x-checkbox.quality {
+      display: inline-flex;
+      min-height: 34px;
+      margin: 0 8px 6px 0;
+      font-size: 12px;
+    }
+
+    .position-wrapper {
+      overflow-x: auto;
+      overflow-y: hidden;
+      gap: 8px;
+      padding-bottom: 6px;
+      scroll-snap-type: x proximity;
+      overscroll-behavior-x: contain;
+
+      x-image-card {
+        @include flex-grow(0);
+        @include flex-shrink(0);
+        flex-basis: 72px;
+        width: 72px;
+        scroll-snap-align: start;
+
+        img {
+          width: 36px;
+          height: 36px;
+        }
+      }
     }
   }
 

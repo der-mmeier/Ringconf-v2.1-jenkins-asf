@@ -2,12 +2,18 @@
 
 x-config {
   position: relative;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
 
   .config-wrapper {
     margin: 10px 0 0 5px;
 
     @media (max-width: $breakpoint-mobile) {
-      margin-left: 0;
+      margin: 0;
+      min-height: 0;
+      min-width: 0;
+      overflow-x: hidden;
     }
 
   }

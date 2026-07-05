@@ -33,5 +33,19 @@ x-image-card {
     pointer-events: none;
     opacity: 0.5;
   }
-}
 
+  @media (max-width: $breakpoint-mobile) {
+    min-height: 110px;
+    margin: 4px;
+
+    h6.title {
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    img {
+      height: 54px;
+      margin-top: 8px;
+    }
+  }
+}

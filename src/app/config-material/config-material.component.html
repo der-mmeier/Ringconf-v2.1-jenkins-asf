@@ -56,18 +56,38 @@
   </div>
 </div>
 
-<x-dropdown #materialDropDown title="" [options]="app.data.material" [value]="getValue_material()"
+<x-dropdown #materialDropDown class="desktop-material-dropdown" title="" [options]="app.data.material" [value]="getValue_material()"
             [onValueFormat]="onValueFormat_material"
             (onSelect)="setValue_material($event)"></x-dropdown>
+<div class="mobile-material-strip">
+  <div class="mobile-option-strip">
+    @for (item of app.data.material; track item.id) {
+      <div class="mobile-option-item material-chip" [class.active]="getValue_material()?.id === item.id" (mousedown)="setValue_material(item)">
+        <span class="material-swatch" [style.background-color]="item.colorHtml"></span>
+        <span class="mobile-option-label">{{item.name}}</span>
+      </div>
+    }
+  </div>
+</div>
 <x-property-sync-dialog *ngIf="canPropertySync()" [ringId]="ringId" property="material"></x-property-sync-dialog>
 
 <ng-template [ngIf]="isEnabled_surfaceSelector()">
 <h6 class="title">
   Oberfläche
 </h6>
-<x-dropdown title="" [options]="getOptions_surface()" [value]="getValue_surface()"
+<x-dropdown class="desktop-material-dropdown" title="" [options]="getOptions_surface()" [value]="getValue_surface()"
             [onValueFormat]="onValueFormat_surface"
             (onSelect)="setValue_surface($event)"></x-dropdown>
+<div class="mobile-surface-strip">
+  <div class="mobile-option-strip">
+    @for (item of getOptions_surface(); track item.id) {
+      <div class="mobile-option-item surface-chip" [class.active]="getValue_surface()?.id === item.id" (mousedown)="setValue_surface(item)">
+        <span class="surface-icon" [style.background-image]="'url(' + env.assetFolderLocation + '/assets/imgui/' + item.img + ')'"></span>
+        <span class="mobile-option-label">{{item.name}}</span>
+      </div>
+    }
+  </div>
+</div>
 <x-property-sync-dialog *ngIf="canPropertySync()" [ringId]="ringId" property="surface"></x-property-sync-dialog>
 </ng-template>
 

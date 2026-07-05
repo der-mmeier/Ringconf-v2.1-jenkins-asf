@@ -19,11 +19,31 @@ export class MenuComponent
 
   navigation = navigation;
   mobileExpanded=false;
+  mobilePrimaryItems = navigation.items.filter(item => ['profil', 'masse', 'material', 'steinbesatz'].indexOf(item.hash) !== -1)
+    .map(item => item.hash === 'steinbesatz' ? {...item, title: 'Steine'} : item);
+  mobileMoreItems = navigation.items.filter(item => ['fugen', 'gravur'].indexOf(item.hash) !== -1);
 
   changeHash(hash: string)
   {
     this.mobileExpanded = false;
     window.location.hash = hash;
+    requestWebglResize();
+  }
+
+  selectMobileItem(hash: string)
+  {
+    this.mobileExpanded = false;
+    this.changeHash(hash);
+  }
+
+  isMobileMoreActive()
+  {
+    return this.mobileMoreItems.some(item => item.hash === navigation.currentHash);
+  }
+
+  requestResize()
+  {
+    requestWebglResize();
   }
 
   isFirstNavItem()
@@ -121,6 +141,28 @@ function hashChanged()
   });
   if (index == -1 && (window.location.hash !== '#admin' && window.location.hash !== '#diamond')) window.location.hash = navigation.items[0].hash;
   navigation.currentHash = window.location.hash.substring(1);
+  requestWebglResize();
 }
 
 hashChanged();
+
+function requestWebglResize()
+{
+  window.setTimeout(function () {
+    const webgl = (window as any).__oneRingconfWebgl;
+    if (webgl && typeof webgl.resizeViewport === "function") {
+      webgl.resizeViewport();
+    } else if (webgl && typeof webgl.resize === "function") {
+      webgl.resize();
+    }
+  }, 0);
+
+  window.setTimeout(function () {
+    const webgl = (window as any).__oneRingconfWebgl;
+    if (webgl && typeof webgl.resizeViewport === "function") {
+      webgl.resizeViewport();
+    } else if (webgl && typeof webgl.resize === "function") {
+      webgl.resize();
+    }
+  }, 240);
+}
