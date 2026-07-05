@@ -127,16 +127,22 @@
       display: none;
     }
     @media (max-width: $breakpoint-mobile) {
-      position: relative;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1100;
       @include flex-direction(row);
-      min-height: 56px;
-      max-height: none;
+      min-height: var(--mobile-bottom-nav-height, 56px);
+      height: var(--mobile-bottom-nav-height, 56px);
+      max-height: var(--mobile-bottom-nav-height, 56px);
       overflow: visible;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
       background-image: linear-gradient(0deg, #ab3333, #d14b4b);
+      padding-bottom: env(safe-area-inset-bottom);
       margin: 0;
-      width: 100%;
+      width: 100vw;
 
       .item {
         @include flexbox();

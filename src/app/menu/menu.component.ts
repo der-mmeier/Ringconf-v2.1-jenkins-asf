@@ -26,8 +26,7 @@ export class MenuComponent
   changeHash(hash: string)
   {
     this.mobileExpanded = false;
-    window.location.hash = hash;
-    requestWebglResize();
+    setNavigationHash(hash, true);
   }
 
   selectMobileItem(hash: string)
@@ -38,7 +37,7 @@ export class MenuComponent
 
   isMobileMoreActive()
   {
-    return this.mobileMoreItems.some(item => item.hash === navigation.currentHash);
+    return navigation.currentHash === 'more' || this.mobileMoreItems.some(item => item.hash === navigation.currentHash);
   }
 
   requestResize()
@@ -128,20 +127,66 @@ export let navigation = {
       img: "icon-gravur.svg"
     },
   ],
-  currentHash: window.location.hash,
+  currentHash: "profil",
 };
 
 window.addEventListener('hashchange', hashChanged);
 
+const hashAliases: {[key: string]: string} = {
+  profile: "profil",
+  profil: "profil",
+  dimension: "masse",
+  masse: "masse",
+  "ma\u00dfe": "masse",
+  material: "material",
+  stone: "steinbesatz",
+  steine: "steinbesatz",
+  steinbesatz: "steinbesatz",
+  more: "more",
+  mehr: "more",
+  fugen: "fugen",
+  gravur: "gravur",
+  admin: "admin",
+  diamond: "diamond"
+};
+
+const canonicalHashes: {[key: string]: string} = {
+  profil: "profile",
+  masse: "dimension",
+  material: "material",
+  steinbesatz: "stone",
+  more: "more",
+  fugen: "fugen",
+  gravur: "gravur",
+  admin: "admin",
+  diamond: "diamond"
+};
+
+export function setNavigationHash(hash: string, updateUrl: boolean = false)
+{
+  let parsed = parseNavigationHash(hash);
+  navigation.currentHash = parsed;
+
+  if (updateUrl)
+  {
+    let url = new URL(window.location.href);
+    url.hash = canonicalHashes[parsed] || "profile";
+    window.history.replaceState(window.history.state, "", url);
+  }
+
+  requestWebglResize();
+}
+
+function parseNavigationHash(hash: string)
+{
+  let cleaned = decodeURIComponent((hash || "").replace(/^#/, "")).toLowerCase();
+  if (cleaned === "") return "profil";
+  return hashAliases[cleaned] || "profil";
+}
+
 function hashChanged()
 {
-  let index = navigation.items.findIndex(function (e)
-  {
-    return ('#'+e.hash) === window.location.hash
-  });
-  if (index == -1 && (window.location.hash !== '#admin' && window.location.hash !== '#diamond')) window.location.hash = navigation.items[0].hash;
-  navigation.currentHash = window.location.hash.substring(1);
-  requestWebglResize();
+  setNavigationHash(window.location.hash, false);
 }
 
 hashChanged();

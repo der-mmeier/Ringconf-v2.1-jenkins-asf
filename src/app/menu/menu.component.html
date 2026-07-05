@@ -24,7 +24,7 @@
     <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
     <div class="title">{{ i.title }}</div>
   </div>
-  <div class="item more" [class.active]="isMobileMoreActive()" (mousedown)="mobileExpanded = !mobileExpanded; requestResize()">
+  <div class="item more" [class.active]="isMobileMoreActive()" (mousedown)="selectMobileItem('more')">
     <img src="{{env.assetFolderLocation}}/assets/imgui/icon-more.svg" alt="" class="icon">
     <div class="title">Mehr</div>
   </div>

@@ -65,6 +65,19 @@
   </x-tab-control>
 </div>
 
+@if (navigation.currentHash=='more') {
+  <div class="config-wrapper mobile-more-panel">
+    <button type="button" class="mobile-more-option" (mousedown)="changeHash('fugen')">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-fugen-stufen.svg" alt="">
+      <span>Fugen / Stufen</span>
+    </button>
+    <button type="button" class="mobile-more-option" (mousedown)="changeHash('gravur')">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-gravur.svg" alt="">
+      <span>Gravur</span>
+    </button>
+  </div>
+}
+
 <div class="config-wrapper" *ngIf="navigation.currentHash=='admin'">
   <x-config-admin></x-config-admin>
 </div>

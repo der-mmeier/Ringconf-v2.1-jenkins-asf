@@ -1,7 +1,8 @@
 import {Component, HostBinding, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
-import {navigation} from "../menu/menu.component";
+import {navigation, setNavigationHash} from "../menu/menu.component";
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
+import {environment} from "../../environments/environment";
 
 @Component({
     selector: 'x-config',
@@ -13,9 +14,15 @@ import {RingData} from "../app.ringdata";
 })
 export class ConfigComponent {
   navigation = navigation;
+  env = environment;
   @Input() class:string="";
   @HostBinding('class') cl = this.class;
 
   app:AppComponent = AppComponent.app;
   ringData:RingData[] = RingData.list;
+
+  changeHash(hash: string)
+  {
+    setNavigationHash(hash, true);
+  }
 }
