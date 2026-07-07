@@ -51,8 +51,8 @@ export class RingData {
     RingData.setStepWidth(that, 0, 0);
     RingData.setStepWidth(that, 1, 0);
     that.profileName = "P3";
-    that._material = [0, 5, 0, 1, 0];
-    that._surface = [0, 1, 0, 0, 0];
+    that._material = [0, 0, 0, 0, 0];
+    that._surface = [0, 0, 0, 0, 0];
     that._fineness = [333, 333, 333, 333, 333];
     that.divPreset = "-:1";
     that._cartActive = true;
