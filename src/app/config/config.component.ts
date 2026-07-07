@@ -37,4 +37,34 @@ export class ConfigComponent {
   {
     return this.class.indexOf("show-if-mobile") !== -1 && this.navigation.currentHash !== "";
   }
+
+  getRingTabTitle(index: number): string
+  {
+    const ring = this.ringData[index];
+    if (!ring)
+      return "";
+
+    const price = this.getRingPriceLabel(index);
+    const name = this.getNeutralRingName(index);
+    return price ? name + " - " + price : name;
+  }
+
+  private getRingPriceLabel(index: number): string
+  {
+    const price = this.ringData[index]?.price;
+    if (!Number.isFinite(price) || price <= 0)
+      return "";
+
+    return price.toFixed(2) + " €";
+  }
+
+  private getNeutralRingName(index: number): string
+  {
+    if (index === 0)
+      return "Ring 1";
+    if (index === 1)
+      return "Ring 2";
+
+    return this.ringData[index]?.name || "";
+  }
 }

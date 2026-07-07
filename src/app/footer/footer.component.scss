@@ -10,6 +10,10 @@ x-footer {
     border-style: solid;
     margin: 5px 10px;
 
+    .mobile-utility-bar {
+      display: none;
+    }
+
     .priceWrapper {
       @include flexbox();
       @include flex-direction(column);
@@ -137,38 +141,54 @@ x-footer {
     }
 
     @media (max-width: $breakpoint-mobile) {
-      @include flex-shrink(0);
-      margin: 4px 8px;
+      display: block;
+      flex-shrink: 0;
+      margin: 0;
+      border: 0;
 
-      .priceWrapper {
-        width: 100%;
-        margin: 4px 0;
+      .mobile-utility-bar {
+        @include flexbox();
+        @include flex-direction(row);
+        @include justify-content(center);
+        @include align-items(center);
+        gap: 8px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--mobile-bottom-nav-height, 56px);
+        z-index: 1090;
+        height: var(--mobile-utility-height, 48px);
+        padding: 5px 10px;
+        background-color: rgba(242, 242, 242, 0.96);
+        border-top: 1px solid #d5d8d8;
+        box-shadow: 0 -4px 16px -14px #000;
 
-        .item {
-          .checkbox {
-            width: 20px;
-            height: 20px;
-            margin: 3px 6px 3px 0;
-          }
+        .utility-button {
+          @include flexbox();
+          @include justify-content(center);
+          @include align-items(center);
+          flex: 0 0 44px;
+          width: 44px;
+          height: 38px;
+          min-width: 44px;
+          padding: 0;
+          border: 1px solid #d5d8d8;
+          border-radius: $border-radius;
+          background-color: #fff;
+          cursor: pointer;
+          touch-action: manipulation;
 
-          .name,
-          .price {
-            font-size: 12px;
-            line-height: 26px;
-            padding-right: 4px;
+          img {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
           }
         }
       }
 
+      .priceWrapper,
       .wrapper {
-        @include flex-direction(column);
-        flex-direction: column;
-
-        .button {
-          @include flex-basis(auto);
-          flex: 0 0 auto;
-          width: 100%;
-        }
+        display: none;
       }
     }
     @media (max-width: $breakpoint-footer-split) {

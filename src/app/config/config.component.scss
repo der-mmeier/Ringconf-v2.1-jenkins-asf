@@ -18,10 +18,6 @@ x-config {
 
   }
 
-  .mobile-more-panel {
-    display: none;
-  }
-
   .mobile-panel-collapse {
     display: none;
   }
@@ -62,38 +58,14 @@ x-config {
       }
     }
 
-    .mobile-more-panel {
-      @include flexbox();
-      @include flex-direction(row);
-      gap: 8px;
-      overflow-x: auto;
-      padding: 8px 0;
-      overscroll-behavior-x: contain;
-      -webkit-overflow-scrolling: touch;
-    }
+    @media (max-height: 700px) {
+      .mobile-panel-collapse {
+        min-height: 28px;
 
-    .mobile-more-option {
-      @include flexbox();
-      @include flex-direction(column);
-      @include align-items(center);
-      @include justify-content(center);
-      flex: 0 0 112px;
-      min-height: 72px;
-      border: 1px solid #d5d8d8;
-      border-radius: $border-radius;
-      background-color: #f2f2f2;
-      color: #262626;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-align: center;
-      touch-action: manipulation;
-
-      img {
-        width: 28px;
-        height: 28px;
-        margin-bottom: 6px;
+        span {
+          width: 12px;
+          height: 12px;
+        }
       }
     }
   }

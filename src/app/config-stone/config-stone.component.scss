@@ -280,6 +280,42 @@ x-config-stone {
         }
       }
     }
+
+    @media (max-height: 700px) {
+      h6.title {
+        margin: 4px 0 2px 0;
+      }
+
+      .mode-wrapper {
+        gap: 6px;
+        margin-bottom: 5px;
+
+        x-image-card {
+          flex-basis: 74px;
+          width: 74px;
+          min-height: 74px;
+
+          img {
+            width: 32px;
+            height: 32px;
+          }
+        }
+      }
+
+      .stone-wrapper,
+      .division-wrapper {
+        margin-bottom: 5px;
+
+        x-dropdown {
+          margin: 3px 0 5px 0;
+        }
+      }
+
+      .stone-type-chip {
+        min-width: 74px;
+        max-width: 96px;
+      }
+    }
   }
 
 }

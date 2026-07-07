@@ -35,34 +35,11 @@ x-tab-control {
         background-color: #e6e6e6;
       }
 
-      &.female::before {
-        display: block;
-        content: "";
-        width: 100%;
-        height: 20px;
-        background: url(#{$asset-root}/assets/imgui/icon-female.svg) center center no-repeat;
-        background-size: contain;
-        opacity: 0.5;
-      }
-
-      &.pair::before {
-        display: block;
-        content: "";
-        width: 100%;
-        height: 20px;
-        background: url(#{$asset-root}/assets/imgui/icon-pair.svg) center center no-repeat;
-        background-size: contain;
-        opacity: 0.5;
-      }
-
+      &.female::before,
+      &.pair::before,
       &.male::before {
-        display: block;
-        content: "";
-        width: 100%;
-        height: 20px;
-        background: url(#{$asset-root}/assets/imgui/icon-male.svg) center center no-repeat;
-        background-size: contain;
-        opacity: 0.5;
+        display: none;
+        content: none;
       }
 
       &.gap {
@@ -184,12 +161,6 @@ x-tab-control {
         min-height: 44px;
         padding: 7px 4px;
         touch-action: manipulation;
-
-        &.female::before,
-        &.pair::before,
-        &.male::before {
-          height: 16px;
-        }
 
         h6.title {
           font-size: 12px;

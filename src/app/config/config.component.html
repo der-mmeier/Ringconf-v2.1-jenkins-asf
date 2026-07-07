@@ -8,11 +8,11 @@
 
 <div class="config-wrapper" *ngIf="navigation.currentHash=='masse'" >
   <x-tab-control class="asColumns">
-    <x-tab-page [title]="ringData[0].name" class="female" [enabled]="ringData[0].cartActive"
+    <x-tab-page [title]="getRingTabTitle(0)" class="female" [enabled]="ringData[0].cartActive"
                 [active]="app.state.configMode!=1" (onSelect)="app.setConfigMode(0)">
       <x-config-dimension [ringId]=0></x-config-dimension>
     </x-tab-page>
-    <x-tab-page [title]="ringData[1].name" class="male" [enabled]="ringData[1].cartActive"
+    <x-tab-page [title]="getRingTabTitle(1)" class="male" [enabled]="ringData[1].cartActive"
                 [active]="app.state.configMode==1" (onSelect)="app.setConfigMode(1)">
       <x-config-dimension [ringId]=1></x-config-dimension>
     </x-tab-page>
@@ -21,11 +21,11 @@
 
 <div class="config-wrapper" *ngIf="navigation.currentHash=='material'">
   <x-tab-control class="asColumns">
-    <x-tab-page [title]="ringData[0].name" class="female" [enabled]="ringData[0].cartActive"
+    <x-tab-page [title]="getRingTabTitle(0)" class="female" [enabled]="ringData[0].cartActive"
                 [active]="app.state.configMode!=1" (onSelect)="app.setConfigMode(0)">
       <x-config-material [ringId]=0></x-config-material>
     </x-tab-page>
-    <x-tab-page [title]="ringData[1].name" class="male" [enabled]="ringData[1].cartActive"
+    <x-tab-page [title]="getRingTabTitle(1)" class="male" [enabled]="ringData[1].cartActive"
                 [active]="app.state.configMode==1" (onSelect)="app.setConfigMode(1)">
       <x-config-material [ringId]=1></x-config-material>
     </x-tab-page>
@@ -34,11 +34,11 @@
 
 <div class="config-wrapper" *ngIf="navigation.currentHash=='fugen'">
   <x-tab-control class="asColumns">
-    <x-tab-page [title]="ringData[0].name" class="female" [enabled]="ringData[0].cartActive"
+    <x-tab-page [title]="getRingTabTitle(0)" class="female" [enabled]="ringData[0].cartActive"
                 [active]="app.state.configMode!=1" (onSelect)="app.setConfigMode(0)">
       <x-config-gap [ringId]=0></x-config-gap>
     </x-tab-page>
-    <x-tab-page [title]="ringData[1].name" class="male" [enabled]="ringData[1].cartActive"
+    <x-tab-page [title]="getRingTabTitle(1)" class="male" [enabled]="ringData[1].cartActive"
                 [active]="app.state.configMode==1" (onSelect)="app.setConfigMode(1)">
       <x-config-gap [ringId]=1></x-config-gap>
     </x-tab-page>
@@ -47,11 +47,11 @@
 
 <div class="config-wrapper" *ngIf="navigation.currentHash=='steinbesatz'">
   <x-tab-control>
-    <x-tab-page [title]="ringData[0].name" class="female" [enabled]="ringData[0].cartActive"
+    <x-tab-page [title]="getRingTabTitle(0)" class="female" [enabled]="ringData[0].cartActive"
                 [active]="app.state.configMode!=1" (onSelect)="app.setConfigMode(0)">
       <x-config-stone [ringId]=0></x-config-stone>
     </x-tab-page>
-    <x-tab-page [title]="ringData[1].name" class="male" [enabled]="ringData[1].cartActive"
+    <x-tab-page [title]="getRingTabTitle(1)" class="male" [enabled]="ringData[1].cartActive"
                 [active]="app.state.configMode==1" (onSelect)="app.setConfigMode(1)">
       <x-config-stone [ringId]=1></x-config-stone>
     </x-tab-page>
@@ -60,29 +60,16 @@
 
 <div class="config-wrapper" *ngIf="navigation.currentHash=='gravur'">
   <x-tab-control class="asColumns">
-    <x-tab-page [title]="ringData[0].name" class="female" [enabled]="ringData[0].cartActive"
+    <x-tab-page [title]="getRingTabTitle(0)" class="female" [enabled]="ringData[0].cartActive"
                 [active]="app.state.configMode!=1" (onSelect)="app.setConfigMode(0)">
       <x-config-engraving [ringId]=0></x-config-engraving>
     </x-tab-page>
-    <x-tab-page [title]="ringData[1].name" class="male" [enabled]="ringData[1].cartActive"
+    <x-tab-page [title]="getRingTabTitle(1)" class="male" [enabled]="ringData[1].cartActive"
                 [active]="app.state.configMode==1" (onSelect)="app.setConfigMode(1)">
       <x-config-engraving [ringId]=1></x-config-engraving>
     </x-tab-page>
   </x-tab-control>
 </div>
-
-@if (navigation.currentHash=='more') {
-  <div class="config-wrapper mobile-more-panel">
-    <button type="button" class="mobile-more-option" (mousedown)="changeHash('fugen')">
-      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-fugen-stufen.svg" alt="">
-      <span>Fugen / Stufen</span>
-    </button>
-    <button type="button" class="mobile-more-option" (mousedown)="changeHash('gravur')">
-      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-gravur.svg" alt="">
-      <span>Gravur</span>
-    </button>
-  </div>
-}
 
 <div class="config-wrapper" *ngIf="navigation.currentHash=='admin'">
   <x-config-admin></x-config-admin>

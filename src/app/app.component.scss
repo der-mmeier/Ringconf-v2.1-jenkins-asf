@@ -54,9 +54,16 @@
 
   @media (max-width: $breakpoint-mobile) {
     --mobile-bottom-nav-height: calc(56px + env(safe-area-inset-bottom));
-    --mobile-panel-height-open: 34dvh;
-    --mobile-canvas-height-open: clamp(300px, 42dvh, 420px);
-    --mobile-canvas-height-closed: clamp(480px, calc(100dvh - var(--mobile-bottom-nav-height) - 190px), 720px);
+    --mobile-utility-height: 48px;
+    --mobile-canvas-height-open: clamp(300px, 40dvh, 420px);
+    --mobile-canvas-height-closed: clamp(480px, calc(100dvh - var(--mobile-bottom-nav-height) - var(--mobile-utility-height) - 116px), 720px);
+    --mobile-panel-max-height-open: calc(100dvh - var(--mobile-bottom-nav-height) - var(--mobile-utility-height) - var(--mobile-canvas-height-open) - env(safe-area-inset-top));
+
+    @media (max-height: 700px) {
+      --mobile-utility-height: 44px;
+      --mobile-canvas-height-open: clamp(250px, 36dvh, 300px);
+      --mobile-canvas-height-closed: clamp(420px, calc(100dvh - var(--mobile-bottom-nav-height) - var(--mobile-utility-height) - 96px), 560px);
+    }
 
     @include flexbox();
     @include flex-direction(column);
@@ -66,7 +73,7 @@
     overflow: hidden;
     overflow-x: hidden;
     padding-top: env(safe-area-inset-top);
-    padding-bottom: var(--mobile-bottom-nav-height);
+    padding-bottom: calc(var(--mobile-bottom-nav-height) + var(--mobile-utility-height));
 
     .show-if-desktop {
       display: none;
@@ -118,8 +125,8 @@
       @include flex-shrink(0);
       @include flex-basis(auto);
       min-height: 0;
-      max-height: var(--mobile-panel-height-open);
-      overflow: hidden;
+      max-height: var(--mobile-panel-max-height-open);
+      overflow: visible;
       min-width: 0;
       width: calc(100% - 16px);
       background-color: #e6e6e6;

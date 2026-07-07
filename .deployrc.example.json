@@ -1,0 +1,11 @@
+{
+  "protocol": "ftp",
+  "host": "ftp.example.com",
+  "port": 21,
+  "user": "YOUR_USER",
+  "password": "YOUR_PASSWORD",
+  "secure": false,
+  "remoteBasePath": "/configurator/builds",
+  "publicBaseUrl": "https://example.com/configurator/builds",
+  "updateCurrent": true
+}

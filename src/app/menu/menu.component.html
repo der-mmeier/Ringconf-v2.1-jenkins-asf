@@ -24,17 +24,6 @@
     <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
     <div class="title">{{ i.title }}</div>
   </div>
-  <div class="item more" [class.active]="isMobileMoreActive()" (mousedown)="selectMobileItem('more')">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/icon-more.svg" alt="" class="icon">
-    <div class="title">Mehr</div>
-  </div>
-  <div class="more-items">
-    <div *ngFor="let i of mobileMoreItems" class="item" [class.active]="i.hash === navigation.currentHash"
-         (mousedown)="changeHash(i.hash)">
-      <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
-      <div class="title">{{ i.title }}</div>
-    </div>
-  </div>
   <div class="prev" [class.disabled]="isFirstNavItem()" (mousedown)="prev()">
     <img src="{{env.assetFolderLocation}}/assets/imgui/icon-backward.svg">
   </div>

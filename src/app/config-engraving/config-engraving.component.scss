@@ -46,5 +46,40 @@ x-config-engraving {
       }
     }
   }
-}
 
+  @media (max-width: $breakpoint-mobile) {
+    h6.title {
+      margin: 6px 0 4px 0;
+      font-size: 12px;
+    }
+
+    .symbol-wrapper {
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin: 0 0 8px 0;
+      gap: 6px;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+
+      .symbol {
+        flex: 0 0 44px;
+        min-width: 44px;
+        min-height: 38px;
+        margin: 0;
+        scroll-snap-align: start;
+      }
+    }
+
+    @media (max-height: 700px) {
+      .symbol-wrapper {
+        margin-bottom: 5px;
+
+        .symbol {
+          min-height: 34px;
+          padding: 5px;
+        }
+      }
+    }
+  }
+}

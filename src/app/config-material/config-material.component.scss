@@ -200,6 +200,52 @@ x-config-material {
         line-height: 34px;
       }
     }
+
+    @media (max-height: 700px) {
+      h6.title {
+        margin: 4px 0 1px 0;
+      }
+
+      .preset-wrapper {
+        gap: 6px;
+        margin-bottom: 4px;
+
+        x-image-card {
+          flex-basis: 76px;
+          width: 76px;
+          min-height: 76px;
+
+          img {
+            width: 34px;
+            height: 34px;
+          }
+        }
+      }
+
+      .materialindex-wrapper {
+        margin-bottom: 4px;
+
+        .item {
+          height: 26px;
+        }
+      }
+
+      .mobile-option-strip {
+        padding-top: 4px;
+        padding-bottom: 5px;
+      }
+
+      .material-chip {
+        min-width: 76px;
+        max-width: 96px;
+      }
+
+      .material-swatch,
+      .surface-icon {
+        width: 26px;
+        height: 26px;
+      }
+    }
   }
 }
 

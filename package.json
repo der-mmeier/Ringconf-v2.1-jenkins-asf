@@ -8,6 +8,10 @@
     "build:development": "ng build --configuration development",
     "build:production": "ng build --configuration production",
     "build:woocommerce": "ng build --configuration woocommerce",
+    "build:deploy": "ng build --configuration production && node tools/build-deploy-package.mjs",
+    "deploy:ftp": "node tools/deploy-ftp.mjs",
+    "deploy:staging": "npm run build:deploy && npm run deploy:ftp",
+    "deploy:dry-run": "node tools/deploy-ftp.mjs --dry-run",
     "buildWoocommerce": "ng build --configuration=woocommerce && node postbuild.woocommerce.js",
     "check:admin-exclusion": "node tools/check-admin-exclusion.mjs"
   },
@@ -41,6 +45,7 @@
     "@angular/cli": "~22.0.5",
     "@angular/compiler-cli": "^22.0.5",
     "@types/jasmine": "~4.3.0",
+    "basic-ftp": "^5.2.1",
     "browserslist": "^4.28.4",
     "browserslist-useragent-regexp": "^4.1.4",
     "istanbul-lib-instrument": "^6.0.3",

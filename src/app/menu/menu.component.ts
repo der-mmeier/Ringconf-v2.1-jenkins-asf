@@ -19,9 +19,8 @@ export class MenuComponent
 
   navigation = navigation;
   mobileExpanded=false;
-  mobilePrimaryItems = navigation.items.filter(item => ['profil', 'masse', 'material', 'steinbesatz'].indexOf(item.hash) !== -1)
+  mobilePrimaryItems = navigation.items.filter(item => ['profil', 'masse', 'material', 'steinbesatz', 'fugen', 'gravur'].indexOf(item.hash) !== -1)
     .map(item => item.hash === 'steinbesatz' ? {...item, title: 'Steine'} : item);
-  mobileMoreItems = navigation.items.filter(item => ['fugen', 'gravur'].indexOf(item.hash) !== -1);
 
   changeHash(hash: string)
   {
@@ -39,14 +38,9 @@ export class MenuComponent
     setNavigationHash(hash, true);
   }
 
-  isMobileMoreActive()
-  {
-    return navigation.currentHash === 'more' || this.mobileMoreItems.some(item => item.hash === navigation.currentHash);
-  }
-
   isMobileItemActive(hash: string)
   {
-    return hash === 'more' ? this.isMobileMoreActive() : navigation.currentHash === hash;
+    return navigation.currentHash === hash;
   }
 
   requestResize()
@@ -111,7 +105,7 @@ export let navigation = {
       img: "icon-ringprofil.svg"
     },
     {
-      title: "Masse",
+      title: "Maße",
       hash: "masse",
       img: "icon-ringmasse.svg"
     },
@@ -153,9 +147,11 @@ const hashAliases: {[key: string]: string} = {
   stone: "steinbesatz",
   steine: "steinbesatz",
   steinbesatz: "steinbesatz",
-  more: "more",
-  mehr: "more",
+  gap: "fugen",
+  fuge: "fugen",
   fugen: "fugen",
+  stufen: "fugen",
+  engraving: "gravur",
   gravur: "gravur",
   admin: "admin",
   diamond: "diamond"
@@ -166,9 +162,8 @@ const canonicalHashes: {[key: string]: string} = {
   masse: "dimension",
   material: "material",
   steinbesatz: "stone",
-  more: "more",
-  fugen: "fugen",
-  gravur: "gravur",
+  fugen: "gap",
+  gravur: "engraving",
   admin: "admin",
   diamond: "diamond"
 };

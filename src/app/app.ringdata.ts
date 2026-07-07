@@ -21,7 +21,7 @@ export class RingData {
     this._index = RingData.list.length;
     RingData.list.push(this);
 
-    this.name = (this._index == 0) ? "Damenring" : ((this._index == 1) ? "Herrenring" : "");
+    this.name = (this._index == 0) ? "Ring 1" : ((this._index == 1) ? "Ring 2" : "");
     RingData.reset(this);
   }
 

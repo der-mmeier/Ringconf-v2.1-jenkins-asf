@@ -1,8 +1,27 @@
 <div class="footer">
+  <div class="mobile-utility-bar" aria-label="Aktionen">
+    <button type="button" class="utility-button" aria-label="Speichern oder Laden" title="Speichern oder Laden" (mousedown)="openSaveLoad()">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-save-and-load.svg" alt="">
+    </button>
+    <button type="button" class="utility-button" aria-label="Details anzeigen" title="Details anzeigen" (mousedown)="openDetails()">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-details.svg" alt="">
+    </button>
+    <button type="button" class="utility-button" aria-label="Details als PDF" title="Details als PDF" (mousedown)="createPdf()">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-pdf.svg" alt="">
+    </button>
+    <button type="button" class="utility-button" aria-label="Konfiguration zuruecksetzen" title="Konfiguration zuruecksetzen" (mousedown)="resetConfiguration()">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-reset.svg" alt="">
+    </button>
+    @if (hasJewelerCartContext()) {
+      <button type="button" class="utility-button" aria-label="In den Warenkorb" title="In den Warenkorb" (mousedown)="addToCart()">
+        <img src="{{env.assetFolderLocation}}/assets/imgui/icon-cart.svg" alt="">
+      </button>
+    }
+  </div>
   <div class="priceWrapper">
-    <div *ngFor="let ring of ringData" class="item">
+    <div *ngFor="let ring of ringData; let i = index" class="item">
       <div class="checkbox" [class.checked]="ring.cartActive" (mousedown)="ring.cartActive = !ring.cartActive"></div>
-      <div class="name">{{ring.name}}</div>
+      <div class="name">{{getRingDisplayName(i)}}</div>
       <div class="price" [hidden]="!ring.cartActive">{{ring.price | number:'1.2-2' | removeCommaPipe}}&nbsp;&euro;</div>
     </div>
     <div class="item total">

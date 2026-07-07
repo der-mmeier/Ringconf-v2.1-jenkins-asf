@@ -5,22 +5,18 @@
     <div class="row -no-border -desktop">
       <div class="data"></div>
       <div *ngIf="ringData[0].cartActive" class="data header col_0">
-        <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-female.svg" alt="">
-        Damenring
+        Ring 1
       </div>
       <div *ngIf="ringData[1].cartActive" class="data header col_1">
-        <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-male.svg" alt="">
-        Herrenring
+        Ring 2
       </div>
     </div>
     <div class="row -no-border -mobile">
       <div *ngIf="ringData[0].cartActive" class="data header col_0" [class.active]="detailMode===0" (mousedown)="detailMode=0">
-        <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-female.svg" alt="">
-        Damenring
+        Ring 1
       </div>
       <div *ngIf="ringData[1].cartActive" class="data header col_1" [class.active]="detailMode===1" (mousedown)="detailMode=1">
-        <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-male.svg" alt="">
-        Herrenring
+        Ring 2
       </div>
     </div>
     <div *ngFor="let item of app.getDetails()">

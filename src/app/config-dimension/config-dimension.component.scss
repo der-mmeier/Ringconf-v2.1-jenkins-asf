@@ -64,4 +64,33 @@ x-config-dimension {
       padding: 7px 10px;
     }
   }
+
+  @media (max-height: 700px) {
+    x-config-dimension {
+      margin: 3px 0;
+    }
+
+    .row {
+      margin-bottom: 5px;
+      min-height: 40px;
+
+      > img {
+        width: 26px;
+        margin-right: 8px;
+      }
+    }
+
+    .dimension-strip {
+      .mobile-option-strip {
+        padding-top: 4px;
+        padding-bottom: 5px;
+      }
+
+      .mobile-option-item {
+        min-width: 58px;
+        min-height: 38px;
+        padding: 5px 8px;
+      }
+    }
+  }
 }

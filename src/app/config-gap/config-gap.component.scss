@@ -276,5 +276,43 @@ x-config-gap {
         }
       }
     }
+
+    @media (max-height: 700px) {
+      x-tab-control.inner {
+        .header {
+          min-height: 34px;
+          padding: 5px 6px;
+        }
+
+        .content {
+          x-tab-page {
+            padding: 5px;
+
+            .image-card-wrapper {
+              gap: 6px;
+
+              x-image-card {
+                flex-basis: 74px;
+                width: 74px;
+                min-height: 74px;
+
+                img {
+                  width: 32px;
+                  height: 32px;
+                }
+              }
+            }
+
+            > h6.title {
+              margin: 7px 0 4px 0;
+            }
+
+            .gap-item {
+              padding: 5px 6px;
+            }
+          }
+        }
+      }
+    }
   }
 }

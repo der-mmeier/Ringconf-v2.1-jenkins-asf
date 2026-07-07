@@ -33,30 +33,10 @@ x-config-profile {
         font-size: 16px;
       }
 
-      &.female::before {
-        content: "";
-        display: block;
-        position: absolute;
-        left: 5px;
-        top: 10px;
-        width: 20px;
-        height: 20px;
-        opacity: 0.25;
-        background: url("#{$asset-root}/assets/imgui/icon-female.svg") center center no-repeat;
-        background-size: contain;
-      }
-
+      &.female::before,
       &.male::after {
-        content: "";
-        display: block;
-        position: absolute;
-        right: 5px;
-        top: 10px;
-        width: 20px;
-        height: 20px;
-        opacity: 0.25;
-        background: url("#{$asset-root}/assets/imgui/icon-male.svg") center center no-repeat;
-        background-size: contain;
+        display: none;
+        content: none;
       }
     }
   }
@@ -100,11 +80,24 @@ x-config-profile {
           margin-top: 6px;
         }
 
-        &.female::before,
-        &.male::after {
-          width: 16px;
-          height: 16px;
-          top: 6px;
+      }
+    }
+
+    @media (max-height: 700px) {
+      .contentWrapper {
+        max-height: 112px;
+        padding: 6px;
+        gap: 6px;
+
+        x-image-card {
+          flex-basis: 92px;
+          width: 92px;
+          min-height: 96px;
+
+          h6.title {
+            font-size: 11px;
+            margin-top: 4px;
+          }
         }
       }
     }
