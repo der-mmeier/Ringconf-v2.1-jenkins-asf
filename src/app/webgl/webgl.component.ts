@@ -29,6 +29,7 @@ import {RingData} from "../app.ringdata";
 import {environment} from "../../environments/environment";
 import {initCamera, USE_ORTHO_CAMERA, zoomExtends} from "./camera";
 import {cRing} from "./cRing";
+import {computeRenderQuality, RenderQualitySettings} from "./render-quality";
 
 @Component({
     selector: 'x-webgl',
@@ -70,6 +71,9 @@ export class WebglComponent {
 
   renderLoopEnabled: boolean = false;
   renderIntervalId: number = 0;
+  renderQuality: RenderQualitySettings | null = null;
+  resizeAnimationFrameId: number = 0;
+  resizeTimeoutId: number = 0;
 
   renderCount = 0;
 
@@ -131,6 +135,7 @@ export class WebglComponent {
     this.engine.enableOfflineSupport = false;
     this.engine.doNotHandleContextLost = true;
     this.engine.disableUniformBuffers = true;
+    this.applyRenderQuality();
 
     let webglSettings: iWebGLSettings = AppComponent.app.data.webglSettings;
 
@@ -163,6 +168,7 @@ export class WebglComponent {
     this.alphaCanvas.getContext("2d", {willReadFrequently: true})
 
     this.scene = new Scene(this.engine);
+    this.scene.skipPointerMovePicking = true;
     this.scene.clearColor = new Color4(0.9764705882352941, 0.9764705882352941, 0.9764705882352941, 1.0);
     this.scene.imageProcessingConfiguration.exposure = AppComponent.app.data.webglSettings.environmentPreset.scene_exposure;
     this.scene.imageProcessingConfiguration.contrast = AppComponent.app.data.webglSettings.environmentPreset.scene_contrast;
@@ -191,11 +197,14 @@ export class WebglComponent {
     onResize();
 
     window.addEventListener("resize", function () {
-      that.resize();
+      that.scheduleResize();
       // that.engine.resize();
       // //    onResize();
       // that.cameraChanged = true;
       // that.renderFrame();
+    });
+    window.addEventListener("orientationchange", function () {
+      that.scheduleResize();
     });
 
     this.cameraScreenshot = new ArcRotateCamera("cameraScreenshot", webglSettings.camera[0], webglSettings.camera[1], webglSettings.camera[2], new Vector3(0, 10, 0), this.scene);
@@ -558,31 +567,12 @@ export class WebglComponent {
     assetsManager.load();
 
     if (1) {
-      if (AppComponent.app.state.mobile) {
-        this.engine.setHardwareScalingLevel(0.2);
-      } else
-      {
+      if (!AppComponent.app.state.mobile) {
         new PassPostProcess("scale_pass", 4.0, this.camera, Texture.BILINEAR_SAMPLINGMODE);
         new PassPostProcess("scale_pass", 2.0, this.camera, Texture.BILINEAR_SAMPLINGMODE);
         new PassPostProcess("scale_pass", 1.0, this.camera, Texture.BILINEAR_SAMPLINGMODE);
       }
     }
-    // else {
-    //   // if (!IS_MOBILE)
-    //   this.engine.setHardwareScalingLevel(0.5);
-    //
-    //   let pipeline = new DefaultRenderingPipeline("defaultPipeline", false, this.scene, [this.camera]);
-    //   let caps = this.engine.getCaps();
-    //
-    //   pipeline.samples = caps.maxMSAASamples;
-    //   pipeline.fxaaEnabled = true;
-    //   if (pipeline.fxaaEnabled) {
-    //     pipeline.fxaa.samples = 4;
-    //   }
-    //
-    //   pipeline.imageProcessingEnabled = true;
-    // }
-
     function onCameraChange() {
       that.cameraChanged = true;
     }
@@ -659,10 +649,10 @@ export class WebglComponent {
       // dbLoadPreset(AppComponent.app.state.preset_id).then(r => {});
       dbLoadPreset("0000-0000").then(r => {
         window.setTimeout(function () {
-          that.resizeViewport();
+          that.scheduleResize();
         }, 0);
         window.setTimeout(function () {
-          that.resizeViewport();
+          that.scheduleResize();
         }, 250);
       });
     })
@@ -677,20 +667,57 @@ export class WebglComponent {
   }
 
   resize() {
-    this.resizeViewport();
+    this.scheduleResize();
   }
 
   resizeAndRender() {
-    this.resizeViewport();
+    this.scheduleResize();
   }
 
-  resizeViewport() {
+  scheduleResize(forceFrames: number = 2) {
+    if (this.resizeAnimationFrameId) {
+      window.cancelAnimationFrame(this.resizeAnimationFrameId);
+    }
+    this.resizeAnimationFrameId = window.requestAnimationFrame(() => {
+      this.resizeAnimationFrameId = 0;
+      this.resizeViewport(forceFrames);
+    });
+
+    if (this.resizeTimeoutId) {
+      window.clearTimeout(this.resizeTimeoutId);
+    }
+    this.resizeTimeoutId = window.setTimeout(() => {
+      this.resizeTimeoutId = 0;
+      this.resizeViewport(forceFrames);
+    }, 80);
+  }
+
+  resizeViewport(forceFrames: number = 2) {
+    this.applyRenderQuality();
     this.engine?.resize();
     if (this.engine && this.canvas && this.scene && this.camera) {
       zoomExtends(this.engine, this.canvas, this.scene, this.camera);
     }
     this.cameraChanged = true;
-    this.renderFrame(2);
+    this.renderFrame(forceFrames);
+  }
+
+  private applyRenderQuality() {
+    if (!this.engine) return;
+
+    this.renderQuality = computeRenderQuality();
+    this.engine.setHardwareScalingLevel(this.renderQuality.hardwareScalingLevel);
+
+    if (AppComponent.app.state.debug) {
+      console.debug("Ringconf WebGL quality", {
+        qualityMode: this.renderQuality.qualityMode,
+        devicePixelRatio: this.renderQuality.devicePixelRatio,
+        cappedDevicePixelRatio: this.renderQuality.cappedDevicePixelRatio,
+        hardwareScalingLevel: this.renderQuality.hardwareScalingLevel,
+        canvasWidth: this.canvas?.clientWidth,
+        canvasHeight: this.canvas?.clientHeight
+      });
+    }
   }
 
   renderFrame(forceFrames: number = 0) {
