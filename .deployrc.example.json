@@ -1,0 +1,26 @@
+{
+  "channel": "staging",
+  "publicBaseUrl": "https://toolbox.asf.gmbh/3d-konfigurator",
+  "sftp": {
+    "host": "ssh.example.com",
+    "port": 22,
+    "username": "YOUR_USER",
+    "password": "YOUR_PASSWORD",
+    "privateKeyPath": "",
+    "passphrase": ""
+  },
+  "remote": {
+    "baseDir": "/3d-konfigurator",
+    "releasesDir": "releases",
+    "releaseIndexFile": "release-index.json",
+    "currentDir": "current"
+  },
+  "release": {
+    "nameTemplate": "{version}-build.{buildNumber}",
+    "status": "testing",
+    "compatible": null,
+    "setCurrentOnDeploy": true,
+    "appDataContract": "2.6",
+    "priceContract": "1.0"
+  }
+}

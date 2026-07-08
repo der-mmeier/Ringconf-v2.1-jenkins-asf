@@ -20,6 +20,7 @@
 !.env.example
 /src/php/config.local.php
 /src/php/user-verification.config.local.php
+/.deployrc.json
 /.deployrc.local.json
 /.deploy/
 

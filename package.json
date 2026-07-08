@@ -1,6 +1,6 @@
 {
   "name": "ringconf-v2.1",
-  "version": "2.6.6",
+  "version": "2.6.9",
   "scripts": {
     "start": "ng serve --host 127.0.0.1 --port 4200 --proxy-config proxy.conf.json",
     "start & open": "ng serve --host 127.0.0.1 --port 4200 --open",
@@ -8,6 +8,10 @@
     "build:development": "ng build --configuration development",
     "build:production": "ng build --configuration production",
     "build:woocommerce": "ng build --configuration woocommerce",
+    "build:deploy": "ng build --configuration production && node tools/build-deploy-package.mjs",
+    "deploy:sftp": "node tools/deploy-sftp.mjs",
+    "deploy:staging": "npm run build:deploy && npm run deploy:sftp",
+    "deploy:dry-run": "node tools/deploy-sftp.mjs --dry-run",
     "buildWoocommerce": "ng build --configuration=woocommerce && node postbuild.woocommerce.js",
     "check:admin-exclusion": "node tools/check-admin-exclusion.mjs"
   },
@@ -50,6 +54,7 @@
     "karma-coverage": "^2.2.1",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "^2.2.0",
+    "ssh2-sftp-client": "^12.1.1",
     "typescript": "~6.0.3"
   },
   "allowScripts": {

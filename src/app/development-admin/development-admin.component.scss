@@ -168,7 +168,8 @@ button:disabled {
 
 .dynamic-row,
 .diff-list article,
-.version-summary {
+.version-summary,
+.release-card {
   display: grid;
   gap: 6px;
   padding: 10px;
@@ -183,6 +184,26 @@ button:disabled {
   overflow: auto;
   white-space: nowrap;
   font-size: 12px;
+}
+
+.platform-release-panel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #d5d5d0;
+}
+
+.release-card span {
+  overflow-wrap: anywhere;
+}
+
+.release-preview {
+  width: 100%;
+  min-height: 360px;
+  border: 1px solid #c8c8c0;
+  border-radius: 6px;
+  background: #fff;
 }
 
 .validation {
