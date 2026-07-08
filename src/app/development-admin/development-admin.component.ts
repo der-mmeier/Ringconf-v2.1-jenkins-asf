@@ -1,5 +1,6 @@
 import {CommonModule} from "@angular/common";
 import {Component, Input} from "@angular/core";
+import {DomSanitizer, SafeResourceUrl} from "@angular/platform-browser";
 import {FormsModule} from "@angular/forms";
 import {Matrix} from "@babylonjs/core";
 import {iAppData} from "../app.interfaces";
@@ -50,6 +51,25 @@ interface CompatibilityInfo {
   build_id: number;
   status: string;
   test_notes?: string | null;
+}
+
+interface PlatformRelease {
+  id: string;
+  version: string;
+  buildNumber?: number;
+  branch: string;
+  shortSha: string;
+  createdAt: string;
+  url: string;
+  status: string;
+  compatible: boolean | null;
+  appDataContract?: string | null;
+  priceContract?: string | null;
+}
+
+interface PlatformReleaseIndex {
+  current: string | null;
+  releases: PlatformRelease[];
 }
 
 interface BootstrapData {
@@ -112,6 +132,11 @@ export class DevelopmentAdminComponent {
   activeTab: "appdata" | "webgl" | "tools" | "versions" = "appdata";
   selectedJsonPath = "material";
   selectedVersionId = "";
+  selectedPlatformReleaseId = "";
+  releaseIndexUrl = "/3d-konfigurator/release-index.json";
+  releasePreviewUrl = "";
+  releasePreviewSafeUrl: SafeResourceUrl | null = null;
+  releaseIndex: PlatformReleaseIndex | null = null;
   selectedTargetKey = "local-development";
   selectedCompatibilityStatus: "compatible" | "incompatible" = "compatible";
   authAction: AdminAction | null = null;
@@ -195,7 +220,7 @@ export class DevelopmentAdminComponent {
     {title: "Diamant – Fire", fields: this.diamondFields("fire", "Fire")},
   ];
 
-  constructor(private adminApi: AppDataAdminService)
+  constructor(private adminApi: AppDataAdminService, private sanitizer: DomSanitizer)
   {
   }
 
@@ -441,6 +466,37 @@ export class DevelopmentAdminComponent {
     this.applyWebglLive();
     this.recalculate();
     this.setStatus("Version geladen.", "success");
+  }
+
+  async loadReleaseIndex(): Promise<void>
+  {
+    try {
+      const response = await fetch(this.releaseIndexUrl, {cache: "no-store"});
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      this.releaseIndex = await response.json() as PlatformReleaseIndex;
+      this.selectedPlatformReleaseId = this.releaseIndex.current || this.releaseIndex.releases[0]?.id || "";
+      this.selectPlatformRelease(this.selectedPlatformReleaseId);
+      this.setStatus("Release-Index geladen.", "success");
+    } catch (error) {
+      this.releaseIndex = null;
+      this.releasePreviewUrl = "";
+      this.releasePreviewSafeUrl = null;
+      this.setStatus(`Release-Index konnte nicht geladen werden: ${error instanceof Error ? error.message : "unbekannter Fehler"}`, "warning");
+    }
+  }
+
+  selectPlatformRelease(releaseId: string): void
+  {
+    this.selectedPlatformReleaseId = releaseId;
+    this.releasePreviewUrl = this.selectedPlatformRelease?.url || "";
+    this.releasePreviewSafeUrl = this.releasePreviewUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(this.releasePreviewUrl) : null;
+  }
+
+  get selectedPlatformRelease(): PlatformRelease | null
+  {
+    return this.releaseIndex?.releases.find(release => release.id === this.selectedPlatformReleaseId) || null;
   }
 
   private diamondFields(prefix: string, label: string): WebglField[]

@@ -93,6 +93,35 @@
   </section>
 
   <section class="admin-body" *ngIf="activeTab === 'versions'">
+    <div class="platform-release-panel">
+      <h3>Build-Releases</h3>
+      <label class="field">
+        <span>Release-Index</span>
+        <input [(ngModel)]="releaseIndexUrl" placeholder="/3d-konfigurator/release-index.json">
+      </label>
+      <button type="button" (click)="loadReleaseIndex()">Release-Index laden</button>
+
+      <label class="field" *ngIf="releaseIndex">
+        <span>VerfÃ¼gbare Builds</span>
+        <select [(ngModel)]="selectedPlatformReleaseId" (ngModelChange)="selectPlatformRelease($event)">
+          <option *ngFor="let release of releaseIndex.releases" [value]="release.id">
+            {{release.id}} Â· {{release.status}} Â· {{release.branch}}/{{release.shortSha}}
+          </option>
+        </select>
+      </label>
+
+      <div class="release-card" *ngIf="selectedPlatformRelease as release">
+        <strong>{{release.id}}</strong>
+        <span>URL: <a [href]="release.url" target="_blank" rel="noreferrer">{{release.url}}</a></span>
+        <span>AppData-Contract: {{release.appDataContract || 'unbekannt'}}</span>
+        <span>Price-Contract: {{release.priceContract || 'unbekannt'}}</span>
+        <span>Branch/SHA: {{release.branch}} / {{release.shortSha}}</span>
+        <span>Status: {{release.status}} Â· Kompatibel: {{release.compatible === null ? 'ungeprÃ¼ft' : release.compatible}}</span>
+      </div>
+
+      <iframe class="release-preview" *ngIf="releasePreviewSafeUrl" [src]="releasePreviewSafeUrl" title="Release Preview"></iframe>
+    </div>
+
     <div class="version-summary">
       <div>
         <h3>Aktuelle Version</h3>
