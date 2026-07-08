@@ -54,6 +54,7 @@
           },
           "configurations": {
             "production": {
+              "baseHref": "./",
               "fileReplacements": [
                 {
                   "replace": "src/app/development-admin/admin-entry.ts",
@@ -75,6 +76,7 @@
               "outputHashing": "all"
             },
             "woocommerce": {
+              "baseHref": "./",
               "outputHashing": "all",
               "outputPath": {
                 "base": "_shop/woocommerce/OneRingconf/dist"

@@ -1,6 +1,6 @@
 {
   "channel": "staging",
-  "publicBaseUrl": "https://toolbox.asf.gmbh/3d-konfigurator",
+  "publicBaseUrl": "https://toolbox.asf.gmbh/3d-konfigurator/builds",
   "sftp": {
     "host": "ssh.example.com",
     "port": 22,
@@ -10,7 +10,7 @@
     "passphrase": ""
   },
   "remote": {
-    "baseDir": "/3d-konfigurator",
+    "baseDir": "/3d-konfigurator/builds",
     "releasesDir": "releases",
     "releaseIndexFile": "release-index.json",
     "currentDir": "current"

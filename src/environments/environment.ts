@@ -1,6 +1,6 @@
 import {iEnvironment} from "./iEnvironment";
 
 export const environment: iEnvironment = {
-  assetFolderLocation:"",
+  assetFolderLocation:".",
   isWooCommerce: false,
 }

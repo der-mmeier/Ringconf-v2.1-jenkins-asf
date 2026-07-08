@@ -100,14 +100,14 @@ function loadConfig() {
     usedFallback: true,
     config: {
       channel: "staging",
-      publicBaseUrl: "https://toolbox.asf.gmbh/3d-konfigurator",
+      publicBaseUrl: "https://toolbox.asf.gmbh/3d-konfigurator/builds",
       sftp: {
         host: "",
         port: 22,
         username: "",
       },
       remote: {
-        baseDir: "/3d-konfigurator",
+        baseDir: "/3d-konfigurator/builds",
         releasesDir: "releases",
         releaseIndexFile: "release-index.json",
       },
