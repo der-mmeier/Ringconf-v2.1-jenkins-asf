@@ -235,7 +235,7 @@ export class WebglComponent {
 
     this.matUV = new PBRMaterial("standard", this.scene);
     if (0) {
-      this.textureUV = new Texture("/assets/img3d/UVMap2.png", this.scene);
+      this.textureUV = new Texture(this.env.assetFolderLocation + "/assets/img3d/UVMap2.png", this.scene);
       // this.textureUV = new Texture(APPDATA.urlRoot + "/assets/img3d/3DLABbg_UV_Map_Checker_01_4096x4096.jpg", this.scene);
       // this.textureUV = new Texture(APPDATA.urlRoot + "/assets/img3d/tex_uvref_4096.jpg", this.scene);
       // this.textureUV = new Texture(APPDATA.urlRoot + "/assets/img3d/tex_uvref_2048.jpg", this.scene);

@@ -1,4 +1,4 @@
-import {copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync} from "node:fs";
 import {join, resolve} from "node:path";
 import {execFileSync} from "node:child_process";
 
@@ -21,7 +21,7 @@ const releaseId = sanitizeReleaseId(applyTemplate(deployConfig.release?.nameTemp
   branch,
   shortSha,
 }));
-const publicBaseUrl = (process.env.RINGCONF_PUBLIC_BASE_URL || deployConfig.publicBaseUrl || "https://toolbox.asf.gmbh/3d-konfigurator").replace(/\/$/, "");
+const publicBaseUrl = (process.env.RINGCONF_PUBLIC_BASE_URL || deployConfig.publicBaseUrl || "https://toolbox.asf.gmbh/3d-konfigurator/builds").replace(/\/$/, "");
 const publicUrl = `${publicBaseUrl}/releases/${releaseId}/`;
 const deployRoot = join(root, ".deploy");
 const deployDir = join(deployRoot, releaseId);
@@ -31,6 +31,8 @@ rmSync(deployDir, {recursive: true, force: true});
 mkdirSync(deployDir, {recursive: true});
 cpSync(distDir, deployDir, {recursive: true});
 ensureServerIndex(deployDir);
+ensureRelativeBaseHref(deployDir);
+ensureRelativeAssetUrls(deployDir);
 
 const copiedPhpFiles = copyPhpRuntimeFiles(deployDir);
 const release = {
@@ -155,6 +157,47 @@ function ensureServerIndex(targetDir) {
   if (!existsSync(indexPath) && existsSync(index2Path)) {
     copyFileSync(index2Path, indexPath);
   }
+}
+
+function ensureRelativeBaseHref(targetDir) {
+  for (const file of ["index.html", "index2.html"]) {
+    const indexPath = join(targetDir, file);
+    if (!existsSync(indexPath)) {
+      continue;
+    }
+    const html = readFileSync(indexPath, "utf8");
+    const patched = html.replace(/<base\s+href=["'][^"']*["']\s*>/i, '<base href="./">');
+    writeFileSync(indexPath, patched, "utf8");
+  }
+}
+
+function ensureRelativeAssetUrls(targetDir) {
+  for (const file of walkFiles(targetDir)) {
+    if (!/\.(html|js|css)$/.test(file)) {
+      continue;
+    }
+    const content = readFileSync(file, "utf8");
+    const patched = content
+      .replace(/url\(\s*\/assets\//g, "url(assets/")
+      .replace(/url\(\s*"\/assets\//g, 'url("assets/')
+      .replace(/url\(\s*'\/assets\//g, "url('assets/");
+    if (patched !== content) {
+      writeFileSync(file, patched, "utf8");
+    }
+  }
+}
+
+function walkFiles(dir) {
+  const files = [];
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    if (statSync(fullPath).isDirectory()) {
+      files.push(...walkFiles(fullPath));
+    } else {
+      files.push(fullPath);
+    }
+  }
+  return files;
 }
 
 function copyPhpRuntimeFiles(targetDir) {

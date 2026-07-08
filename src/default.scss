@@ -11,14 +11,14 @@ $overlay-opacity:0.7;
 
 @font-face {
   font-family: 'Montserrat';
-  src: url('#{$asset-root}/assets/font/Montserrat-VariableFont_wght.ttf') format('truetype');
+  src: url('assets/font/Montserrat-VariableFont_wght.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'engraving-0';
-  src: url('#{$asset-root}/assets/font/Arial-Gravur.ttf') format('truetype');
+  src: url('assets/font/Arial-Gravur.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
@@ -29,7 +29,7 @@ $overlay-opacity:0.7;
 
 @font-face {
   font-family: 'engraving-1';
-  src: url('#{$asset-root}/assets/font/Monotype-Corsiva-Gravur.ttf') format('truetype');
+  src: url('assets/font/Monotype-Corsiva-Gravur.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
@@ -40,7 +40,7 @@ $overlay-opacity:0.7;
 
 @font-face {
   font-family: 'engraving-2';
-  src: url('#{$asset-root}/assets/font/MV-Boli-Gravur.ttf') format('truetype');
+  src: url('assets/font/MV-Boli-Gravur.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
@@ -51,7 +51,7 @@ $overlay-opacity:0.7;
 
 @font-face {
   font-family: 'engraving-3';
-  src: url('#{$asset-root}/assets/font/Savoye-LET-Plain-Gravur.ttf') format('truetype');
+  src: url('assets/font/Savoye-LET-Plain-Gravur.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
