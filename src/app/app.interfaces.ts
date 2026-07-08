@@ -310,7 +310,7 @@ export interface iPresetStone {
   count: number,
   /* countReal
   Tatsächliche Steinanzahl in dieser Gruppe. Wenn 'count' < 0 ist, dann gab es Fehler beider Preisberechnung.
-  Dieser Wert wird nach dem berechnen und vor der Anfrage für den Preis in webgl-ring.ts gesetzt.
+  Dieser Wert wird nach dem Berechnen und vor der Preisanfrage in der aktuellen WebGL-Ringberechnung gesetzt.
    */
   countReal: number,
 
@@ -347,7 +347,7 @@ export interface iPresetStone {
 
      [5000,5000] = mittig
 
-     Die möglichen Positionen werden in der Komponente WebglRing.compute().calc_possible_stone_positions() ermittelt.
+     Die möglichen Positionen werden in der aktuellen WebGL-Ringberechnung ermittelt.
    */
 
   positionDiv: number[];
