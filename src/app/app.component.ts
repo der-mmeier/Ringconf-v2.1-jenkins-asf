@@ -2911,15 +2911,34 @@ export async function dbCheckIdExist(id: string): Promise<boolean> {
 async function dbGetAppData(): Promise<any> {
   let url = getDistRootUrl();
   let headers = makeHttpHeaders();
-  let params = makeHttpParams("dbGetAPPDATA", []);
+  let params = makeHttpParams("dbGetAPPDATA", [null, AppComponent.app.state.build]);
 
   let response = await AppComponent.app.http.post(url, params, {headers});
 
   let result: any;
+  let failed = false;
 
   await lastValueFrom(response).then(function (data: any) {
+    if (data?.ok === false) {
+      Log("error", data.error?.message ?? "AppData konnte nicht geladen werden.");
+      failed = true;
+      result = null;
+      return;
+    }
+
+    if (data?.ok === true && data.data !== undefined) {
+      result = data.data;
+      AppComponent.app.state.appDataVersionLabel = data.meta?.appDataVersionLabel ?? "unversioned";
+      AppComponent.app.state.appDataHash = data.meta?.appDataHash ?? "";
+      return;
+    }
+
     result = data;
   })
+
+  if (failed) {
+    return null;
+  }
 
   if (result == null) {
     dbSetAppData().then();
