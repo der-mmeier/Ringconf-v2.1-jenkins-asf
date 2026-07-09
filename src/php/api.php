@@ -8,9 +8,14 @@ header('Access-Control-Allow-Methods: GET, POST');
 header("Access-Control-Allow-Headers: *");
 
 use PDO;
+use Throwable;
 use stdClass;
 
 const DATA_PATH = __DIR__ . '/data/';
+const TABLE_APPDATA_BUILD = 'ringcfg_appdata_build';
+const TABLE_APPDATA_VERSION = 'ringcfg_appdata_version';
+const TABLE_APPDATA_COMPATIBILITY = 'ringcfg_appdata_build_compatibility';
+const TABLE_APPDATA_TARGET = 'ringcfg_appdata_target';
 
 new class {
   public function __construct()
@@ -104,14 +109,251 @@ new class {
     echo json_encode($R);
   }
 
-  public function dbGetAPPDATA()
+  public function dbGetAPPDATA($targetKey = null, $buildKey = null)
   {
     $db = $this->getDB();
+    $targetKey = $this->resolveTargetKey($targetKey);
+    $buildKey = $this->resolveBuildKey($buildKey);
+
+    try {
+      $resolved = $this->resolveVersionedAppData($db, $targetKey, $buildKey);
+      if ($resolved !== null) {
+        echo json_encode([
+          'ok' => true,
+          'data' => $resolved['snapshot'],
+          'meta' => [
+            'source' => 'versioned',
+            'targetKey' => $targetKey,
+            'buildKey' => $buildKey,
+            'appDataVersionId' => $resolved['versionId'],
+            'appDataVersionLabel' => $resolved['versionLabel'],
+            'appDataHash' => $resolved['hash'],
+          ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        return;
+      }
+    } catch (Throwable $error) {
+      echo json_encode([
+        'ok' => false,
+        'data' => null,
+        'meta' => [
+          'source' => 'versioned',
+          'targetKey' => $targetKey,
+          'buildKey' => $buildKey,
+        ],
+        'error' => [
+          'code' => 'APPDATA_RESOLUTION_FAILED',
+          'message' => $error->getMessage(),
+        ],
+      ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+      return;
+    }
+
     $stm = $db->query("SELECT `value` FROM " . TABLE_DATA . " WHERE `id`='appdata'");
     if ($stm->rowCount() === 1) {
       $data = $stm->fetch(PDO::FETCH_ASSOC);
-      echo $data["value"];
+      echo json_encode([
+        'ok' => true,
+        'data' => json_decode($data["value"], true),
+        'meta' => [
+          'source' => 'legacy',
+          'targetKey' => $targetKey,
+          'buildKey' => $buildKey,
+          'appDataVersionId' => null,
+          'appDataVersionLabel' => 'legacy',
+          'appDataHash' => '',
+        ],
+      ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
+  }
+
+  private function resolveVersionedAppData(PDO $db, string $targetKey, string $buildKey): ?array
+  {
+    if (!$this->tableExists($db, TABLE_APPDATA_TARGET)
+      || !$this->tableExists($db, TABLE_APPDATA_BUILD)
+      || !$this->tableExists($db, TABLE_APPDATA_VERSION)
+      || !$this->tableExists($db, TABLE_APPDATA_COMPATIBILITY)) {
+      return null;
+    }
+
+    $target = $this->fetchTarget($db, $targetKey);
+    if ($target === null) {
+      return null;
+    }
+
+    $build = $this->fetchBuild($db, $buildKey);
+    if ($build === null) {
+      if ($target['active_appdata_version_id'] !== null) {
+        throw new \RuntimeException('Build is not available for AppData resolution.');
+      }
+      return null;
+    }
+
+    if ((int)($target['locked_to_build'] ?? 0) === 1
+      && $target['active_build_id'] !== null
+      && (int)$target['active_build_id'] !== (int)$build['id']) {
+      throw new \RuntimeException('Target is locked to a different build.');
+    }
+
+    if ($target['active_appdata_version_id'] !== null) {
+      $version = $this->fetchVersion($db, (int)$target['active_appdata_version_id']);
+      if ($version === null) {
+        throw new \RuntimeException('Assigned AppData version was not found.');
+      }
+    } else {
+      $version = $this->fetchLatestCompatibleVersion($db, (int)$build['id']);
+      if ($version === null) {
+        return null;
+      }
+    }
+
+    if (($version['state'] ?? '') !== 'approved') {
+      throw new \RuntimeException('Assigned AppData version is not approved.');
+    }
+
+    $compatibility = $this->fetchCompatibility($db, (int)$build['id'], (int)$version['id']);
+    if (($compatibility['status'] ?? '') !== 'compatible') {
+      throw new \RuntimeException('Assigned AppData version is not compatible with this build.');
+    }
+
+    $snapshot = json_decode((string)$version['snapshot_json'], true);
+    if (!is_array($snapshot)) {
+      throw new \RuntimeException('Assigned AppData snapshot is invalid.');
+    }
+
+    return [
+      'snapshot' => $snapshot,
+      'versionId' => (int)$version['id'],
+      'versionLabel' => (string)$version['version_label'],
+      'hash' => (string)$version['snapshot_hash'],
+    ];
+  }
+
+  private function resolveTargetKey($targetKey): string
+  {
+    $explicit = $this->stringOrNull($targetKey)
+      ?? $this->stringOrNull($_REQUEST['targetKey'] ?? null)
+      ?? $this->stringOrNull($_REQUEST['target_key'] ?? null);
+    if ($explicit !== null) {
+      return $explicit;
+    }
+
+    $path = str_replace('\\', '/', __DIR__);
+    if (str_contains($path, '/builds/development/')) {
+      return 'local-development';
+    }
+    if (str_contains($path, '/builds/releases/')) {
+      return 'default-production';
+    }
+    return 'default-production';
+  }
+
+  private function resolveBuildKey($buildKey): string
+  {
+    $explicit = $this->stringOrNull($buildKey)
+      ?? $this->stringOrNull($_REQUEST['buildKey'] ?? null)
+      ?? $this->stringOrNull($_REQUEST['build_key'] ?? null);
+    if ($explicit !== null) {
+      return $explicit;
+    }
+
+    $releaseJson = __DIR__ . '/release.json';
+    if (is_file($releaseJson)) {
+      $release = json_decode((string)file_get_contents($releaseJson), true);
+      $version = $this->stringOrNull($release['version'] ?? null);
+      if ($version !== null) {
+        return $version;
+      }
+    }
+
+    return 'unknown';
+  }
+
+  private function fetchTarget(PDO $db, string $targetKey): ?array
+  {
+    $stmt = $db->prepare('select * from ' . TABLE_APPDATA_TARGET . ' where target_key = :target_key and enabled = 1 limit 1');
+    $stmt->execute(['target_key' => $targetKey]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+  }
+
+  private function fetchBuild(PDO $db, string $buildKey): ?array
+  {
+    $stmt = $db->prepare('select * from ' . TABLE_APPDATA_BUILD . ' where build_key = :build_key and status = "available" limit 1');
+    $stmt->execute(['build_key' => $buildKey]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+  }
+
+  private function fetchVersion(PDO $db, int $versionId): ?array
+  {
+    $stmt = $db->prepare('
+      select id, version_label, state, snapshot as snapshot_json, snapshot_sha256 as snapshot_hash
+      from ' . TABLE_APPDATA_VERSION . '
+      where id = :id
+      limit 1
+    ');
+    $stmt->execute(['id' => $versionId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+  }
+
+  private function fetchLatestCompatibleVersion(PDO $db, int $buildId): ?array
+  {
+    $stmt = $db->prepare('
+      select v.id,
+             v.version_label,
+             v.state,
+             v.snapshot as snapshot_json,
+             v.snapshot_sha256 as snapshot_hash
+      from ' . TABLE_APPDATA_VERSION . ' v
+      inner join ' . TABLE_APPDATA_COMPATIBILITY . ' c on c.appdata_version_id = v.id
+      where c.build_id = :build_id
+        and c.status = "compatible"
+        and v.state = "approved"
+      order by v.version_major desc, v.version_minor desc, v.version_patch desc, v.version_revision desc, v.id desc
+      limit 1
+    ');
+    $stmt->execute(['build_id' => $buildId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+  }
+
+  private function fetchCompatibility(PDO $db, int $buildId, int $versionId): ?array
+  {
+    $stmt = $db->prepare('
+      select * from ' . TABLE_APPDATA_COMPATIBILITY . '
+      where build_id = :build_id and appdata_version_id = :version_id
+      limit 1
+    ');
+    $stmt->execute(['build_id' => $buildId, 'version_id' => $versionId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+  }
+
+  private function tableExists(PDO $db, string $table): bool
+  {
+    $stmt = $db->prepare('
+      SELECT COUNT(*)
+      FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = :table_name
+  ');
+
+    $stmt->execute([
+      'table_name' => $table,
+    ]);
+
+    return (int)$stmt->fetchColumn() > 0;
+  }
+
+  private function stringOrNull($value): ?string
+  {
+    if (!is_string($value)) {
+      return null;
+    }
+    $trimmed = trim($value);
+    return $trimmed === '' ? null : $trimmed;
   }
 
   public function dbSetAPPDATA($data)

@@ -2,7 +2,7 @@
 
 namespace One;
 
-$localConfig = __DIR__ . '/config.local.php';
+$localConfig = __DIR__ . '/../../config.local.php';
 if (is_file($localConfig)) {
     include $localConfig;
 }
