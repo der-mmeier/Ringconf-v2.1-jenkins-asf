@@ -1,20 +1,47 @@
 # SFTP Deployment
 
-The ASF 3D configurator is deployed as a versioned standalone release on the central ASF platform. PHP files are copied into the release package after the Angular production build. They are not added to Angular dev-server assets.
+The ASF 3D configurator is deployed as versioned standalone packages below the shared builds root. PHP files are copied into deploy packages after the Angular build. They are not added to Angular dev-server assets.
+
+## Channels
+
+Two deployment channels are supported:
+
+- `releases`: public/stable release packages.
+- `development`: internal development, admin, and AppData packages.
+
+If no channel is provided, deploy tooling defaults to `releases`. Unknown channels are rejected.
 
 ## Server Layout
 
 ```text
-/3d-konfigurator/
+/public_html/toolbox/3d-konfigurator/builds/
   releases/
-    2.6.9-build.1/
-    2.6.9-build.2/
-  release-index.json
-  current/
-  admin/
+    2.7.1-build.11/
+      index.html
+      assets/
+      api.php
+      config.php
+      database.php
+      browsers.json
+      release.json
+    current.json
+  development/
+    2.7.1-build.11/
+      index.html
+      assets/
+      api.php
+      appdata-admin.php
+      config.php
+      database.php
+      browsers.json
+      release.json
+    current.json
+  indexes/
+    releases.json
+    development.json
 ```
 
-`current/` is optional. The authoritative release list is `release-index.json`.
+The authoritative release lists are channel-specific: `indexes/releases.json` and `indexes/development.json`.
 
 ## Local Config
 
@@ -26,96 +53,108 @@ Copy-Item .deployrc.example.json .deployrc.json
 
 `.deployrc.json` and `.deployrc.local.json` are ignored by Git. Do not commit host names, users, passwords, private key paths, passphrases, or customer data.
 
-Relevant config fields:
+The remote base points to `builds`, not to a channel:
 
-- `channel`: deployment channel, for example `staging`.
-- `publicBaseUrl`: public base URL, for example `https://toolbox.asf.gmbh/3d-konfigurator`.
-- `sftp.host`, `sftp.port`, `sftp.username`, `sftp.password`.
-- `sftp.privateKeyPath` and `sftp.passphrase` for key-based auth.
-- `remote.baseDir`: usually `/3d-konfigurator`.
-- `remote.releasesDir`: usually `releases`.
-- `release.nameTemplate`: default `{version}-build.{buildNumber}`.
+```json
+{
+  "sftp": {
+    "host": "dedi2432.your-server.de",
+    "port": 22,
+    "username": "asfmtm",
+    "password": "..."
+  },
+  "remote": {
+    "baseDir": "/public_html/toolbox/3d-konfigurator/builds",
+    "publicBaseUrl": "https://toolbox.asf.gmbh/3d-konfigurator/builds",
+    "indexesDir": "indexes",
+    "updateCurrent": true
+  }
+}
+```
+
+Do not configure `remote.baseDir` as `.../builds/releases` or `.../builds/development`.
 
 ## Commands
 
 ```powershell
 npm run build
+npm run build:deploy:release
+npm run build:deploy:development
+npm run deploy:dry-run:release
+npm run deploy:dry-run:development
+npm run deploy:release
+npm run deploy:development
+```
+
+Compatibility aliases remain available:
+
+```powershell
 npm run build:deploy
 npm run deploy:dry-run
-npm run deploy:staging
+npm run deploy:sftp
 ```
 
-`npm run build:deploy` runs the Angular production build, finds the Angular 22 output folder, creates `.deploy/<releaseId>/`, copies runtime PHP files, and writes `release.json`.
+Those aliases target the `releases` channel. `npm run deploy:staging` builds and deploys the `development` channel.
 
-`npm run deploy:dry-run` prints the target SFTP paths and does not upload.
+## PHP Files
 
-`npm run deploy:staging` uploads the latest `.deploy/<releaseId>/` package to:
+`releases` packages contain:
+
+- `api.php`
+- `config.php`
+- `database.php`
+- `browsers.json`
+
+`development` packages contain:
+
+- `api.php`
+- `appdata-admin.php`
+- `config.php`
+- `database.php`
+- `browsers.json`
+
+`appdata-admin.php` is development-only and must not exist in public release packages.
+
+## Package Metadata
+
+Local packages are written to:
 
 ```text
-/3d-konfigurator/releases/<releaseId>/
+.deploy/releases/<releaseId>/
+.deploy/development/<releaseId>/
 ```
 
-## Release IDs
+`release.json` contains `channel`, `baseHref`, `publicUrl`, version, build number, branch, short SHA, build time, AppData contract, price contract, and copied PHP files.
 
-`package.json` remains SemVer, for example:
+Example release URL:
 
 ```text
-2.6.9
+https://toolbox.asf.gmbh/3d-konfigurator/builds/releases/2.7.1-build.11/
 ```
 
-The build number is separate. It is read from `RINGCONF_BUILD_NUMBER` or `BUILD_NUMBER`. If neither is set, the package builder increments the highest local build number for the current version from `.deploy/release-index.json`.
-
-Default release folder:
+Example development URL:
 
 ```text
-2.6.9-build.1
+https://toolbox.asf.gmbh/3d-konfigurator/builds/development/2.7.1-build.11/
 ```
 
-`release.json` contains version, build number, branch, short SHA, build time, channel, AppData contract, price contract, and public URL.
+## Current Pointers
 
-## Release Index
+When `remote.updateCurrent` is enabled, deploy writes channel-specific pointers:
 
-The deploy script downloads the remote `release-index.json` when present, upserts the new release entry, and uploads it again.
-
-Minimal shape:
-
-```json
-{
-  "current": "2.6.9-build.1",
-  "releases": [
-    {
-      "id": "2.6.9-build.1",
-      "version": "2.6.9",
-      "buildNumber": 1,
-      "branch": "main",
-      "shortSha": "a1b2c3d",
-      "createdAt": "2026-07-08T12:00:00.000Z",
-      "url": "https://toolbox.asf.gmbh/3d-konfigurator/releases/2.6.9-build.1/",
-      "status": "testing",
-      "compatible": null,
-      "appDataContract": "2.6",
-      "priceContract": "1.0"
-    }
-  ]
-}
+```text
+builds/releases/current.json
+builds/development/current.json
 ```
 
-## Admin Version Select
+There is no global `current` pointer shared by release and development builds.
 
-The development admin panel has a minimal `Build-Releases` section under `Versionen und Freigaben`.
+## Troubleshooting
 
-It can:
+Assets load from `/assets`: verify the package index contains `<base href="./">`, `environment.assetFolderLocation` is `"."` for standalone builds, and CSS in the deploy package does not contain `url(/assets...)`.
 
-- load `release-index.json`;
-- show available releases;
-- display status, branch, SHA, AppData contract, and price contract;
-- switch the preview iframe to the selected release URL.
+`appdata-admin.php` GET shows `METHOD_NOT_ALLOWED`: this is acceptable if the endpoint only supports POST. It should only be reachable in the `development` channel.
 
-Compatibility persistence for build releases is intentionally not implemented here. Long-term write access belongs behind a protected server-side admin endpoint.
+Wrong channel deployed: check the dry-run output. It prints `Channel`, local package path, remote release dir, remote index path, and public URL.
 
-## Security
-
-- Protect `/3d-konfigurator/admin/` server-side.
-- `licenseKey` values are public tenant identifiers, not secrets.
-- Tenant enablement, Origin allowlists, price calculation, and cart authorization must remain server-side.
-- SFTP credentials and private keys stay in ignored local config or CI secrets.
+`appdata-admin.php` exists under `releases`: rebuild with `npm run build:deploy:release`; release packages intentionally copy only the public PHP runtime files.
