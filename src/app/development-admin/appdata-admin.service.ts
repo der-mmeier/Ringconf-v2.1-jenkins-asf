@@ -32,7 +32,7 @@ export interface AppDataAdminResponse<T = unknown> {
 
 @Injectable({providedIn: "root"})
 export class AppDataAdminService {
-  private readonly endpoint = "/appdata-admin.php";
+  private readonly endpoint = "./appdata-admin.php";
 
   constructor(private http: HttpClient)
   {
