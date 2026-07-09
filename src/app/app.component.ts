@@ -1,19 +1,12 @@
 import {ChangeDetectionStrategy, Component, OnInit} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {lastValueFrom} from 'rxjs';
-import {jsPDF} from 'jspdf';
 import packageInfo from '../../package.json';
-
-import './pdf/Montserrat-Regular-normal.js';
-import './pdf/Montserrat-SemiBold-normal.js';
-import './pdf/Arial-Gravur-normal.js';
 
 import {environment} from '../environments/environment';
 import {iAppData, iDBSaveItem} from './app.interfaces';
 import {RingData} from './app.ringdata';
 import {Log} from './logger/logger.component';
-import {pdfFemaleHeader} from './pdf/pdfFemaleHeader';
-import {pdfMaleHeader} from './pdf/pdfMaleHeader';
 import {collectRingScreenshots, createScreenshot} from './webgl/webgl.component';
 
 @Component({
@@ -2654,133 +2647,54 @@ export class AppComponent implements OnInit {
     return result;
   }
 
-  createPdf() {
+  async createPdf() {
     if (RingData.list.length < 2) return;
-    let that = this;
 
-    dbSavePreset().then(function () {
-      let isActive = [RingData.list[0].cartActive, RingData.list[1].cartActive];
-      let isSingle = !isActive[0] || !isActive[1];
+    try {
+      await dbSavePreset();
 
-      collectRingScreenshots(800, 622, function (data: string[]) {
-        let pdf = new jsPDF("p", "mm", "a4", true);
-        let img = <HTMLImageElement>document.getElementById("a4pdfbg");
-        pdf.addImage(img, 'PNG', 0, 0, 210, 297);
+      let details = this.getDetails();
+      if (!details) {
+        Log("error", "PDF konnte nicht erstellt werden: Keine Ringdetails vorhanden.");
+        return;
+      }
 
-        if (data[0].length && isActive[0])
-          pdf.addImage(data[0], 'PNG', 41, 31, 54, 42);
-        if (data[1].length && isActive[1])
-          pdf.addImage(data[1], 'PNG', isSingle ? 41 : 101, 31, 54, 42);
+      let screenshots = await collectRingScreenshotsAsync(800, 622);
+      let payload = {
+        requestVersion: 1,
+        presetId: AppComponent.app.state.preset_id,
+        build: AppComponent.app.state.build,
+        channel: getRuntimeChannel(),
+        appDataVersion: AppComponent.app.state.appDataVersionLabel,
+        appDataHash: AppComponent.app.state.appDataHash,
+        configMode: AppComponent.app.state.configMode,
+        isActive: [RingData.list[0].cartActive, RingData.list[1].cartActive],
+        rings: RingData.list.slice(0, 2),
+        details: details,
+        screenshots: {
+          ring1: screenshots[0] || "",
+          ring2: screenshots[1] || "",
+        },
+        meta: {
+          createdAt: new Date().toISOString(),
+          sourceUrl: window.location.href,
+          embedReferrer: document.referrer || "",
+          license: "",
+        },
+      };
 
-        if (isActive[0])
-          pdf.addImage(pdfFemaleHeader, 'PNG', 41, 72, 54, 12);
-        if (isActive[1])
-          pdf.addImage(pdfMaleHeader, 'PNG', isSingle ? 41 : 101, 72, 54, 12);
+      let blob = await lastValueFrom(this.http.post(getPdfEndpoint(), payload, {
+        headers: makeJsonHttpHeaders(),
+        responseType: 'blob',
+      }));
 
-        pdf.setFont('Montserrat-Regular', 'normal');
-
-        // Datum
-        let today = new Date();
-        let date = today.getDate() + "." + (today.getMonth() + 1) + "." + today.getFullYear();
-        let text = "Datum: " + date;
-        pdf.setFontSize(8);
-        pdf.text(text, 6, 6);
-
-        // rind ID
-        pdf.setFontSize(10);
-        pdf.setFont('Montserrat-SemiBold', 'normal');
-        pdf.text(AppComponent.app.state.preset_id, 98 - pdf.getTextWidth(AppComponent.app.state.preset_id) / 2, 25);
-
-        // Details
-        pdf.setFontSize(7);
-        let textY = 94, lineSpace = 2;
-        let details = that.getDetails();
-        if (details) {
-          details.forEach(function (e) {
-            pdf.setFont('Montserrat-SemiBold', 'normal');
-            pdf.text(e.section, 6, textY);
-
-            pdf.setDrawColor(0, 0, 0);
-            pdf.setLineWidth(0.2);
-            pdf.line(6, textY + lineSpace, 35, textY + lineSpace);
-            pdf.line(41, textY + lineSpace, 95, textY + lineSpace);
-            if (!isSingle)
-              pdf.line(101, textY + lineSpace, 155, textY + lineSpace);
-
-            pdf.setDrawColor(223, 223, 223);
-            pdf.setLineWidth(0.1);
-            pdf.setFont('Montserrat-Regular', 'normal');
-
-            let fontChanged = false;
-
-            if (e.data) {
-              textY += 6;
-
-              (e.data as iDetailData[]).forEach(function (data: iDetailData) {
-                let maxLines = 1;
-
-                if (data.col_0)
-                  pdf.text(data.col_0, 6, textY);
-
-                if (data.class) {
-                  pdf.setFont('Arial-Gravur', 'normal');
-                  fontChanged = true;
-                }
-
-                if (data.col_1 && isActive[0]) {
-                  let text = pdf.splitTextToSize(data.col_1, 54);
-                  pdf.text(text, 41, textY);
-                  if (text.length > maxLines) maxLines = text.length;
-                }
-                if (data.col_2 && isActive[1]) {
-                  let text = pdf.splitTextToSize(data.col_2, 54);
-                  pdf.text(text, isSingle ? 41 : 101, textY);
-                  if (text.length > maxLines) maxLines = text.length;
-                }
-
-                if (fontChanged) {
-                  pdf.setFont('Montserrat-Regular', 'normal');
-                  fontChanged = false;
-                }
-
-                if (maxLines > 1)
-                  textY += (maxLines - 1) * 3;
-
-                pdf.line(6, textY + lineSpace, 35, textY + lineSpace);
-                pdf.line(41, textY + lineSpace, 95, textY + lineSpace);
-                if (!isSingle)
-                  pdf.line(101, textY + lineSpace, 155, textY + lineSpace);
-
-                textY += 6;
-              })
-            }
-
-            textY += 3;
-          })
-
-          pdf.setFont('Montserrat-SemiBold', 'normal');
-          pdf.text("Preis", 6, textY);
-          if (isActive[0])
-            pdf.text(RingData.list[0].price.toString() + " €", 41, textY);
-          else
-            pdf.text(RingData.list[1].price.toString() + " €", 41, textY);
-          if (!isSingle)
-            pdf.text(RingData.list[1].price.toString() + " €", 101, textY);
-
-          pdf.setDrawColor(0, 0, 0);
-          pdf.setLineWidth(0.2);
-          pdf.line(6, textY + lineSpace, 35, textY + lineSpace);
-          pdf.line(41, textY + lineSpace, 95, textY + lineSpace);
-          if (!isSingle)
-            pdf.line(101, textY + lineSpace, 155, textY + lineSpace);
-        }
-
-        pdf.save(AppComponent.app.state.preset_id + ".pdf");
-      })
-    }).catch(err => {
-      console.log("error in createPdf dbSavePreset(): ", err);
-    });
+      downloadBlob(blob, AppComponent.app.state.preset_id + ".pdf");
+    } catch (err) {
+      console.log("error in createPdf(): ", err);
+      Log("error", await getPdfErrorMessage(err));
+    }
   }
+
 
   getPriceTotal(): number {
     let total = 0.0;
@@ -2856,6 +2770,67 @@ function makeHttpHeaders(): HttpHeaders {
   return new HttpHeaders({
     'Content-Type': 'application/x-www-form-urlencoded',
   });
+}
+
+function makeJsonHttpHeaders(): HttpHeaders {
+  return new HttpHeaders({
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  });
+}
+
+function getPdfEndpoint(): string {
+  let configured = environment.pdfEndpoint;
+  if (configured && configured.startsWith("http")) return configured;
+  if (configured) return window.location.origin + configured;
+  return window.location.origin + "/3d-konfigurator/pdf/create.php";
+}
+
+function getRuntimeChannel(): string {
+  let path = window.location.pathname;
+  if (path.indexOf("/builds/development/") >= 0) return "development";
+  if (path.indexOf("/builds/releases/") >= 0) return "releases";
+  return environment.isWooCommerce ? "woocommerce" : "development";
+}
+
+function collectRingScreenshotsAsync(width: number, height: number): Promise<string[]> {
+  return new Promise((resolve) => {
+    collectRingScreenshots(width, height, (data: string[]) => resolve(data));
+  });
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function getPdfErrorMessage(err: any): Promise<string> {
+  let fallback = "PDF konnte nicht erstellt werden.";
+  let body = err?.error;
+
+  try {
+    if (body instanceof Blob) {
+      let text = await body.text();
+      if (!text) return fallback;
+      let parsed = JSON.parse(text);
+      return parsed?.error?.message || fallback;
+    }
+
+    if (typeof body === "string") {
+      let parsed = JSON.parse(body);
+      return parsed?.error?.message || fallback;
+    }
+
+    return body?.error?.message || err?.message || fallback;
+  } catch {
+    return err?.message || fallback;
+  }
 }
 
 function makeHttpParams(rpc: string, rpp: any[]): HttpParams {
