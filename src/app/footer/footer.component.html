@@ -1,10 +1,12 @@
 <div class="footer">
   <div class="priceWrapper">
-    <div *ngFor="let ring of ringData" class="item">
-      <div class="checkbox" [class.checked]="ring.cartActive" (mousedown)="ring.cartActive = !ring.cartActive"></div>
-      <div class="name">{{ring.name}}</div>
-      <div class="price" [hidden]="!ring.cartActive">{{ring.price | number:'1.2-2' | removeCommaPipe}}&nbsp;&euro;</div>
-    </div>
+    @for (ring of ringData; track ring) {
+      <div class="item">
+        <div class="checkbox" [class.checked]="ring.cartActive" (mousedown)="ring.cartActive = !ring.cartActive"></div>
+        <div class="name">{{ring.name}}</div>
+        <div class="price" [hidden]="!ring.cartActive">{{ring.price | number:'1.2-2' | removeCommaPipe}}&nbsp;&euro;</div>
+      </div>
+    }
     <div class="item total">
       <div class="name">Gesamtpreis</div>
       <div class="price">{{app.getPriceTotal() | number:'1.2-2' | removeCommaPipe}}&nbsp;&euro;</div>

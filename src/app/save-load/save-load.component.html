@@ -15,7 +15,7 @@
       <div class="input-wrapper">
         <div class="ring-id">{{curPresetId}}</div>
         <div class="button"
-             (mousedown)="onSave()">Speichern
+          (mousedown)="onSave()">Speichern
         </div>
       </div>
     </div>
@@ -24,7 +24,7 @@
       <div class="input-wrapper">
         <input id="ringId" type="text" maxlength="12" placeholder="Ring-ID eingeben" #ringId>
         <div class="button"
-             (mousedown)="onLoad(ringId.value)">Laden
+          (mousedown)="onLoad(ringId.value)">Laden
         </div>
       </div>
     </div>
@@ -34,12 +34,13 @@
   <div class="dbContent">
     <div class="dbRow">
 
-      <div class="dbCol"
-           *ngFor="let item of getDBSaveItems()"
-           (mousedown)="onLoad(item.id)">
-        <img class="preview" [src]="item.img" alt="">
-        <div class="id">{{ item.id }}</div>
-      </div>
+      @for (item of getDBSaveItems(); track item) {
+        <div class="dbCol"
+          (mousedown)="onLoad(item.id)">
+          <img class="preview" [src]="item.img" alt="">
+          <div class="id">{{ item.id }}</div>
+        </div>
+      }
     </div>
   </div>
 </div>

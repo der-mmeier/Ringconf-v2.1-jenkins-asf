@@ -5,8 +5,10 @@
   <div class="selected" [class.open]="open" (mousedown)="open=!open" [innerHTML]="onValueFormat ? (onValueFormat(value) | safeHtml) : value">
   </div>
   <div class="items" [class.selectHide]="!open">
-    <div *ngFor="let item of options;trackBy:trackByFn; let i = index;" (mousedown)="select(item)" [class.-hidden]="onValueHidden ? onValueHidden(that, item) : false"
-         [innerHTML]="onValueFormat ? (onValueFormat(item) | safeHtml) : item">
-    </div>
+    @for (item of options; track trackByFn(i, item); let i = $index) {
+      <div (mousedown)="select(item)" [class.-hidden]="onValueHidden ? onValueHidden(that, item) : false"
+        [innerHTML]="onValueFormat ? (onValueFormat(item) | safeHtml) : item">
+      </div>
+    }
   </div>
 </div>

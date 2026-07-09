@@ -679,6 +679,16 @@ function handleSaveVersion(PDO $db, array $input, string $requestId): array
   $changeReason = requireString($input, 'changeReason');
   $baseVersionId = (int)($input['baseVersionId'] ?? 0);
   $baseHash = requireString($input, 'baseHash');
+
+  if ($baseVersionId <= 0) {
+    $baseVersionLabel = nullableString($input['baseVersionLabel'] ?? null);
+    $baseVersionId = resolveVersionIdByLabelAndHash($db, $baseVersionLabel, $baseHash);
+  }
+
+  if ($baseVersionId <= 0) {
+    fail(400, 'VALIDATION_FAILED', 'baseVersionId is required or must be resolvable by baseVersionLabel and baseHash.');
+  }
+
   $bump = (string)($input['bump'] ?? 'revision');
   $appData = requireArrayValue($input, 'appData');
 
@@ -1207,4 +1217,28 @@ function nextVersionParts(array $base, string $bump): array
 function formatVersion(array $parts): string
 {
   return $parts['major'] . '.' . $parts['minor'] . '.' . $parts['patch'] . '.' . $parts['revision'];
+}
+
+function resolveVersionIdByLabelAndHash(PDO $db, ?string $versionLabel, string $hash): int
+{
+  if ($versionLabel === null || $versionLabel === '' || $hash === '') {
+    return 0;
+  }
+
+  $stmt = $db->prepare('
+    select id
+    from ' . ADMIN_TABLE_VERSION . '
+    where version_label = :version_label
+      and snapshot_sha256 = :snapshot_hash
+    limit 1
+  ');
+
+  $stmt->execute([
+    'version_label' => $versionLabel,
+    'snapshot_hash' => $hash,
+  ]);
+
+  $row = $stmt->fetch();
+
+  return $row ? (int)$row['id'] : 0;
 }

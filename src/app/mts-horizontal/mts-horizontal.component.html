@@ -2,29 +2,39 @@
   <div #wrapper class="slider-wrapper">
     <canvas #bgCanvas class="slider-bg" height="32"></canvas>
 
-    <div *ngIf="is_valueGapObserved()">
-      <div *ngFor="let value of getValueGapArray(); index as i" class="slider-handle-wrapper gap" [class.no-events]="_gapNoEvents" [class.disabled]="_gapDisabled" style="left:{{getPercentGapAtIndex(i)}}%"
-           (mousedown)="onThumbSelectMouse($event)"
-           (touchstart)="onThumbSelectTouch($event)"
-           [attr.data-index]="i">
-        <div class="slider-line"></div>
-        <div class="slider-index"></div>
+    @if (is_valueGapObserved()) {
+      <div>
+        @for (value of getValueGapArray(); track value; let i = $index) {
+          <div class="slider-handle-wrapper gap" [class.no-events]="_gapNoEvents" [class.disabled]="_gapDisabled" style="left:{{getPercentGapAtIndex(i)}}%"
+            (mousedown)="onThumbSelectMouse($event)"
+            (touchstart)="onThumbSelectTouch($event)"
+            [attr.data-index]="i">
+            <div class="slider-line"></div>
+            <div class="slider-index"></div>
+          </div>
+        }
       </div>
-    </div>
-    <div *ngIf="is_valueFreeGapObserved()">
-      <div *ngFor="let value of getValueGapArray();index as i; " class="slider-handle-wrapper no-events" [class.disabled]="_valueGapEnabledArray[i] != 1" style="left:{{getPercentGapAtIndex(i)}}%">
-        <div class="slider-line"></div>
-        <div class="slider-index">{{i + 1}}</div>
+    }
+    @if (is_valueFreeGapObserved()) {
+      <div>
+        @for (value of getValueGapArray(); track value; let i = $index) {
+          <div class="slider-handle-wrapper no-events" [class.disabled]="_valueGapEnabledArray[i] != 1" style="left:{{getPercentGapAtIndex(i)}}%">
+            <div class="slider-line"></div>
+            <div class="slider-index">{{i + 1}}</div>
+          </div>
+        }
+        @for (value of getValueFreeGapArray(); track value; let i = $index) {
+          <div class="slider-handle-wrapper freeGap" style="left:{{getPercentFreeGapAtIndex(i)}}%"
+            (mousedown)="onThumbSelectMouse($event)"
+            (touchstart)="onThumbSelectTouch($event)"
+            [attr.data-index]="i">
+            <div class="slider-value">{{getValueFreeGap(i)}}</div>
+            <div class="slider-line"></div>
+            <div class="slider-index">{{i + 1}}</div>
+          </div>
+        }
       </div>
-      <div *ngFor="let value of getValueFreeGapArray(); index as i" class="slider-handle-wrapper freeGap" style="left:{{getPercentFreeGapAtIndex(i)}}%"
-           (mousedown)="onThumbSelectMouse($event)"
-           (touchstart)="onThumbSelectTouch($event)"
-           [attr.data-index]="i">
-        <div class="slider-value">{{getValueFreeGap(i)}}</div>
-        <div class="slider-line"></div>
-        <div class="slider-index">{{i + 1}}</div>
-      </div>
-    </div>
+    }
   </div>
 </div>
 

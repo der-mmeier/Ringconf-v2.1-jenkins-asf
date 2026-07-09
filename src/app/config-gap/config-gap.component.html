@@ -1,96 +1,99 @@
 <x-tab-control class="inner">
   <x-tab-page class="gap" title="Fugen" [attr.data-ringId]="ringId">
     <div class="image-card-wrapper">
-      <x-image-card *ngFor="let item of app.data.gapMode;trackBy:trackByFn"
-                    [class.active]="ringData[ringId].gapMode===item.id"
-                    [class.disabled]="isDisabled_gapMode(item.id)"
-                    (mousedown)="setValue_gapMode(item.id)"
-                    [title]="item.name"
-                    [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
+      @for (item of app.data.gapMode; track trackByFn($index, item)) {
+        <x-image-card
+          [class.active]="ringData[ringId].gapMode===item.id"
+          [class.disabled]="isDisabled_gapMode(item.id)"
+          (mousedown)="setValue_gapMode(item.id)"
+          [title]="item.name"
+        [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
+      }
     </div>
     <x-property-sync-dialog [ringId]="ringId" property="gapMode"></x-property-sync-dialog>
 
-    <ng-template [ngIf]="isVisible_gapSettings()">
+    @if (isVisible_gapSettings()) {
       <x-dropdown title="Breite"
-                  [options]="getOptions_gapWidth()"
-                  [value]="ringData[ringId].gapWidth"
-                  [onValueFormat]="onValueFormat_gapWidth"
-                  [onValueHidden]="onValueHidden_gapWidth"
-                  [that]="this"
-                  (onSelect)="setOption_gapWidth($event)"></x-dropdown>
-
+        [options]="getOptions_gapWidth()"
+        [value]="ringData[ringId].gapWidth"
+        [onValueFormat]="onValueFormat_gapWidth"
+        [onValueHidden]="onValueHidden_gapWidth"
+        [that]="this"
+      (onSelect)="setOption_gapWidth($event)"></x-dropdown>
       <x-property-sync-dialog [ringId]="ringId" property="gapWidth"></x-property-sync-dialog>
-
       <x-dropdown title="Oberfläche"
-                  [options]="getOptions_gapSurface()"
-                  [value]="ringData[ringId].gapSurface"
-                  [onValueFormat]="onValueFormat_gapSurface"
-                  (onSelect)="setOption_gapSurface($event)"></x-dropdown>
-
+        [options]="getOptions_gapSurface()"
+        [value]="ringData[ringId].gapSurface"
+        [onValueFormat]="onValueFormat_gapSurface"
+      (onSelect)="setOption_gapSurface($event)"></x-dropdown>
       <x-property-sync-dialog [ringId]="ringId" property="gapSurface"></x-property-sync-dialog>
-
       <h6 class="title">
         Aufteilung
       </h6>
-
-      <div class="gap-item" *ngFor="let item of ringData[ringId].gapEnabled;trackBy:trackByFn; let i=index;"
-           [hidden]="isHidden_gapElement(i)">
-        <div class="number">{{ i + 1 }}</div>
-        <div class="title">Trennfuge</div>
-          <div class="switch" [class.active]="item != 0" (mousedown)="onToggleGapEnabled(i)"></div>
-      </div>
-
-      <ng-template [ngFor] let-item [ngForOf]=ringData[ringId].gapDiv let-i="index">
+      @for (item of ringData[ringId].gapEnabled; track trackByFn(i, item); let i = $index) {
         <div class="gap-item"
-             *ngIf="i<ringData[ringId].gapDiv.length-1"
-             [attr.data-index]="i"
-             [attr.data-ringId]="ringId">
-          <div class="number -freeGap">{{ i + 1 }}</div>
-          <div class="title">Freie Fuge
-            <div class="position">{{getGapPositionString(i)}}</div>
-          </div>
-          <div class="switch delete" (mousedown)="onDeleteGap(i)"></div>
+          [hidden]="isHidden_gapElement(i)">
+          <div class="number">{{ i + 1 }}</div>
+          <div class="title">Trennfuge</div>
+          <div class="switch" [class.active]="item != 0" (mousedown)="onToggleGapEnabled(i)"></div>
         </div>
+      }
+      <ng-template [ngFor] let-item [ngForOf]=ringData[ringId].gapDiv let-i="index">
+        @if (i<ringData[ringId].gapDiv.length-1) {
+          <div class="gap-item"
+            [attr.data-index]="i"
+            [attr.data-ringId]="ringId">
+            <div class="number -freeGap">{{ i + 1 }}</div>
+            <div class="title">Freie Fuge
+              <div class="position">{{getGapPositionString(i)}}</div>
+            </div>
+            <div class="switch delete" (mousedown)="onDeleteGap(i)"></div>
+          </div>
+        }
       </ng-template>
-
       <div class="gapDiv-plus">
-        <div class="icon" (mousedown)="onAddGap()" *ngIf="canAddGaps()"></div>
-        <h6 class="title" *ngIf="canAddGaps()">Freie Fuge hinzufügen</h6>
-        <h6 class="title" *ngIf="!canAddGaps()">Keine freien Fugen mehr möglich</h6>
+        @if (canAddGaps()) {
+          <div class="icon" (mousedown)="onAddGap()"></div>
+        }
+        @if (canAddGaps()) {
+          <h6 class="title">Freie Fuge hinzufügen</h6>
+        }
+        @if (!canAddGaps()) {
+          <h6 class="title">Keine freien Fugen mehr möglich</h6>
+        }
       </div>
-
-<!--      <x-multi-thumb-slider [ringId]=ringId mode="gap" [onThumbChanging]="onGapChanging"></x-multi-thumb-slider>-->
+      <!--      <x-multi-thumb-slider [ringId]=ringId mode="gap" [onThumbChanging]="onGapChanging"></x-multi-thumb-slider>-->
       <x-mts-horizontal [ringId]=ringId (onValueFreeGapChanged)="onValueFreeGapArrayChanged($event)" mode="gap"></x-mts-horizontal>
-
-    </ng-template>
+    }
   </x-tab-page>
-  <ng-template [ngIf]="canSteps()">
+  @if (canSteps()) {
     <x-tab-page class="step" title="Stufen">
       <div class="image-card-wrapper">
-        <x-image-card *ngFor="let item of app.data.stepMode;trackBy:trackByFn"
-                      [class.active]="ringData[ringId].stepMode===item.id"
-                      (mousedown)="setValue_stepMode(item.id)"
-                      [title]="item.name"
-                      [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
+        @for (item of app.data.stepMode; track trackByFn($index, item)) {
+          <x-image-card
+            [class.active]="ringData[ringId].stepMode===item.id"
+            (mousedown)="setValue_stepMode(item.id)"
+            [title]="item.name"
+          [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
+        }
       </div>
       <x-property-sync-dialog [ringId]="ringId" property="stepMode"></x-property-sync-dialog>
-
-      <ng-template [ngIf]="ringData[ringId].stepMode === 1 || ringData[ringId].stepMode === 3">
+      @if (ringData[ringId].stepMode === 1 || ringData[ringId].stepMode === 3) {
         <x-dropdown title="Breite links"
-                    [options]="getOptions_stepWidth()"
-                    [value]="ringData[ringId].stepWidth[0]"
-                    [onValueFormat]="onValueFormat_stepWidth"
-                    (onSelect)="onSelect_stepWidth(0, $event)"></x-dropdown>
+          [options]="getOptions_stepWidth()"
+          [value]="ringData[ringId].stepWidth[0]"
+          [onValueFormat]="onValueFormat_stepWidth"
+        (onSelect)="onSelect_stepWidth(0, $event)"></x-dropdown>
         <x-property-sync-dialog [ringId]="ringId" property="stepWidth_left"></x-property-sync-dialog>
-      </ng-template>
-      <ng-template [ngIf]="ringData[ringId].stepMode === 2 || ringData[ringId].stepMode === 3">
+      }
+      @if (ringData[ringId].stepMode === 2 || ringData[ringId].stepMode === 3) {
         <x-dropdown title="Breite rechts"
-                    [options]="getOptions_stepWidth()"
-                    [value]="ringData[ringId].stepWidth[1]"
-                    [onValueFormat]="onValueFormat_stepWidth"
-                    (onSelect)="onSelect_stepWidth(1, $event)"></x-dropdown>
+          [options]="getOptions_stepWidth()"
+          [value]="ringData[ringId].stepWidth[1]"
+          [onValueFormat]="onValueFormat_stepWidth"
+        (onSelect)="onSelect_stepWidth(1, $event)"></x-dropdown>
         <x-property-sync-dialog [ringId]="ringId" property="stepWidth_right"></x-property-sync-dialog>
-      </ng-template>
+      }
     </x-tab-page>
-  </ng-template>
+  }
 </x-tab-control>

@@ -1,4 +1,4 @@
-<ng-template [ngIf]="mode=='normal'">
+@if (mode=='normal') {
   <div (mousedown)="onSaveLoad_open()">
     <img src="{{env.assetFolderLocation}}/assets/imgui/icon-save-and-load.svg">
     Ringe Speichern oder Laden
@@ -14,14 +14,14 @@
   <!--  <div class="disabled">-->
   <!--    <img src="/assets/imgui/icon-undo.svg">-->
   <!--    Letzte Aktion rückgängig-->
-  <!--  </div>-->
-  <div (mousedown)="onLoadDefaults()">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/icon-reset.svg">
-    Konfiguration zurücksetzen
-  </div>
-</ng-template>
+<!--  </div>-->
+<div (mousedown)="onLoadDefaults()">
+  <img src="{{env.assetFolderLocation}}/assets/imgui/icon-reset.svg">
+  Konfiguration zurücksetzen
+</div>
+}
 
-<ng-template [ngIf]="mode=='menu'">
+@if (mode=='menu') {
   <img class="close" src="{{env.assetFolderLocation}}/assets/imgui/icon-close-white.svg" alt="" (mousedown)="app.state.toolsMenu=false">
   <div (mousedown)="onSaveLoad_open()">
     <img src="{{env.assetFolderLocation}}/assets/imgui/icon-save-and-load.svg">
@@ -38,9 +38,9 @@
   <!--  <div class="disabled">-->
   <!--    <img src="/assets/imgui/icon-undo.svg">-->
   <!--    Letzte Aktion rückgängig-->
-  <!--  </div>-->
-  <div (mousedown)="onLoadDefaults()">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/icon-reset.svg">
-    Konfiguration zurücksetzen
-  </div>
-</ng-template>
+<!--  </div>-->
+<div (mousedown)="onLoadDefaults()">
+  <img src="{{env.assetFolderLocation}}/assets/imgui/icon-reset.svg">
+  Konfiguration zurücksetzen
+</div>
+}
