@@ -1,10 +1,11 @@
 import {CommonModule} from "@angular/common";
-import {Component, Input} from "@angular/core";
+import {Component, HostListener, Input} from "@angular/core";
 import {DomSanitizer, SafeResourceUrl} from "@angular/platform-browser";
 import {FormsModule} from "@angular/forms";
 import {Matrix} from "@babylonjs/core";
 import {iAppData} from "../app.interfaces";
 import {AppDataAdminResponse, AppDataAdminService} from "./appdata-admin.service";
+import {AdminHelpEntry, APPDATA_ADMIN_HELP} from "./appdata-admin-help";
 
 type StatusType = "idle" | "success" | "warning" | "error";
 type AdminAction = "importCurrentBaseline" | "saveVersion" | "setCompatibility" | "approveVersion" | "retireVersion" | "assignTarget" | "rollbackTarget";
@@ -23,7 +24,8 @@ interface AppDataVersion {
   id: number;
   version_label: string;
   state: string;
-  snapshot_sha256: string;
+  snapshot_sha256?: string;
+  snapshot_hash?: string;
   created_at?: string;
 }
 
@@ -97,6 +99,13 @@ interface DiffEntry {
 interface ValidationResult {
   errors: string[];
   warnings: string[];
+  issues: AdminValidationIssue[];
+}
+
+interface AdminValidationIssue {
+  severity: "error" | "warning";
+  path: string;
+  message: string;
 }
 
 interface EditorSection {
@@ -111,6 +120,13 @@ interface WebglField {
   max: number;
   step: number;
   reload: boolean;
+}
+
+type JsonRecord = Record<string, unknown>;
+
+interface MilgrainOption {
+  id: number | string;
+  label: string;
 }
 
 @Component({
@@ -147,6 +163,7 @@ export class DevelopmentAdminComponent {
     pin: "",
     reason: "",
   };
+  helpEntry: AdminHelpEntry | null = null;
 
   build: BuildInfo = {
     build_key: "2.6.6",
@@ -160,11 +177,14 @@ export class DevelopmentAdminComponent {
   builds: BuildInfo[] = [];
   compatibilities: CompatibilityInfo[] = [];
   targets: AppDataTarget[] = [];
-  validation: ValidationResult = {errors: [], warnings: []};
+  validation: ValidationResult = {errors: [], warnings: [], issues: []};
   diff: DiffEntry[] = [];
 
   readonly appDataSections: EditorSection[] = [
     {title: "Profile und Ringmaße", keys: ["profile", "ringWidth", "ringHeight", "ringSize"]},
+    {title: "Perlfugen", keys: ["milgrainMode", "milgrainSize"]},
+    {title: "Regelwerk", keys: ["featureRules"]},
+    {title: "Profil-Regeln", keys: ["profile"]},
     {title: "Ringarten und Ansichten", keys: ["ringModes"]},
     {title: "Materialien und Legierungen", keys: ["material"]},
     {title: "Materialkombinationen", keys: ["materialExclude"]},
@@ -224,6 +244,12 @@ export class DevelopmentAdminComponent {
   {
   }
 
+  @HostListener("document:keydown.escape")
+  closeHelpOnEscape(): void
+  {
+    this.closeHelp();
+  }
+
   async toggle(): Promise<void>
   {
     this.open = !this.open;
@@ -253,6 +279,7 @@ export class DevelopmentAdminComponent {
     this.builds = response.data.builds;
     this.compatibilities = response.data.compatibilities;
     this.targets = response.data.targets;
+    this.ensureActiveVersionResolved();
     this.baseline = this.clone(response.data.appData);
     this.working = this.clone(response.data.appData);
     this.applyVersionLabel();
@@ -288,6 +315,241 @@ export class DevelopmentAdminComponent {
         errors: [`${path}: ungültiges JSON im Editor.`],
       };
     }
+  }
+
+  getMilgrainModes(): JsonRecord[]
+  {
+    return this.getRecordArray("milgrainMode");
+  }
+
+  getMilgrainModeOptions(): MilgrainOption[]
+  {
+    return this.getMilgrainModes().map(mode => {
+      const id = mode["id"] as number | string;
+      const name = String(mode["name"] ?? id);
+      return {
+        id,
+        label: `${name} (${id})`,
+      };
+    });
+  }
+
+  getMilgrainSizes(): JsonRecord[]
+  {
+    return this.getRecordArray("milgrainSize");
+  }
+
+  getMilgrainSizeOptions(): MilgrainOption[]
+  {
+    return this.getMilgrainSizes().map(size => {
+      const id = size["id"] as number | string;
+      const diameter = size["diameter"] !== undefined ? this.formatMm(size["diameter"]) : String(size["name"] ?? id);
+      const name = size["name"] ? ` - ${String(size["name"])}` : "";
+      return {
+        id,
+        label: `${diameter} (${id})${name}`,
+      };
+    });
+  }
+
+  getProfiles(): JsonRecord[]
+  {
+    return this.getRecordArray("profile");
+  }
+
+  getFeatureGlobal(): JsonRecord | null
+  {
+    const value = this.getPath(this.working, "featureRules.global");
+    return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : null;
+  }
+
+  getFeatureCombinations(): JsonRecord[]
+  {
+    return this.getRecordArray("featureRules.combinations");
+  }
+
+  getProfileMilgrain(profile: JsonRecord): JsonRecord | null
+  {
+    const value = profile["milgrain"];
+    return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : null;
+  }
+
+  initializeFeatureRules(): void
+  {
+    if (!this.working) {
+      return;
+    }
+    const current = this.getPath(this.working, "featureRules");
+    if (!current || typeof current !== "object" || Array.isArray(current)) {
+      this.setPath(this.working, "featureRules", {
+        global: {
+          unit: "micrometer",
+          defaultAction: "block",
+          autoAdjustAllowed: false,
+          minFeatureDistance: 0,
+          minMilgrainToRingEdge: 0,
+          logViolations: false,
+        },
+        combinations: [],
+      });
+    } else {
+      const rules = current as JsonRecord;
+      if (!rules["global"] || typeof rules["global"] !== "object" || Array.isArray(rules["global"])) {
+        rules["global"] = {
+          unit: "micrometer",
+          defaultAction: "block",
+          autoAdjustAllowed: false,
+          minFeatureDistance: 0,
+          minMilgrainToRingEdge: 0,
+          logViolations: false,
+        };
+      }
+      if (!Array.isArray(rules["combinations"])) {
+        rules["combinations"] = [];
+      }
+    }
+    this.markChanged(false);
+  }
+
+  initializeProfileMilgrain(profile: JsonRecord): void
+  {
+    if (this.getProfileMilgrain(profile)) {
+      return;
+    }
+
+    const allowedModes = this.getMilgrainModeIds();
+    const allowedSizes = this.getMilgrainSizeIds();
+    const minRingWidth = this.defaultProfileMinRingWidth(profile);
+    const minEdgeDistance = this.defaultProfileEdgeDistance(profile);
+    const minFeatureDistance = this.defaultProfileFeatureDistance(profile);
+
+    profile["milgrain"] = {
+      enabled: true,
+      allowedModes: allowedModes.length ? allowedModes : [0],
+      allowedSizes: allowedSizes.length ? allowedSizes : [500],
+      minRingWidth,
+      minEdgeDistance,
+      minFeatureDistance,
+      minStoneDistanceMode: "beadDiameter",
+      stopBeforeStoneByBeads: 1,
+      autoAdjustAllowed: false,
+      conflictAction: "block",
+    };
+    this.markChanged(false);
+  }
+
+  updateRecordText(record: JsonRecord | null, field: string, value: string): void
+  {
+    if (!record) {
+      return;
+    }
+    record[field] = value;
+    this.markChanged(false);
+  }
+
+  updateRecordBoolean(record: JsonRecord | null, field: string, value: boolean): void
+  {
+    if (!record) {
+      return;
+    }
+    record[field] = value;
+    this.markChanged(false);
+  }
+
+  updateRecordNumber(record: JsonRecord | null, field: string, value: string | number): void
+  {
+    if (!record) {
+      return;
+    }
+    const next = Number(value);
+    record[field] = Number.isFinite(next) ? next : value;
+    this.markChanged(false);
+  }
+
+  updateRecordMicrometer(record: JsonRecord | null, field: string, value: string | number): void
+  {
+    if (!record) {
+      return;
+    }
+    const next = Number(value);
+    if (Number.isFinite(next)) {
+      record[field] = this.fromMmValue(next);
+      this.markChanged(false);
+    }
+  }
+
+  updateRecordCsv(record: JsonRecord | null, field: string, value: string): void
+  {
+    if (!record) {
+      return;
+    }
+    record[field] = value
+      .split(",")
+      .map(item => item.trim())
+      .filter(item => item.length > 0)
+      .map(item => /^-?\d+(\.\d+)?$/.test(item) ? Number(item) : item);
+    this.markChanged(false);
+  }
+
+  csvValue(value: unknown): string
+  {
+    return Array.isArray(value) ? value.join(", ") : "";
+  }
+
+  micrometerToMm(value: unknown): number
+  {
+    return this.toMmValue(value);
+  }
+
+  toMmValue(value: unknown): number
+  {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue / 1000 : 0;
+  }
+
+  fromMmValue(value: string | number): number
+  {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? Math.round(numberValue * 1000) : 0;
+  }
+
+  formatMm(value: unknown): string
+  {
+    const mm = this.toMmValue(value);
+    return `${new Intl.NumberFormat("de-DE", {minimumFractionDigits: 1, maximumFractionDigits: 3}).format(mm)} mm`;
+  }
+
+  isOptionSelected(record: JsonRecord, field: string, id: number | string): boolean
+  {
+    const values = record[field];
+    return Array.isArray(values) && values.some(value => String(value) === String(id));
+  }
+
+  toggleOption(record: JsonRecord, field: string, id: number | string, checked: boolean): void
+  {
+    const current = Array.isArray(record[field]) ? [...record[field] as unknown[]] : [];
+    const filtered = current.filter(value => String(value) !== String(id));
+    const normalizedId = this.normalizeId(id);
+    record[field] = checked ? [...filtered, normalizedId] : filtered;
+    this.markChanged(false);
+  }
+
+  describeSelectedOptions(record: JsonRecord, field: string, options: MilgrainOption[]): string
+  {
+    const labels = options
+      .filter(option => this.isOptionSelected(record, field, option.id))
+      .map(option => option.label);
+    return labels.length ? labels.join(", ") : "Keine Auswahl";
+  }
+
+  openHelp(key: string): void
+  {
+    this.helpEntry = APPDATA_ADMIN_HELP[key] ?? null;
+  }
+
+  closeHelp(): void
+  {
+    this.helpEntry = null;
   }
 
   getArray(path: string): unknown[]
@@ -385,51 +647,81 @@ export class DevelopmentAdminComponent {
           build: this.localBuildInfo(),
         });
         break;
-      case "saveVersion":
+      case "saveVersion": {
+        const baseVersion = this.resolveCurrentBaseVersion();
+        if (!baseVersion || baseVersion.id <= 0) {
+          this.setStatus("Keine gültige Basisversion geladen. Bitte AppData neu laden und dann erneut speichern.", "error");
+          return;
+        }
+        if (!this.activeHash) {
+          this.setStatus("Kein gültiger Basis-Hash geladen. Bitte AppData neu laden und dann erneut speichern.", "error");
+          return;
+        }
         response = await this.adminApi.request("saveVersion", {
           ...credentials,
           changeReason: reason,
-          baseVersionId: this.activeVersion?.id ?? null,
-          baseVersionLabel: this.activeVersion?.version_label ?? "3.0.216.4",
+          baseVersionId: baseVersion.id,
+          baseVersionLabel: baseVersion.version_label,
           baseHash: this.activeHash,
           bump: "revision",
           build: this.localBuildInfo(),
           appData: this.working,
         });
         break;
-      case "setCompatibility":
+      }
+      case "setCompatibility": {
+        const versionId = this.requireActiveVersionIdForAction();
+        if (versionId === null) {
+          return;
+        }
         response = await this.adminApi.request("setCompatibility", {
           ...credentials,
-          versionId: this.activeVersion?.id,
+          versionId,
           build: this.localBuildInfo(),
           status: this.selectedCompatibilityStatus,
           note: reason,
         });
         break;
-      case "approveVersion":
+      }
+      case "approveVersion": {
+        const versionId = this.requireActiveVersionIdForAction();
+        if (versionId === null) {
+          return;
+        }
         response = await this.adminApi.request("approveVersion", {
           ...credentials,
-          versionId: this.activeVersion?.id,
+          versionId,
           changeReason: reason,
         });
         break;
-      case "retireVersion":
+      }
+      case "retireVersion": {
+        const versionId = this.requireActiveVersionIdForAction();
+        if (versionId === null) {
+          return;
+        }
         response = await this.adminApi.request("retireVersion", {
           ...credentials,
-          versionId: this.activeVersion?.id,
+          versionId,
           changeReason: reason,
         });
         break;
+      }
       case "assignTarget":
-      case "rollbackTarget":
+      case "rollbackTarget": {
+        const versionId = this.requireActiveVersionIdForAction();
+        if (versionId === null) {
+          return;
+        }
         response = await this.adminApi.request(action, {
           ...credentials,
           targetKey: this.selectedTargetKey,
           build: this.localBuildInfo(),
-          versionId: this.activeVersion?.id,
+          versionId,
           changeReason: reason,
         });
         break;
+      }
     }
 
     if (!response.ok) {
@@ -527,7 +819,7 @@ export class DevelopmentAdminComponent {
     const errors: string[] = [];
     const warnings: string[] = [];
     if (!value || typeof value !== "object") {
-      return {errors: ["AppData ist kein JSON-Objekt."], warnings};
+      return this.toValidationResult([{severity: "error", path: "$", message: "AppData ist kein JSON-Objekt."}]);
     }
 
     this.requireUnique(value.material, "material.id", errors);
@@ -560,7 +852,144 @@ export class DevelopmentAdminComponent {
       warnings.push("Möglicher Mojibake in AppData erkannt. Bitte manuell prüfen, nicht automatisch korrigieren.");
     }
 
-    return {errors, warnings};
+    return this.toValidationResult([
+      ...errors.map(message => ({severity: "error" as const, path: "$", message})),
+      ...warnings.map(message => ({severity: "warning" as const, path: "$", message})),
+      ...this.validateMilgrainModes(value),
+      ...this.validateMilgrainSizes(value),
+      ...this.validateProfileMilgrainRules(value),
+      ...this.validateFeatureRules(value),
+    ]);
+  }
+
+  private validateMilgrainModes(appData: iAppData): AdminValidationIssue[]
+  {
+    const issues: AdminValidationIssue[] = [];
+    const modes = this.recordArray(appData, "milgrainMode");
+    this.validateUniqueRecordIds(modes, "milgrainMode", issues);
+    modes.forEach((mode, index) => {
+      if (mode["id"] === undefined || mode["id"] === null || String(mode["id"]).trim() === "") {
+        issues.push({severity: "error", path: `milgrainMode[${index}].id`, message: "Perlfugen-Modus benoetigt eine ID."});
+      }
+    });
+    return issues;
+  }
+
+  private validateMilgrainSizes(appData: iAppData): AdminValidationIssue[]
+  {
+    const issues: AdminValidationIssue[] = [];
+    const sizes = this.recordArray(appData, "milgrainSize");
+    this.validateUniqueRecordIds(sizes, "milgrainSize", issues);
+    sizes.forEach((size, index) => {
+      const path = `milgrainSize[${index}]`;
+      const diameter = Number(size["diameter"]);
+      const radius = Number(size["radius"]);
+      const borderLeft = Number(size["borderLeft"]);
+      const borderRight = Number(size["borderRight"]);
+      const spacing = Number(size["spacing"]);
+      if (size["id"] === undefined || size["id"] === null || String(size["id"]).trim() === "") {
+        issues.push({severity: "error", path: `${path}.id`, message: "Perlengroesse benoetigt eine ID."});
+      }
+      if (!Number.isFinite(diameter) || diameter <= 0) {
+        issues.push({severity: "error", path: `${path}.diameter`, message: "diameter muss > 0 sein."});
+      }
+      if (Number.isFinite(radius) && Number.isFinite(diameter) && radius !== diameter / 2) {
+        issues.push({severity: "warning", path: `${path}.radius`, message: "radius weicht von diameter / 2 ab."});
+      }
+      if (!Number.isFinite(borderLeft) || borderLeft < 0) {
+        issues.push({severity: "error", path: `${path}.borderLeft`, message: "borderLeft muss >= 0 sein."});
+      }
+      if (!Number.isFinite(borderRight) || borderRight < 0) {
+        issues.push({severity: "error", path: `${path}.borderRight`, message: "borderRight muss >= 0 sein."});
+      }
+      if (!Number.isFinite(spacing) || spacing < diameter) {
+        issues.push({severity: "error", path: `${path}.spacing`, message: "spacing muss >= diameter sein."});
+      }
+    });
+    return issues;
+  }
+
+  private validateProfileMilgrainRules(appData: iAppData): AdminValidationIssue[]
+  {
+    const issues: AdminValidationIssue[] = [];
+    const modeIds = new Set(this.recordArray(appData, "milgrainMode").map(mode => String(mode["id"])));
+    const sizeIds = new Set(this.recordArray(appData, "milgrainSize").map(size => String(size["id"])));
+    this.recordArray(appData, "profile").forEach((profile, index) => {
+      const profileName = String(profile["name"] ?? index);
+      const milgrain = profile["milgrain"];
+      if (!milgrain || typeof milgrain !== "object" || Array.isArray(milgrain)) {
+        return;
+      }
+      const rule = milgrain as JsonRecord;
+      this.validateReferenceList(rule["allowedModes"], modeIds, `profile[${profileName}].milgrain.allowedModes`, "unbekannten Modus", issues);
+      this.validateReferenceList(rule["allowedSizes"], sizeIds, `profile[${profileName}].milgrain.allowedSizes`, "unbekannte Groesse", issues);
+      this.requireNonNegative(rule["minRingWidth"], `profile[${profileName}].milgrain.minRingWidth`, issues);
+      this.requireNonNegative(rule["minEdgeDistance"], `profile[${profileName}].milgrain.minEdgeDistance`, issues);
+      this.requireNonNegative(rule["minFeatureDistance"], `profile[${profileName}].milgrain.minFeatureDistance`, issues);
+      this.requireNonNegative(rule["stopBeforeStoneByBeads"], `profile[${profileName}].milgrain.stopBeforeStoneByBeads`, issues);
+      const minStoneDistanceMode = rule["minStoneDistanceMode"];
+      if (minStoneDistanceMode !== undefined && !["beadDiameter", "fixed"].includes(String(minStoneDistanceMode))) {
+        issues.push({severity: "error", path: `profile[${profileName}].milgrain.minStoneDistanceMode`, message: "minStoneDistanceMode muss beadDiameter oder fixed sein."});
+      }
+      const conflictAction = rule["conflictAction"];
+      if (conflictAction !== undefined && !["block", "warn", "autoAdjust"].includes(String(conflictAction))) {
+        issues.push({severity: "error", path: `profile[${profileName}].milgrain.conflictAction`, message: "conflictAction muss block, warn oder autoAdjust sein."});
+      }
+    });
+    return issues;
+  }
+
+  private validateFeatureRules(appData: iAppData): AdminValidationIssue[]
+  {
+    const issues: AdminValidationIssue[] = [];
+    const featureRules = this.recordValue(appData, "featureRules");
+    if (!featureRules) {
+      return issues;
+    }
+    const global = featureRules["global"];
+    if (global && typeof global === "object" && !Array.isArray(global)) {
+      const globalRules = global as JsonRecord;
+      if (globalRules["unit"] !== undefined && globalRules["unit"] !== "micrometer") {
+        issues.push({severity: "error", path: "featureRules.global.unit", message: "unit muss micrometer sein."});
+      }
+      if (globalRules["defaultAction"] !== undefined && !["block", "warn", "autoAdjust"].includes(String(globalRules["defaultAction"]))) {
+        issues.push({severity: "error", path: "featureRules.global.defaultAction", message: "defaultAction muss block, warn oder autoAdjust sein."});
+      }
+      this.requireNonNegative(globalRules["minFeatureDistance"], "featureRules.global.minFeatureDistance", issues);
+      this.requireNonNegative(globalRules["minMilgrainToRingEdge"], "featureRules.global.minMilgrainToRingEdge", issues);
+    }
+
+    const featureTypes = new Set(["materialGap", "freeGap", "step", "stone", "milgrain"]);
+    const combinations = featureRules["combinations"];
+    if (combinations !== undefined && !Array.isArray(combinations)) {
+      issues.push({severity: "error", path: "featureRules.combinations", message: "combinations muss eine Liste sein."});
+    }
+    (Array.isArray(combinations) ? combinations : []).forEach((entry, index) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        issues.push({severity: "error", path: `featureRules.combinations[${index}]`, message: "Regel muss ein Objekt sein."});
+        return;
+      }
+      const rule = entry as JsonRecord;
+      ["a", "b"].forEach(field => {
+        if (!featureTypes.has(String(rule[field]))) {
+          issues.push({severity: "error", path: `featureRules.combinations[${index}].${field}`, message: "Feature-Typ ist unbekannt."});
+        }
+      });
+      this.requireNonNegative(rule["minDistance"], `featureRules.combinations[${index}].minDistance`, issues);
+      if (rule["action"] !== undefined && !["block", "warn", "autoAdjust"].includes(String(rule["action"]))) {
+        issues.push({severity: "error", path: `featureRules.combinations[${index}].action`, message: "action muss block, warn oder autoAdjust sein."});
+      }
+    });
+    return issues;
+  }
+
+  private toValidationResult(issues: AdminValidationIssue[]): ValidationResult
+  {
+    return {
+      errors: issues.filter(issue => issue.severity === "error").map(issue => `${issue.path}: ${issue.message}`),
+      warnings: issues.filter(issue => issue.severity === "warning").map(issue => `${issue.path}: ${issue.message}`),
+      issues,
+    };
   }
 
   private requireUnique(items: unknown[] | undefined, field: string, errors: string[]): void
@@ -586,6 +1015,165 @@ export class DevelopmentAdminComponent {
     if (value.step !== undefined && Number(value.step) <= 0) {
       errors.push(`${path}: Schrittweite muss größer 0 sein.`);
     }
+  }
+
+  private getRecordArray(path: string): JsonRecord[]
+  {
+    const value = this.getPath(this.working, path);
+    return Array.isArray(value) ? value.filter(item => item && typeof item === "object" && !Array.isArray(item)) as JsonRecord[] : [];
+  }
+
+  private recordArray(source: unknown, path: string): JsonRecord[]
+  {
+    const value = this.getPath(source, path);
+    return Array.isArray(value) ? value.filter(item => item && typeof item === "object" && !Array.isArray(item)) as JsonRecord[] : [];
+  }
+
+  private recordValue(source: unknown, path: string): JsonRecord | null
+  {
+    const value = this.getPath(source, path);
+    return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : null;
+  }
+
+  private validateUniqueRecordIds(items: JsonRecord[], path: string, issues: AdminValidationIssue[]): void
+  {
+    const seen = new Set<string>();
+    items.forEach((item, index) => {
+      const id = String(item["id"] ?? "");
+      if (!id) {
+        return;
+      }
+      if (seen.has(id)) {
+        issues.push({severity: "error", path: `${path}[${index}].id`, message: `doppelte ID ${id}.`});
+      }
+      seen.add(id);
+    });
+  }
+
+  private validateReferenceList(value: unknown, knownIds: Set<string>, path: string, label: string, issues: AdminValidationIssue[]): void
+  {
+    if (value === undefined) {
+      return;
+    }
+    if (!Array.isArray(value)) {
+      issues.push({severity: "error", path, message: "muss eine Liste sein."});
+      return;
+    }
+    value.forEach(id => {
+      if (!knownIds.has(String(id))) {
+        issues.push({severity: "error", path, message: `referenziert ${label} ${id}.`});
+      }
+    });
+  }
+
+  private requireNonNegative(value: unknown, path: string, issues: AdminValidationIssue[]): void
+  {
+    if (value === undefined) {
+      return;
+    }
+    const numberValue = Number(value);
+    if (!Number.isFinite(numberValue) || numberValue < 0) {
+      issues.push({severity: "error", path, message: "muss >= 0 sein."});
+    }
+  }
+
+  private normalizeId(id: number | string): number | string
+  {
+    return typeof id === "number" ? id : (/^-?\d+(\.\d+)?$/.test(id) ? Number(id) : id);
+  }
+
+  private getMilgrainModeIds(): Array<number | string>
+  {
+    return this.getMilgrainModeOptions().map(option => this.normalizeId(option.id));
+  }
+
+  private getMilgrainSizeIds(): Array<number | string>
+  {
+    return this.getMilgrainSizeOptions().map(option => this.normalizeId(option.id));
+  }
+
+  private defaultProfileMinRingWidth(profile: JsonRecord): number
+  {
+    const profileRange = profile["rw"];
+    if (profileRange && typeof profileRange === "object" && !Array.isArray(profileRange)) {
+      const value = Number((profileRange as JsonRecord)["min"]);
+      if (Number.isFinite(value) && value > 0) {
+        return value;
+      }
+    }
+
+    const globalMin = Number(this.getPath(this.working, "ringWidth.min"));
+    return Number.isFinite(globalMin) && globalMin > 0 ? globalMin : 3000;
+  }
+
+  private defaultProfileEdgeDistance(profile: JsonRecord): number
+  {
+    const value = Number(profile["sideGapDistance"]);
+    return Number.isFinite(value) && value >= 0 ? value : 500;
+  }
+
+  private defaultProfileFeatureDistance(profile: JsonRecord): number
+  {
+    const value = Number(profile["gapGapDistance"]);
+    return Number.isFinite(value) && value >= 0 ? value : 300;
+  }
+
+  private versionHash(version: AppDataVersion | null | undefined): string
+  {
+    return String(version?.snapshot_sha256 ?? version?.snapshot_hash ?? "");
+  }
+
+  private ensureActiveVersionResolved(): void
+  {
+    if (this.activeVersion?.id) {
+      return;
+    }
+
+    const resolved = this.findVersionByHash(this.activeHash);
+    if (resolved) {
+      this.activeVersion = resolved;
+    }
+  }
+
+  private resolveCurrentBaseVersion(): AppDataVersion | null
+  {
+    if (this.activeVersion?.id) {
+      return this.activeVersion;
+    }
+
+    const byHash = this.findVersionByHash(this.activeHash);
+    if (byHash) {
+      this.activeVersion = byHash;
+      return byHash;
+    }
+
+    const byLabel = this.versions.find(version => version.version_label === this.app?.state.appDataVersionLabel);
+    if (byLabel) {
+      this.activeVersion = byLabel;
+      return byLabel;
+    }
+
+    return null;
+  }
+
+  private findVersionByHash(hash: string): AppDataVersion | null
+  {
+    if (!hash) {
+      return null;
+    }
+
+    return this.versions.find(version => this.versionHash(version) === hash) ?? null;
+  }
+
+  private requireActiveVersionIdForAction(): number | null
+  {
+    const version = this.resolveCurrentBaseVersion();
+    if (!version?.id) {
+      this.setStatus("Keine gültige AppData-Version geladen. Bitte Version neu laden und Aktion erneut ausführen.", "error");
+      return null;
+    }
+
+    return version.id;
   }
 
   private createDiff(before: unknown, after: unknown, path = ""): DiffEntry[]

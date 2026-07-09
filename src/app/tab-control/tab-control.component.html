@@ -1,12 +1,16 @@
 <div class="header">
   <ng-template [ngFor] let-page [ngForOf]="pages">
-    <div *ngIf="page.enabled" (mousedown)="selectPage(page)" [class.active]="page.active" class="item" [class]="page.class">
-      <h6 class="title">
-        {{ page.title}}
-      </h6>
-    </div>
+    @if (page.enabled) {
+      <div (mousedown)="selectPage(page)" [class.active]="page.active" class="item" [class]="page.class">
+        <h6 class="title">
+          {{ page.title}}
+        </h6>
+      </div>
+    }
   </ng-template>
 </div>
-<div class="content" *ngIf="!headerOnly">
-<ng-content></ng-content>
-</div>
+@if (!headerOnly) {
+  <div class="content">
+    <ng-content></ng-content>
+  </div>
+}

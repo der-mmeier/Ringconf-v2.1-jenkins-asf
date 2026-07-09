@@ -1,15 +1,17 @@
 <h6 class="title">Gravurtext</h6>
 <meta charset=utf-8 />
 <x-textbox id="engravingText" [value]="ringData[ringId].engraving" [class]="'engraving-'+ringData[ringId].engravingFont" infotext="test"
-           [maxlength]=30 [onInfotextFormat]="onEngravingInfoFormat" #textbox></x-textbox>
+[maxlength]=30 [onInfotextFormat]="onEngravingInfoFormat" #textbox></x-textbox>
 
 <button class="default applyText" (mousedown)="applyEngravingText()">Anwenden</button>
 
 <h6 class="title">Symbol hinzufügen</h6>
 <div class="symbol-wrapper">
-  <div class="symbol" *ngFor="let item of app.data.engraving.symbols" (mousedown)="addSymbol(item.unicode)">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/{{item.img}}" alt="">
-  </div>
+  @for (item of app.data.engraving.symbols; track item) {
+    <div class="symbol" (mousedown)="addSymbol(item.unicode)">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/{{item.img}}" alt="">
+    </div>
+  }
 </div>
 
 <h6 class="title">Schriftart</h6>

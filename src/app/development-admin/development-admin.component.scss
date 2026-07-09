@@ -12,7 +12,8 @@
   border-radius: 50%;
   background: #111;
   color: #fff;
-  font-size: 22px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -128,6 +129,151 @@ button:disabled {
   margin-top: 4px;
   font-size: 12px;
   color: #59616b;
+}
+
+.rule-editor {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.rule-editor details {
+  border: 1px solid #d4d4cc;
+  border-radius: 6px;
+  background: #fff;
+  padding: 10px;
+}
+
+.rule-editor summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.rule-panel,
+.profile-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.rule-panel label,
+.profile-rule-grid label {
+  display: grid;
+  gap: 5px;
+}
+
+.profile-rule-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.choice-section,
+.rule-subsection {
+  display: grid;
+  gap: 8px;
+}
+
+.rule-subsection h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.field-heading,
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-line {
+  justify-content: flex-start;
+}
+
+.option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.option-list label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #d4d4cc;
+  border-radius: 6px;
+  background: #f7f7f4;
+}
+
+.choice-section small {
+  color: #59616b;
+}
+
+.help-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  padding: 0;
+  border: 1px solid #697386;
+  background: #f7f9fc;
+  color: #253142;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-table {
+  display: grid;
+  gap: 4px;
+  overflow-x: auto;
+  margin: 8px 0 16px;
+}
+
+.admin-table-header,
+.admin-table-row {
+  display: grid;
+  gap: 6px;
+  align-items: center;
+  min-width: max-content;
+}
+
+.admin-table-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: #59616b;
+}
+
+.admin-table-row input,
+.admin-table-row select {
+  min-width: 0;
+}
+
+.mode-grid {
+  grid-template-columns: 54px 78px 160px 180px 70px 78px;
+}
+
+.size-grid {
+  grid-template-columns: 78px 150px repeat(5, 110px) 180px;
+}
+
+.combo-grid {
+  grid-template-columns: 130px 130px 130px 160px 130px;
+}
+
+.profile-rule {
+  display: grid;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid #e2e2dc;
+}
+
+.profile-rule header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .field,
@@ -251,5 +397,47 @@ button:disabled {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10003;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.help-dialog {
+  width: min(520px, 94vw);
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2428;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+}
+
+.help-dialog header,
+.help-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.help-dialog p {
+  margin: 0;
+}
+
+.help-dialog code {
+  display: block;
+  margin-top: 4px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f1f3f5;
+  overflow-wrap: anywhere;
 }
 

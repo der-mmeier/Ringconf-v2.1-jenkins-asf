@@ -4,19 +4,20 @@
     <h6 class="title">
       {{getHeader()}}
     </h6>
-    <ng-template [ngIf]="header" [ngIfElse]="elseHeader">
+    @if (header) {
       {{data[0].message}}
       <div class="button" (mousedown)="clear()">Ok</div>
-    </ng-template>
-
-    <ng-template #elseHeader>
+    } @else {
       <ul class="messag-wrapper">
-        <li class="message"
-            *ngFor="let item of data">
-          {{item.message}}
-        </li>
+        @for (item of data; track item) {
+          <li class="message"
+            >
+            {{item.message}}
+          </li>
+        }
       </ul>
-    <div class="button" (mousedown)="clear()">Weiter</div>
-    </ng-template>
+      <div class="button" (mousedown)="clear()">Weiter</div>
+    }
+
   </div>
 </div>

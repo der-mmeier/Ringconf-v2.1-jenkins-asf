@@ -4,39 +4,59 @@
   <div class="content" [class.col_0]="detailMode===0" [class.col_1]="detailMode===1">
     <div class="row -no-border -desktop">
       <div class="data"></div>
-      <div *ngIf="ringData[0].cartActive" class="data header col_0">
-        <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-female.svg" alt="">
-        Damenring
-      </div>
-      <div *ngIf="ringData[1].cartActive" class="data header col_1">
-        <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-male.svg" alt="">
-        Herrenring
-      </div>
+      @if (ringData[0].cartActive) {
+        <div class="data header col_0">
+          <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-female.svg" alt="">
+          Damenring
+        </div>
+      }
+      @if (ringData[1].cartActive) {
+        <div class="data header col_1">
+          <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-male.svg" alt="">
+          Herrenring
+        </div>
+      }
     </div>
     <div class="row -no-border -mobile">
-      <div *ngIf="ringData[0].cartActive" class="data header col_0" [class.active]="detailMode===0" (mousedown)="detailMode=0">
-        <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-female.svg" alt="">
-        Damenring
-      </div>
-      <div *ngIf="ringData[1].cartActive" class="data header col_1" [class.active]="detailMode===1" (mousedown)="detailMode=1">
-        <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-male.svg" alt="">
-        Herrenring
-      </div>
+      @if (ringData[0].cartActive) {
+        <div class="data header col_0" [class.active]="detailMode===0" (mousedown)="detailMode=0">
+          <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-female.svg" alt="">
+          Damenring
+        </div>
+      }
+      @if (ringData[1].cartActive) {
+        <div class="data header col_1" [class.active]="detailMode===1" (mousedown)="detailMode=1">
+          <img class="icon" src="{{env.assetFolderLocation}}/assets/imgui/icon-male.svg" alt="">
+          Herrenring
+        </div>
+      }
     </div>
-    <div *ngFor="let item of app.getDetails()">
-      <div class="row">
-        <div class="section">{{ item.section }}</div>
+    @for (item of app.getDetails(); track item) {
+      <div>
+        <div class="row">
+          <div class="section">{{ item.section }}</div>
+        </div>
+        @for (data of item.data; track data) {
+          <div class="row">
+            <div class="data">{{ data.col_0 }}</div>
+            @if (ringData[0].cartActive) {
+              <div class="data col_0 {{data.class}}">{{ data.col_1 }}</div>
+            }
+            @if (ringData[1].cartActive) {
+              <div class="data col_1 {{data.class}}">{{ data.col_2 }}</div>
+            }
+          </div>
+        }
       </div>
-      <div class="row" *ngFor="let data of item.data">
-        <div class="data">{{ data.col_0 }}</div>
-        <div class="data col_0 {{data.class}}" *ngIf="ringData[0].cartActive">{{ data.col_1 }}</div>
-        <div class="data col_1 {{data.class}}" *ngIf="ringData[1].cartActive">{{ data.col_2 }}</div>
-      </div>
-    </div>
+    }
     <div class="row">
       <div class="data -price">Preis</div>
-      <div class="data -price col_0" *ngIf="ringData[0].cartActive">{{ getPrice(0) }}&nbsp;&euro;</div>
-      <div class="data -price col_1" *ngIf="ringData[1].cartActive">{{ getPrice(1) }}&nbsp;&euro;</div>
+      @if (ringData[0].cartActive) {
+        <div class="data -price col_0">{{ getPrice(0) }}&nbsp;&euro;</div>
+      }
+      @if (ringData[1].cartActive) {
+        <div class="data -price col_1">{{ getPrice(1) }}&nbsp;&euro;</div>
+      }
     </div>
   </div>
 </div>

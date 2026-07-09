@@ -30,25 +30,33 @@
 </div>
 <x-footer></x-footer>
 
-<ng-template [ngIf]="state.debug">
+@if (state.debug) {
   <x-debug></x-debug>
-</ng-template>
+}
 
 <x-logger [hidden]="!state.logVisible"></x-logger>
 
-<div *ngIf="!state.ready" class="waitOverlay show">
-  <div class="spinner"></div>
-</div>
+@if (!state.ready) {
+  <div class="waitOverlay show">
+    <div class="spinner"></div>
+  </div>
+}
 
-<div *ngIf="state.toolsMenu" class="waitOverlay noAnimation alignTop">
-  <x-tools mode="menu"></x-tools>
-</div>
+@if (state.toolsMenu) {
+  <div class="waitOverlay noAnimation alignTop">
+    <x-tools mode="menu"></x-tools>
+  </div>
+}
 
-<x-save-load *ngIf="state.saveLoad"></x-save-load>
+@if (state.saveLoad) {
+  <x-save-load></x-save-load>
+}
 
-<div *ngIf="state.ringDetails" class="waitOverlay noAnimation alignTop percent">
-  <x-ring-details></x-ring-details>
-</div>
+@if (state.ringDetails) {
+  <div class="waitOverlay noAnimation alignTop percent">
+    <x-ring-details></x-ring-details>
+  </div>
+}
 
 <x-local-storage></x-local-storage>
 

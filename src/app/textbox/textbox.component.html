@@ -1,6 +1,8 @@
 <input type="text" autocomplete="{{autocomplete}}" spellcheck="{{spellcheck}}" class="{{class}}"
-       maxLength="{{maxlength.toFixed()}}" value="{{value}}" (input)="_onChange(input.value)" #input>
-<div class="info-text" *ngIf="onInfotextFormat != null"
-     [innerHTML]="onInfotextFormat ? (onInfotextFormat(value, maxlength) | safeHtml) : value">
-</div>
+  maxLength="{{maxlength.toFixed()}}" value="{{value}}" (input)="_onChange(input.value)" #input>
+  @if (onInfotextFormat != null) {
+    <div class="info-text"
+      [innerHTML]="onInfotextFormat ? (onInfotextFormat(value, maxlength) | safeHtml) : value">
+    </div>
+  }
 

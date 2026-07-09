@@ -1,61 +1,72 @@
-<div *ngIf="mode=='desktop'" class="menu desktop">
-  <div *ngFor="let i of navigation.items" class="item" [class.active]="i.hash === navigation.currentHash"
-       (mousedown)="changeHash(i.hash)">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
-    <div class="title">{{ i.title }}</div>
+@if (mode=='desktop') {
+  <div class="menu desktop">
+    @for (i of navigation.items; track i) {
+      <div class="item" [class.active]="i.hash === navigation.currentHash"
+        (mousedown)="changeHash(i.hash)">
+        <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
+        <div class="title">{{ i.title }}</div>
+      </div>
+    }
+    @if (app.state.admin) {
+      <div class="item" [class.active]="navigation.currentHash === '#admin'"
+        (mousedown)="changeHash('#admin')">
+        <div class="title">Admin</div>
+      </div>
+    }
+    @if (app.state.diamond) {
+      <div class="item" [class.active]="navigation.currentHash === '#diamond'"
+        (mousedown)="changeHash('#diamond')">
+        <div class="title">Diamant Einstellung</div>
+      </div>
+    }
   </div>
-  <ng-template [ngIf]="app.state.admin">
-    <div class="item" [class.active]="navigation.currentHash === '#admin'"
-         (mousedown)="changeHash('#admin')">
-      <div class="title">Admin</div>
-    </div>
-  </ng-template>
-  <ng-template [ngIf]="app.state.diamond">
-    <div class="item" [class.active]="navigation.currentHash === '#diamond'"
-         (mousedown)="changeHash('#diamond')">
-      <div class="title">Diamant Einstellung</div>
-    </div>
-  </ng-template>
-</div>
+}
 
-<div *ngIf="mode=='mobile'" class="menu mobile" [class.expanded]="mobileExpanded">
-  <div *ngFor="let i of mobilePrimaryItems" class="item" [class.active]="i.hash === navigation.currentHash"
-       (mousedown)="selectMobileItem(i.hash)">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
-    <div class="title">{{ i.title }}</div>
-  </div>
-  <div class="item more" [class.active]="isMobileMoreActive()" (mousedown)="selectMobileItem('more')">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/icon-more.svg" alt="" class="icon">
-    <div class="title">Mehr</div>
-  </div>
-  <div class="more-items">
-    <div *ngFor="let i of mobileMoreItems" class="item" [class.active]="i.hash === navigation.currentHash"
-         (mousedown)="changeHash(i.hash)">
-      <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
-      <div class="title">{{ i.title }}</div>
+@if (mode=='mobile') {
+  <div class="menu mobile" [class.expanded]="mobileExpanded">
+    @for (i of mobilePrimaryItems; track i) {
+      <div class="item" [class.active]="i.hash === navigation.currentHash"
+        (mousedown)="selectMobileItem(i.hash)">
+        <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
+        <div class="title">{{ i.title }}</div>
+      </div>
+    }
+    <div class="item more" [class.active]="isMobileMoreActive()" (mousedown)="selectMobileItem('more')">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-more.svg" alt="" class="icon">
+      <div class="title">Mehr</div>
+    </div>
+    <div class="more-items">
+      @for (i of mobileMoreItems; track i) {
+        <div class="item" [class.active]="i.hash === navigation.currentHash"
+          (mousedown)="changeHash(i.hash)">
+          <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
+          <div class="title">{{ i.title }}</div>
+        </div>
+      }
+    </div>
+    <div class="prev" [class.disabled]="isFirstNavItem()" (mousedown)="prev()">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-backward.svg">
+    </div>
+    <div class="next" [class.disabled]="isLastNavItem()" (mousedown)="next()">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-forward.svg">
     </div>
   </div>
-  <div class="prev" [class.disabled]="isFirstNavItem()" (mousedown)="prev()">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/icon-backward.svg">
-  </div>
-  <div class="next" [class.disabled]="isLastNavItem()" (mousedown)="next()">
-    <img src="{{env.assetFolderLocation}}/assets/imgui/icon-forward.svg">
-  </div>
+}
 
-</div>
-
-<div *ngIf="mode=='prevNext'" class="menu prevNext">
-  <div [class.disabled]="isFirstNavItem()">
-    <div (mousedown)="prev()">
-      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-backward-color.svg">
-      Zurück
+@if (mode=='prevNext') {
+  <div class="menu prevNext">
+    <div [class.disabled]="isFirstNavItem()">
+      <div (mousedown)="prev()">
+        <img src="{{env.assetFolderLocation}}/assets/imgui/icon-backward-color.svg">
+        Zurück
+      </div>
+    </div>
+    <div [class.disabled]="isLastNavItem()">
+      <div (mousedown)="next()">
+        Weiter
+        <img src="{{env.assetFolderLocation}}/assets/imgui/icon-forward-color.svg">
+      </div>
     </div>
   </div>
-  <div [class.disabled]="isLastNavItem()">
-    <div (mousedown)="next()">
-      Weiter
-      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-forward-color.svg">
-    </div>
-  </div>
-</div>
+}
 

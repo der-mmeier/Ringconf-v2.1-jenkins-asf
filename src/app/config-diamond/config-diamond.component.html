@@ -3,193 +3,195 @@
     <td></td>
     <td>
       <p><strong>Diamant Textur</strong><br/>
-        <small>
-          Achtung: Eine Auswahl schreibt alle Werte als aktuelles Preset in die Datenbank und lädt die Seite neu!
-        </small>
-      </p>
+      <small>
+        Achtung: Eine Auswahl schreibt alle Werte als aktuelles Preset in die Datenbank und lädt die Seite neu!
+      </small>
+    </p>
 
-      <br/>
-      <select (change)="refSampler_image_change($event)" value="{{getRefSampler_image()}}">
-        <option></option>
-        <option value="diamondMap_0.jpg">diamondMap_0</option>
-        <option value="diamondMap_1.jpg">diamondMap_1</option>
-        <option value="diamondMap_2.jpg">diamondMap_2</option>
-        <option value="diamondMap_3.jpg">diamondMap_3</option>
-      </select>
-    </td>
-  </tr>
-  <tr>
-    <td><p><strong>Texture</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{getRefSampler_image()}}"
-                                            width="80px"
-                                            height="80px"></td>
-    <td>
+    <br/>
+    <select (change)="refSampler_image_change($event)" value="{{getRefSampler_image()}}">
+      <option></option>
+      <option value="diamondMap_0.jpg">diamondMap_0</option>
+      <option value="diamondMap_1.jpg">diamondMap_1</option>
+      <option value="diamondMap_2.jpg">diamondMap_2</option>
+      <option value="diamondMap_3.jpg">diamondMap_3</option>
+    </select>
+  </td>
+</tr>
+<tr>
+  <td><p><strong>Texture</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{getRefSampler_image()}}"
+  width="80px"
+height="80px"></td>
+<td>
 
-      <label for="reflect_refSampler" style="display:inline-block;width:180px">reflect</label>&nbsp;
-      <input id="reflect_refSampler" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="refSampler_reflect()" (input)="set_refSampler_reflect($event)">
-      <br/>
-      <label for="camRad_refSampler" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
-      <input id="camRad_refSampler" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="refSampler_camRad()" (input)="set_refSampler_camRad($event)">
+  <label for="reflect_refSampler" style="display:inline-block;width:180px">reflect</label>&nbsp;
+  <input id="reflect_refSampler" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+    [value]="refSampler_reflect()" (input)="set_refSampler_reflect($event)">
+    <br/>
+    <label for="camRad_refSampler" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
+    <input id="camRad_refSampler" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+      [value]="refSampler_camRad()" (input)="set_refSampler_camRad($event)">
       <br/>
       <label for="factor_refSampler" style="display:inline-block;width:180px">factor</label>&nbsp;
       <input id="factor_refSampler" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="refSampler_factor()" (input)="set_refSampler_factor($event)">
-    </td>
-  </tr>
-  <tr>
-    <td><p><strong>Triangles 1</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{tri1_image}}"
-                                                width="80px"
-                                                height="80px"></td>
+        [value]="refSampler_factor()" (input)="set_refSampler_factor($event)">
+      </td>
+    </tr>
+    <tr>
+      <td><p><strong>Triangles 1</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{tri1_image}}"
+      width="80px"
+    height="80px"></td>
     <td>
       <label for="reflect_tri1" style="display:inline-block;width:180px">reflect</label>&nbsp;
       <input id="reflect_tri1" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="tri1_reflect()" (input)="set_tri1_reflect($event)">
-      <br/>
-      <label for="camRad_tri1" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
-      <input id="camRad_tri1" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="tri1_camRad()" (input)="set_tri1_camRad($event)">
-      <br/>
-      <label for="factor_tri1" style="display:inline-block;width:180px">factor</label>&nbsp;
-      <input id="factor_tri1" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="tri1_factor()" (input)="set_tri1_factor($event)">
-    </td>
-  </tr>
-  <tr>
-    <td><p><strong>Triangles 2</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{tri2_image}}"
-                                                width="80px"
-                                                height="80px"></td>
-    <td>
-      <label for="reflect_tri2" style="display:inline-block;width:180px">reflect</label>&nbsp;
-      <input id="reflect_tri2" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="tri2_reflect()" (input)="set_tri2_reflect($event)">
-      <br/>
-      <label for="camRad_tri2" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
-      <input id="camRad_tri2" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="tri2_camRad()" (input)="set_tri2_camRad($event)">
-      <br/>
-      <label for="factor_tri2" style="display:inline-block;width:180px">factor</label>&nbsp;
-      <input id="factor_tri2" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="tri2_factor()" (input)="set_tri2_factor($event)">
-    </td>
-  </tr>
-  <tr>
-    <td><p><strong>Highlight</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{high_image}}" width="80px"
-                                              height="80px">
-    </td>
-    <td>
-      <label for="reflect_high" style="display:inline-block;width:180px">reflect</label>&nbsp;
-      <input id="reflect_high" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="high_reflect()" (input)="set_high_reflect($event)">
-      <br/>
-      <label for="camRad_high" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
-      <input id="camRad_high" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="high_camRad()" (input)="set_high_camRad($event)">
-      <br/>
-      <label for="factor_high" style="display:inline-block;width:180px">factor</label>&nbsp;
-      <input id="factor_high" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="high_factor()" (input)="set_high_factor($event)">
-    </td>
-  </tr>
-  <tr>
-    <td><p><strong>Sparkle</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{sparkle_image}}"
-                                            width="80px"
-                                            height="80px"></td>
-    <td>
-      <label for="reflect_sparkle" style="display:inline-block;width:180px">reflect_s</label>&nbsp;
-      <input id="reflect_sparkle" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="sparkle_reflect()" (input)="set_sparkle_reflect($event)">
-      <br/>
-      <label for="camRad_sparkle" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
-      <input id="camRad_sparkle" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="sparkle_camRad()" (input)="set_sparkle_camRad($event)">
-      <br/>
-      <label for="factor_sparkle" style="display:inline-block;width:180px">factor</label>&nbsp;
-      <input id="factor_sparkle" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="sparkle_factor()" (input)="set_sparkle_factor($event)">
-    </td>
-  </tr>
-  <tr>
-    <td><p><strong>Fire</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{fire_image}}" width="80px"
-                                         height="80px"></td>
-    <td>
-      <label for="reflect_fire" style="display:inline-block;width:180px">reflect</label>&nbsp;
-      <input id="reflect_fire" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="fire_reflect()" (input)="set_fire_reflect($event)">
-      <br/>
-      <label for="camRad_fire" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
-      <input id="camRad_fire" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="fire_camRad()" (input)="set_fire_camRad($event)">
-      <br/>
-      <label for="factor_fire" style="display:inline-block;width:180px">factor</label>&nbsp;
-      <input id="factor_fire" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
-             [value]="fire_factor()" (input)="set_fire_factor($event)">
-    </td>
-  </tr>
-  <tr>
-    <td></td>
-    <td>
-      <p><strong>Umgebungs-Map (.env)</strong>
+        [value]="tri1_reflect()" (input)="set_tri1_reflect($event)">
         <br/>
-        <small>
-          (Die Datei wird immer überschrieben. Es gibt keine Auswahl von möglichen Umgebungsmaps. Ein Neuladen (Strg +
-          F5) der Seite ist erforderlich).
-        </small>
-      </p>
-      <input type="file" name="envTexture" id="envTexture" accept=".env" (change)="upload_envTexture($event)">
-      <input type="button" value="Original wiederherstellen" (mousedown)="restore_envTexture()">
-      <hr/>
-      <label for="envTexture_yaw" style="display:inline-block;width:180px">envTexture Yaw</label>&nbsp;
-      <input id="envTexture_yaw" type="range" min="0" max="1.0" step="0.001" style="width:350px"
-             [value]="get_envTexture_yaw()" (input)="set_envTexture_yaw($event)">
-      <br/>
-      <label for="envTexture_pitch" style="display:inline-block;width:180px">envTexture Pitch</label>&nbsp;
-      <input id="envTexture_pitch" type="range" min="0" max="1.0" step="0.001" style="width:350px"
-             [value]="get_envTexture_pitch()" (input)="set_envTexture_pitch($event)">
-      <br/>
-      <label for="envTexture_roll" style="display:inline-block;width:180px">envTexture Roll</label>&nbsp;
-      <input id="envTexture_roll" type="range" min="0" max="1.0" step="0.001" style="width:350px"
-             [value]="get_envTexture_roll()" (input)="set_envTexture_roll($event)">
-      <br/>
-      <label for="scene_exposure" style="display:inline-block;width:180px">scene Exposure</label>&nbsp;
-      <input id="scene_exposure" type="range" min="0" max="5.0" step="0.001" style="width:350px"
-             [value]="get_scene_exposure()" (input)="set_scene_exposure($event)">
-      <br/>
-      <label for="scene_contrast" style="display:inline-block;width:180px">scene Contrast</label>&nbsp;
-      <input id="scene_contrast" type="range" min="0" max="5.0" step="0.001" style="width:350px"
-             [value]="get_scene_contrast()" (input)="set_scene_contrast($event)">
-      <hr/>
-      <p><strong>Preset speichern (Datenbank)</strong></p>
-      <input type="text" placeholder="Presetbezeichnung" (input)="set_preset_name($event)"/>
-      &nbsp;
-      <input type="button" value="Preset in Datenbank speichern" [disabled]="!can_save_preset()"
-             (mousedown)="save_preset()"/>
-      <hr/>
-      <p><strong>vorhandene Presets</strong><br/><small>(auswählen und Preset laden)</small></p>
-      <select (change)="select_preset($event)">
-        <option *ngFor="let name of environmentPresetNames">{{name}}</option>
-      </select>
-      &nbsp;
-      <input type="button" value="Preset laden" (mousedown)="load_preset()"/>
-      <hr/>
-      <p><strong>Preset importieren / exportieren (Datei)</strong></p>
-      <input class="button" type="file" id="selectFiles" text="Import JSON" (change)="import_json()">
-      &nbsp;
-      <input type="button" (mousedown)="export_json()" value="Export JSON"/>
-      <hr/>
-      <p><strong>Standardkonfiguration überschreiben - ACHTUNG !!</strong></p>
-      <small>
-        Die aktuelle Einstellung wird in die Standardkonfiguration übernommen und ist für alle dann sichtbar!
-        <br/>
-        Die Grundkonfiguration stellt die Werte zum Zeitpunkt der Codeerstellung wieder her.
-        Die Seite muss anschließend komplett neu geladen werden (Strg + F5).
-      </small>
-      <br/>
-      <br/>
-      <input type="button" value="Standardkonfiguration überschreiben" (mousedown)="upload_appData()">
-      &nbsp;
-      <input type="button" value="Grundkonfiguration wiederherstellen" (mousedown)="restore_appData()">
-      <hr/>
-    </td>
-  </tr>
-</table>
+        <label for="camRad_tri1" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
+        <input id="camRad_tri1" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+          [value]="tri1_camRad()" (input)="set_tri1_camRad($event)">
+          <br/>
+          <label for="factor_tri1" style="display:inline-block;width:180px">factor</label>&nbsp;
+          <input id="factor_tri1" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+            [value]="tri1_factor()" (input)="set_tri1_factor($event)">
+          </td>
+        </tr>
+        <tr>
+          <td><p><strong>Triangles 2</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{tri2_image}}"
+          width="80px"
+        height="80px"></td>
+        <td>
+          <label for="reflect_tri2" style="display:inline-block;width:180px">reflect</label>&nbsp;
+          <input id="reflect_tri2" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+            [value]="tri2_reflect()" (input)="set_tri2_reflect($event)">
+            <br/>
+            <label for="camRad_tri2" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
+            <input id="camRad_tri2" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+              [value]="tri2_camRad()" (input)="set_tri2_camRad($event)">
+              <br/>
+              <label for="factor_tri2" style="display:inline-block;width:180px">factor</label>&nbsp;
+              <input id="factor_tri2" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                [value]="tri2_factor()" (input)="set_tri2_factor($event)">
+              </td>
+            </tr>
+            <tr>
+              <td><p><strong>Highlight</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{high_image}}" width="80px"
+              height="80px">
+            </td>
+            <td>
+              <label for="reflect_high" style="display:inline-block;width:180px">reflect</label>&nbsp;
+              <input id="reflect_high" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                [value]="high_reflect()" (input)="set_high_reflect($event)">
+                <br/>
+                <label for="camRad_high" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
+                <input id="camRad_high" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                  [value]="high_camRad()" (input)="set_high_camRad($event)">
+                  <br/>
+                  <label for="factor_high" style="display:inline-block;width:180px">factor</label>&nbsp;
+                  <input id="factor_high" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                    [value]="high_factor()" (input)="set_high_factor($event)">
+                  </td>
+                </tr>
+                <tr>
+                  <td><p><strong>Sparkle</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{sparkle_image}}"
+                  width="80px"
+                height="80px"></td>
+                <td>
+                  <label for="reflect_sparkle" style="display:inline-block;width:180px">reflect_s</label>&nbsp;
+                  <input id="reflect_sparkle" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                    [value]="sparkle_reflect()" (input)="set_sparkle_reflect($event)">
+                    <br/>
+                    <label for="camRad_sparkle" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
+                    <input id="camRad_sparkle" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                      [value]="sparkle_camRad()" (input)="set_sparkle_camRad($event)">
+                      <br/>
+                      <label for="factor_sparkle" style="display:inline-block;width:180px">factor</label>&nbsp;
+                      <input id="factor_sparkle" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                        [value]="sparkle_factor()" (input)="set_sparkle_factor($event)">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><p><strong>Fire</strong></p><img src="{{env.assetFolderLocation}}/assets/img3d/{{fire_image}}" width="80px"
+                    height="80px"></td>
+                    <td>
+                      <label for="reflect_fire" style="display:inline-block;width:180px">reflect</label>&nbsp;
+                      <input id="reflect_fire" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                        [value]="fire_reflect()" (input)="set_fire_reflect($event)">
+                        <br/>
+                        <label for="camRad_fire" style="display:inline-block;width:180px">cameraRadius</label>&nbsp;
+                        <input id="camRad_fire" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                          [value]="fire_camRad()" (input)="set_fire_camRad($event)">
+                          <br/>
+                          <label for="factor_fire" style="display:inline-block;width:180px">factor</label>&nbsp;
+                          <input id="factor_fire" type="range" min="0.001" max="5.0" step="0.001" style="width:350px"
+                            [value]="fire_factor()" (input)="set_fire_factor($event)">
+                          </td>
+                        </tr>
+                        <tr>
+                          <td></td>
+                          <td>
+                            <p><strong>Umgebungs-Map (.env)</strong>
+                            <br/>
+                            <small>
+                              (Die Datei wird immer überschrieben. Es gibt keine Auswahl von möglichen Umgebungsmaps. Ein Neuladen (Strg +
+                              F5) der Seite ist erforderlich).
+                            </small>
+                          </p>
+                          <input type="file" name="envTexture" id="envTexture" accept=".env" (change)="upload_envTexture($event)">
+                          <input type="button" value="Original wiederherstellen" (mousedown)="restore_envTexture()">
+                          <hr/>
+                          <label for="envTexture_yaw" style="display:inline-block;width:180px">envTexture Yaw</label>&nbsp;
+                          <input id="envTexture_yaw" type="range" min="0" max="1.0" step="0.001" style="width:350px"
+                            [value]="get_envTexture_yaw()" (input)="set_envTexture_yaw($event)">
+                            <br/>
+                            <label for="envTexture_pitch" style="display:inline-block;width:180px">envTexture Pitch</label>&nbsp;
+                            <input id="envTexture_pitch" type="range" min="0" max="1.0" step="0.001" style="width:350px"
+                              [value]="get_envTexture_pitch()" (input)="set_envTexture_pitch($event)">
+                              <br/>
+                              <label for="envTexture_roll" style="display:inline-block;width:180px">envTexture Roll</label>&nbsp;
+                              <input id="envTexture_roll" type="range" min="0" max="1.0" step="0.001" style="width:350px"
+                                [value]="get_envTexture_roll()" (input)="set_envTexture_roll($event)">
+                                <br/>
+                                <label for="scene_exposure" style="display:inline-block;width:180px">scene Exposure</label>&nbsp;
+                                <input id="scene_exposure" type="range" min="0" max="5.0" step="0.001" style="width:350px"
+                                  [value]="get_scene_exposure()" (input)="set_scene_exposure($event)">
+                                  <br/>
+                                  <label for="scene_contrast" style="display:inline-block;width:180px">scene Contrast</label>&nbsp;
+                                  <input id="scene_contrast" type="range" min="0" max="5.0" step="0.001" style="width:350px"
+                                    [value]="get_scene_contrast()" (input)="set_scene_contrast($event)">
+                                    <hr/>
+                                    <p><strong>Preset speichern (Datenbank)</strong></p>
+                                    <input type="text" placeholder="Presetbezeichnung" (input)="set_preset_name($event)"/>
+                                    &nbsp;
+                                    <input type="button" value="Preset in Datenbank speichern" [disabled]="!can_save_preset()"
+                                      (mousedown)="save_preset()"/>
+                                      <hr/>
+                                      <p><strong>vorhandene Presets</strong><br/><small>(auswählen und Preset laden)</small></p>
+                                      <select (change)="select_preset($event)">
+                                        @for (name of environmentPresetNames; track name) {
+                                          <option>{{name}}</option>
+                                        }
+                                      </select>
+                                      &nbsp;
+                                      <input type="button" value="Preset laden" (mousedown)="load_preset()"/>
+                                      <hr/>
+                                      <p><strong>Preset importieren / exportieren (Datei)</strong></p>
+                                      <input class="button" type="file" id="selectFiles" text="Import JSON" (change)="import_json()">
+                                      &nbsp;
+                                      <input type="button" (mousedown)="export_json()" value="Export JSON"/>
+                                      <hr/>
+                                      <p><strong>Standardkonfiguration überschreiben - ACHTUNG !!</strong></p>
+                                      <small>
+                                        Die aktuelle Einstellung wird in die Standardkonfiguration übernommen und ist für alle dann sichtbar!
+                                        <br/>
+                                        Die Grundkonfiguration stellt die Werte zum Zeitpunkt der Codeerstellung wieder her.
+                                        Die Seite muss anschließend komplett neu geladen werden (Strg + F5).
+                                      </small>
+                                      <br/>
+                                      <br/>
+                                      <input type="button" value="Standardkonfiguration überschreiben" (mousedown)="upload_appData()">
+                                      &nbsp;
+                                      <input type="button" value="Grundkonfiguration wiederherstellen" (mousedown)="restore_appData()">
+                                      <hr/>
+                                    </td>
+                                  </tr>
+                                </table>
