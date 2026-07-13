@@ -1,8 +1,8 @@
 <?php
 
-defined('DB_DSN') || define('DB_DSN', 'mysql:host=localhost;dbname=konfigurator;charset=utf8mb4');
-defined('DB_USERNAME') || define('DB_USERNAME', 'root');
-defined('DB_PASSWORD') || define('DB_PASSWORD', '');
+defined('DB_DSN') || define('DB_DSN', 'mysql:host=lr5x.your-database.de;dbname=asfmtm_db35;charset=utf8mb4');
+defined('DB_USERNAME') || define('DB_USERNAME', 'asfmtm_35');
+defined('DB_PASSWORD') || define('DB_PASSWORD', 'r3+Ed+JW/aW2');
 
 defined('TABLE_DATA') || define('TABLE_DATA', 'ringcfg_2v1_data');
 defined('TABLE_PRESET') || define('TABLE_PRESET', 'ringcfg_2v1_preset');

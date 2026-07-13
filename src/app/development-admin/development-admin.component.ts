@@ -1,14 +1,26 @@
 import {CommonModule} from "@angular/common";
-import {Component, HostListener, Input} from "@angular/core";
+import {ChangeDetectorRef, Component, HostListener, Input} from "@angular/core";
 import {DomSanitizer, SafeResourceUrl} from "@angular/platform-browser";
 import {FormsModule} from "@angular/forms";
 import {Matrix} from "@babylonjs/core";
 import {iAppData} from "../app.interfaces";
-import {AppDataAdminResponse, AppDataAdminService} from "./appdata-admin.service";
+import {RingData} from "../app.ringdata";
+import {AppDataAdminDebugInfo, AppDataAdminResponse, AppDataAdminService} from "./appdata-admin.service";
 import {AdminHelpEntry, APPDATA_ADMIN_HELP} from "./appdata-admin-help";
+import {
+  createDefaultPearlingSizes,
+  hasPearlingDefinitions,
+  normalizePearlingAllowedSizes,
+  normalizePearlingAppData,
+  normalizePearlingSizeList,
+  PEARLING_SPACING_MODES,
+} from "../pearling-size";
+import {cRing, eRingFlags} from "../webgl/cRing";
+import {WebglComponent} from "../webgl/webgl.component";
 
 type StatusType = "idle" | "success" | "warning" | "error";
 type AdminAction = "importCurrentBaseline" | "saveVersion" | "setCompatibility" | "approveVersion" | "retireVersion" | "assignTarget" | "rollbackTarget";
+type BootstrapOptions = {replaceWorking?: boolean};
 
 interface BuildInfo {
   id?: number;
@@ -141,10 +153,11 @@ export class DevelopmentAdminComponent {
 
   open = false;
   loading = false;
+  previewingBabylon = false;
   dirty = false;
   requiresReload = false;
   statusType: StatusType = "idle";
-  statusMessage = "Development-Admin bereit.";
+  statusMessage = "Development-Admin lädt...";
   activeTab: "appdata" | "webgl" | "tools" | "versions" = "appdata";
   selectedJsonPath = "material";
   selectedVersionId = "";
@@ -166,8 +179,8 @@ export class DevelopmentAdminComponent {
   helpEntry: AdminHelpEntry | null = null;
 
   build: BuildInfo = {
-    build_key: "2.6.6",
-    version_label: "2.6.6",
+    build_key: "2.7.3",
+    version_label: "2.7.3",
   };
   activeVersion: AppDataVersion | null = null;
   activeHash = "";
@@ -179,10 +192,31 @@ export class DevelopmentAdminComponent {
   targets: AppDataTarget[] = [];
   validation: ValidationResult = {errors: [], warnings: [], issues: []};
   diff: DiffEntry[] = [];
+  private lastPearlingNormalizationNotice = "";
+  milgrainModeEditorOptions: JsonRecord[] = [];
+  milgrainSizeEditorOptions: JsonRecord[] = [];
+  milgrainModeSelectOptions: MilgrainOption[] = [];
+  milgrainSizeSelectOptions: MilgrainOption[] = [];
+  readonly pearlingSpacingModes = PEARLING_SPACING_MODES;
+
+  get lastAdminRequest(): AppDataAdminDebugInfo | null
+  {
+    return this.adminApi.lastDebugInfo;
+  }
+
+  get buildLabel(): string
+  {
+    return this.app?.state.build || this.build.version_label || this.build.build_key || "2.7.3";
+  }
+
+  get activeAppDataLabel(): string
+  {
+    return this.activeVersion?.version_label || this.app?.state.appDataVersionLabel || "unversioned";
+  }
 
   readonly appDataSections: EditorSection[] = [
     {title: "Profile und Ringmaße", keys: ["profile", "ringWidth", "ringHeight", "ringSize"]},
-    {title: "Perlfugen", keys: ["milgrainMode", "milgrainSize"]},
+    {title: "Perlierung", keys: ["pearlingSize"]},
     {title: "Regelwerk", keys: ["featureRules"]},
     {title: "Profil-Regeln", keys: ["profile"]},
     {title: "Ringarten und Ansichten", keys: ["ringModes"]},
@@ -240,7 +274,11 @@ export class DevelopmentAdminComponent {
     {title: "Diamant – Fire", fields: this.diamondFields("fire", "Fire")},
   ];
 
-  constructor(private adminApi: AppDataAdminService, private sanitizer: DomSanitizer)
+  constructor(
+    private adminApi: AppDataAdminService,
+    private sanitizer: DomSanitizer,
+    private changeDetector: ChangeDetectorRef,
+  )
   {
   }
 
@@ -252,56 +290,96 @@ export class DevelopmentAdminComponent {
 
   async toggle(): Promise<void>
   {
-    this.open = !this.open;
-    if (this.open && this.working === null) {
-      await this.loadBootstrap();
-    }
-  }
-
-  async loadBootstrap(): Promise<void>
-  {
-    this.loading = true;
-    const response = await this.adminApi.request<BootstrapData>("bootstrap", {
-      build: this.localBuildInfo(),
-    });
-    this.loading = false;
-
-    if (!response.ok || !response.data) {
-      this.setStatus(response.error?.message ?? "Admin-Bootstrap fehlgeschlagen.", "error");
-      this.setLocalSnapshot();
+    if (this.open) {
+      this.open = false;
       return;
     }
 
-    this.build = response.data.build;
-    this.activeVersion = response.data.activeVersion;
-    this.activeHash = response.data.activeHash;
+    await this.openAdmin();
+  }
+
+  async openAdmin(): Promise<void>
+  {
+    this.open = true;
+    this.hydrateFromRuntime();
+    await this.loadBootstrap({replaceWorking: false});
+  }
+
+  async loadBootstrap(options: BootstrapOptions = {}): Promise<void>
+  {
+    this.loading = true;
+    if (!this.working) {
+      this.setStatus("Development-Admin lädt...", "idle");
+    }
+    let response: AppDataAdminResponse<BootstrapData>;
+    try {
+      response = await this.adminApi.request<BootstrapData>("bootstrap", {
+        build: this.localBuildInfo(),
+      });
+    } finally {
+      this.loading = false;
+    }
+
+    if (!response.ok || !response.data) {
+      if (!this.working) {
+        this.hydrateFromRuntime();
+      }
+      this.setStatus(response.error?.message ?? "Server-Metadaten konnten nicht geladen werden. Runtime-AppData wird angezeigt.", this.working ? "warning" : "error");
+      return;
+    }
+
+    this.build = response.data.build ?? this.localBuildInfo();
     this.versions = response.data.versions;
     this.builds = response.data.builds;
     this.compatibilities = response.data.compatibilities;
     this.targets = response.data.targets;
-    this.ensureActiveVersionResolved();
-    this.baseline = this.clone(response.data.appData);
-    this.working = this.clone(response.data.appData);
-    this.applyVersionLabel();
+
+    const mayReplaceEditorState = options.replaceWorking === true || this.working === null;
+    let pearlingNormalized = false;
+    if (mayReplaceEditorState) {
+      this.activeVersion = response.data.activeVersion;
+      this.activeHash = response.data.activeHash;
+      this.baseline = this.clone(response.data.appData);
+      this.working = this.clone(response.data.appData);
+      pearlingNormalized = this.normalizeWorkingPearlingLegacy();
+      this.applyVersionLabel();
+      this.refreshMilgrainEditorOptions();
+    } else {
+      if (!this.activeHash) {
+        this.activeHash = this.app?.state.appDataHash || response.data.activeHash || "";
+      }
+      this.ensureActiveVersionResolved();
+    }
+
+    pearlingNormalized = this.normalizeWorkingPearlingLegacy() || pearlingNormalized;
     this.recalculate();
-    this.setStatus("AppData geladen.", "success");
+    this.setStatus(
+      pearlingNormalized
+        ? "AppData geladen. Alte Perlgröße 0,3 mm wurde aus allowedSizes entfernt."
+        : "AppData geladen.",
+      pearlingNormalized ? "warning" : "success",
+    );
   }
 
   getSectionCount(key: string): string
   {
-    const value = this.getPath(this.working, key);
-    if (Array.isArray(value)) {
-      return String(value.length);
-    }
-    if (value && typeof value === "object") {
-      return String(Object.keys(value as Record<string, unknown>).length);
-    }
-    return value === undefined ? "0" : "1";
+    return this.describeAppDataKey(key, this.getPath(this.working, key));
   }
 
   getJsonValue(path: string): string
   {
     return JSON.stringify(this.getPath(this.working, path) ?? null, null, 2);
+  }
+
+  formatJson(value: unknown): string
+  {
+    return JSON.stringify(value ?? null, null, 2);
+  }
+
+  getRecordId(record: JsonRecord): string | number
+  {
+    const id = record["id"];
+    return typeof id === "string" || typeof id === "number" ? id : this.formatJson(record);
   }
 
   updateJsonValue(path: string, value: string): void
@@ -319,37 +397,32 @@ export class DevelopmentAdminComponent {
 
   getMilgrainModes(): JsonRecord[]
   {
-    return this.getRecordArray("milgrainMode");
+    return this.milgrainModeEditorOptions;
+  }
+
+  getMilgrainModeState(): string
+  {
+    return "nicht mehr verwendet";
   }
 
   getMilgrainModeOptions(): MilgrainOption[]
   {
-    return this.getMilgrainModes().map(mode => {
-      const id = mode["id"] as number | string;
-      const name = String(mode["name"] ?? id);
-      return {
-        id,
-        label: `${name} (${id})`,
-      };
-    });
+    return this.milgrainModeSelectOptions;
   }
 
   getMilgrainSizes(): JsonRecord[]
   {
-    return this.getRecordArray("milgrainSize");
+    return this.milgrainSizeEditorOptions;
+  }
+
+  getMilgrainSizeState(): string
+  {
+    return this.describeCollectionState("pearlingSize");
   }
 
   getMilgrainSizeOptions(): MilgrainOption[]
   {
-    return this.getMilgrainSizes().map(size => {
-      const id = size["id"] as number | string;
-      const diameter = size["diameter"] !== undefined ? this.formatMm(size["diameter"]) : String(size["name"] ?? id);
-      const name = size["name"] ? ` - ${String(size["name"])}` : "";
-      return {
-        id,
-        label: `${diameter} (${id})${name}`,
-      };
-    });
+    return this.milgrainSizeSelectOptions;
   }
 
   getProfiles(): JsonRecord[]
@@ -411,13 +484,49 @@ export class DevelopmentAdminComponent {
     this.markChanged(false);
   }
 
+  initializeMilgrainDefaults(force = false): void
+  {
+    if (!this.working) {
+      return;
+    }
+    const record = this.working as unknown as JsonRecord;
+    if (force || !Array.isArray(record["pearlingSize"])) {
+      record["pearlingSize"] = createDefaultPearlingSizes();
+    }
+    this.ensureFeatureRulesDefaults();
+    this.markChanged(false);
+  }
+
+  initializeMilgrainModeDefaults(force = false): void
+  {
+    if (!this.working) {
+      return;
+    }
+    const record = this.working as unknown as JsonRecord;
+    if (force || !Array.isArray(record["pearlingSize"])) {
+      record["pearlingSize"] = createDefaultPearlingSizes();
+      this.markChanged(false);
+    }
+  }
+
+  initializeMilgrainSizeDefaults(force = false): void
+  {
+    if (!this.working) {
+      return;
+    }
+    const record = this.working as unknown as JsonRecord;
+    if (force || !Array.isArray(record["pearlingSize"])) {
+      record["pearlingSize"] = createDefaultPearlingSizes();
+      this.markChanged(false);
+    }
+  }
+
   initializeProfileMilgrain(profile: JsonRecord): void
   {
     if (this.getProfileMilgrain(profile)) {
       return;
     }
 
-    const allowedModes = this.getMilgrainModeIds();
     const allowedSizes = this.getMilgrainSizeIds();
     const minRingWidth = this.defaultProfileMinRingWidth(profile);
     const minEdgeDistance = this.defaultProfileEdgeDistance(profile);
@@ -425,8 +534,7 @@ export class DevelopmentAdminComponent {
 
     profile["milgrain"] = {
       enabled: true,
-      allowedModes: allowedModes.length ? allowedModes : [0],
-      allowedSizes: allowedSizes.length ? allowedSizes : [500],
+      allowedSizes: allowedSizes.length ? allowedSizes : normalizePearlingAllowedSizes([]),
       minRingWidth,
       minEdgeDistance,
       minFeatureDistance,
@@ -594,8 +702,42 @@ export class DevelopmentAdminComponent {
     this.requiresReload = false;
     this.applyWorkingToRuntime();
     this.applyWebglLive();
+    this.forceBabylonRerender();
+    this.refreshMilgrainEditorOptions();
     this.recalculate();
     this.setStatus("Änderungen zurückgesetzt.", "success");
+  }
+
+  previewWorkingAppDataInBabylon(): void
+  {
+    if (!this.working) {
+      this.setStatus("Keine Working-AppData geladen.", "warning");
+      return;
+    }
+
+    this.previewingBabylon = true;
+    try {
+      const next = this.clone(this.working);
+      const pearlingNormalized = normalizePearlingAppData(next).changed;
+      this.applyAppDataToRuntime(next, {
+        versionLabel: this.activeVersion?.version_label ?? "unsaved-preview",
+        hash: this.activeHash || "unsaved-preview",
+      });
+      this.normalizeRingDataForCurrentAppData();
+      this.forceBabylonRerender();
+      this.setStatus(
+        pearlingNormalized
+          ? "Working-AppData wurde normalisiert und in Babylon getestet."
+          : "Working-AppData wurde in Babylon getestet.",
+        "success",
+      );
+    } catch (error) {
+      console.error("[DevelopmentAdmin] Babylon preview failed", error);
+      this.setStatus(error instanceof Error ? error.message : "Babylon konnte nicht neu gerendert werden.", "error");
+    } finally {
+      this.previewingBabylon = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   openAuth(action: AdminAction): void
@@ -623,6 +765,9 @@ export class DevelopmentAdminComponent {
 
   async confirmAuth(): Promise<void>
   {
+    if (this.loading) {
+      return;
+    }
     if (!this.authAction || !this.auth.username || !this.auth.pin || !this.auth.reason.trim()) {
       this.setStatus("Login, PIN und Grund sind erforderlich.", "warning");
       return;
@@ -638,6 +783,7 @@ export class DevelopmentAdminComponent {
     this.authAction = null;
 
     let response: AppDataAdminResponse<unknown>;
+    this.loading = true;
     switch (action) {
       case "importCurrentBaseline":
         response = await this.adminApi.request("importCurrentBaseline", {
@@ -648,13 +794,17 @@ export class DevelopmentAdminComponent {
         });
         break;
       case "saveVersion": {
+        this.normalizeWorkingPearlingLegacy();
+        this.recalculate();
         const baseVersion = this.resolveCurrentBaseVersion();
         if (!baseVersion || baseVersion.id <= 0) {
           this.setStatus("Keine gültige Basisversion geladen. Bitte AppData neu laden und dann erneut speichern.", "error");
+          this.loading = false;
           return;
         }
         if (!this.activeHash) {
           this.setStatus("Kein gültiger Basis-Hash geladen. Bitte AppData neu laden und dann erneut speichern.", "error");
+          this.loading = false;
           return;
         }
         response = await this.adminApi.request("saveVersion", {
@@ -672,6 +822,7 @@ export class DevelopmentAdminComponent {
       case "setCompatibility": {
         const versionId = this.requireActiveVersionIdForAction();
         if (versionId === null) {
+          this.loading = false;
           return;
         }
         response = await this.adminApi.request("setCompatibility", {
@@ -686,6 +837,7 @@ export class DevelopmentAdminComponent {
       case "approveVersion": {
         const versionId = this.requireActiveVersionIdForAction();
         if (versionId === null) {
+          this.loading = false;
           return;
         }
         response = await this.adminApi.request("approveVersion", {
@@ -698,6 +850,7 @@ export class DevelopmentAdminComponent {
       case "retireVersion": {
         const versionId = this.requireActiveVersionIdForAction();
         if (versionId === null) {
+          this.loading = false;
           return;
         }
         response = await this.adminApi.request("retireVersion", {
@@ -711,6 +864,7 @@ export class DevelopmentAdminComponent {
       case "rollbackTarget": {
         const versionId = this.requireActiveVersionIdForAction();
         if (versionId === null) {
+          this.loading = false;
           return;
         }
         response = await this.adminApi.request(action, {
@@ -723,41 +877,86 @@ export class DevelopmentAdminComponent {
         break;
       }
     }
+    this.loading = false;
 
     if (!response.ok) {
       this.setStatus(response.error?.message ?? "Aktion fehlgeschlagen.", "error");
       return;
     }
 
+    if (action === "saveVersion") {
+      const saved = response.data as {versionId?: number; versionLabel?: string; hash?: string} | undefined;
+      if (saved?.versionId) {
+        await this.refreshAdminListsWithoutReplacingWorkingAppData();
+        this.selectedVersionId = String(saved.versionId);
+        await this.loadVersion(saved.versionId);
+        this.setStatus(`AppData-Version ${saved.versionLabel ?? saved.versionId} als Draft gespeichert und geladen.`, "success");
+        return;
+      }
+    }
+
     this.setStatus("Aktion erfolgreich gespeichert.", "success");
     await this.loadBootstrap();
   }
 
-  async loadVersion(): Promise<void>
+  async loadVersion(versionIdInput?: string | number): Promise<void>
   {
-    const versionId = Number(this.selectedVersionId);
+    if (this.loading) {
+      console.info("[DevelopmentAdmin] loadVersion ignored because another admin action is still loading", {
+        selectedVersionId: this.selectedVersionId,
+        requestedVersionId: versionIdInput,
+      });
+      return;
+    }
+    const versionId = Number(versionIdInput ?? this.selectedVersionId);
     if (!Number.isFinite(versionId) || versionId <= 0) {
+      this.setStatus("Keine gueltige AppData-Version ausgewaehlt.", "warning");
       return;
     }
 
-    const response = await this.adminApi.request<{version: AppDataVersion; appData: iAppData; hash: string}>("getVersion", {
-      versionId,
-    });
+    this.loading = true;
+    console.info("[DevelopmentAdmin] loadVersion start", {versionId});
+    try {
+      const response = await this.adminApi.request<{version: AppDataVersion; appData: iAppData; hash: string}>("getVersion", {
+        versionId,
+      });
 
-    if (!response.ok || !response.data) {
-      this.setStatus(response.error?.message ?? "Version konnte nicht geladen werden.", "error");
-      return;
+      if (!response.ok || !response.data) {
+        this.setStatus(response.error?.message ?? "Version konnte nicht geladen werden.", "error");
+        return;
+      }
+
+      this.activeVersion = response.data.version;
+      this.activeHash = response.data.hash;
+      this.baseline = this.clone(response.data.appData);
+      this.working = this.clone(response.data.appData);
+      const pearlingNormalized = this.normalizeWorkingPearlingLegacy();
+      this.selectedVersionId = String(response.data.version.id);
+      this.applyVersionLabel();
+      this.applyWorkingToRuntime();
+      this.refreshMilgrainEditorOptions();
+      this.applyWebglLive(true);
+      this.forceBabylonRerender();
+      this.recalculate();
+      this.setStatus(
+        pearlingNormalized
+          ? `Version ${response.data.version.version_label} geladen. Alte Perlgröße 0,3 mm wurde aus allowedSizes entfernt.`
+          : `Version ${response.data.version.version_label} geladen.`,
+        pearlingNormalized ? "warning" : "success",
+      );
+      console.info("[DevelopmentAdmin] loadVersion applied", {
+        versionId: response.data.version.id,
+        versionLabel: response.data.version.version_label,
+        hash: response.data.hash,
+      });
+    } catch (error) {
+      console.error("[DevelopmentAdmin] loadVersion failed", error);
+      this.setStatus(error instanceof Error ? error.message : "Version konnte nicht geladen werden.", "error");
+    } finally {
+      this.loading = false;
+      this.changeDetector.detectChanges();
+      console.info("[DevelopmentAdmin] loadVersion finished", {versionId, loading: this.loading});
     }
-
-    this.activeVersion = response.data.version;
-    this.activeHash = response.data.hash;
-    this.baseline = this.clone(response.data.appData);
-    this.working = this.clone(response.data.appData);
-    this.applyVersionLabel();
-    this.applyWorkingToRuntime();
-    this.applyWebglLive();
-    this.recalculate();
-    this.setStatus("Version geladen.", "success");
   }
 
   async loadReleaseIndex(): Promise<void>
@@ -804,11 +1003,70 @@ export class DevelopmentAdminComponent {
   {
     this.dirty = true;
     this.requiresReload = this.requiresReload || reload;
+    this.refreshMilgrainEditorOptions();
     this.recalculate();
+  }
+
+  private normalizeWorkingPearlingLegacy(): boolean
+  {
+    if (!this.working) {
+      this.lastPearlingNormalizationNotice = "";
+      return false;
+    }
+
+    const result = normalizePearlingAppData(this.working);
+    this.lastPearlingNormalizationNotice = result.removedLegacy300
+      ? "Alte Perlgröße 0,3 mm wurde aus allowedSizes entfernt."
+      : "";
+    return result.changed;
+  }
+
+  private refreshMilgrainEditorOptions(): void
+  {
+    this.milgrainModeEditorOptions = [];
+    this.milgrainSizeEditorOptions = hasPearlingDefinitions(this.working)
+      ? normalizePearlingSizeList(this.getPath(this.working, "pearlingSize")) as JsonRecord[]
+      : [];
+    this.milgrainModeSelectOptions = this.milgrainModeEditorOptions.map(mode => {
+      const id = mode["id"] as number | string;
+      const name = String(mode["name"] ?? id);
+      return {
+        id,
+        label: `${name} (${id})`,
+      };
+    });
+    this.milgrainSizeSelectOptions = this.milgrainSizeEditorOptions.map(size => {
+      const id = size["id"] as number | string;
+      const diameter = size["diameter"] !== undefined ? this.formatMm(size["diameter"]) : String(size["name"] ?? id);
+      const name = size["name"] ? ` - ${String(size["name"])}` : "";
+      return {
+        id,
+        label: `${diameter} (${id})${name}`,
+      };
+    });
+  }
+
+  private async refreshAdminListsWithoutReplacingWorkingAppData(): Promise<void>
+  {
+    const versions = await this.adminApi.request<{versions: AppDataVersion[]}>("listVersions");
+    if (versions.ok && versions.data?.versions) {
+      this.versions = versions.data.versions;
+    }
+
+    const builds = await this.adminApi.request<{builds: BuildInfo[]}>("listBuilds");
+    if (builds.ok && builds.data?.builds) {
+      this.builds = builds.data.builds;
+    }
+
+    const targets = await this.adminApi.request<{targets: AppDataTarget[]}>("listTargets");
+    if (targets.ok && targets.data?.targets) {
+      this.targets = targets.data.targets;
+    }
   }
 
   private recalculate(): void
   {
+    this.normalizeWorkingPearlingLegacy();
     this.validation = this.validate(this.working);
     this.diff = this.createDiff(this.baseline, this.working).slice(0, 500);
     this.dirty = this.diff.length > 0;
@@ -864,46 +1122,60 @@ export class DevelopmentAdminComponent {
 
   private validateMilgrainModes(appData: iAppData): AdminValidationIssue[]
   {
-    const issues: AdminValidationIssue[] = [];
-    const modes = this.recordArray(appData, "milgrainMode");
-    this.validateUniqueRecordIds(modes, "milgrainMode", issues);
-    modes.forEach((mode, index) => {
-      if (mode["id"] === undefined || mode["id"] === null || String(mode["id"]).trim() === "") {
-        issues.push({severity: "error", path: `milgrainMode[${index}].id`, message: "Perlfugen-Modus benoetigt eine ID."});
-      }
-    });
-    return issues;
+    return [];
   }
 
   private validateMilgrainSizes(appData: iAppData): AdminValidationIssue[]
   {
     const issues: AdminValidationIssue[] = [];
-    const sizes = this.recordArray(appData, "milgrainSize");
-    this.validateUniqueRecordIds(sizes, "milgrainSize", issues);
+    const sizes = this.recordArray(appData, "pearlingSize");
+    this.validateUniqueRecordIds(sizes, "pearlingSize", issues);
     sizes.forEach((size, index) => {
-      const path = `milgrainSize[${index}]`;
+      const path = `pearlingSize[${index}]`;
       const diameter = Number(size["diameter"]);
-      const radius = Number(size["radius"]);
-      const borderLeft = Number(size["borderLeft"]);
-      const borderRight = Number(size["borderRight"]);
-      const spacing = Number(size["spacing"]);
+      const rowClearance = Number(size["rowClearance"]);
+      const minRowClearance = Number(size["minRowClearance"]);
+      const maxRowClearance = Number(size["maxRowClearance"]);
+      const channelEdgeClearance = Number(size["channelEdgeClearance"]);
+      const channelWidth = Number(size["channelWidth"]);
+      const spacingMode = String(size["spacingMode"] ?? "auto-fit");
+      const pitch = Number(size["pitch"]);
+      const beadCount = Number(size["beadCount"]);
       if (size["id"] === undefined || size["id"] === null || String(size["id"]).trim() === "") {
         issues.push({severity: "error", path: `${path}.id`, message: "Perlengroesse benoetigt eine ID."});
+      }
+      if (![500, 1000].includes(Number(size["id"]))) {
+        issues.push({severity: "error", path: `${path}.id`, message: "Nur 500 und 1000 sind als Perlengroessen zulaessig."});
       }
       if (!Number.isFinite(diameter) || diameter <= 0) {
         issues.push({severity: "error", path: `${path}.diameter`, message: "diameter muss > 0 sein."});
       }
-      if (Number.isFinite(radius) && Number.isFinite(diameter) && radius !== diameter / 2) {
-        issues.push({severity: "warning", path: `${path}.radius`, message: "radius weicht von diameter / 2 ab."});
+      if (!Number.isFinite(rowClearance) || rowClearance < 0) {
+        issues.push({severity: "error", path: `${path}.rowClearance`, message: "rowClearance muss >= 0 sein."});
       }
-      if (!Number.isFinite(borderLeft) || borderLeft < 0) {
-        issues.push({severity: "error", path: `${path}.borderLeft`, message: "borderLeft muss >= 0 sein."});
+      if (size["minRowClearance"] !== undefined && (!Number.isFinite(minRowClearance) || minRowClearance < 0)) {
+        issues.push({severity: "error", path: `${path}.minRowClearance`, message: "minRowClearance muss >= 0 sein."});
       }
-      if (!Number.isFinite(borderRight) || borderRight < 0) {
-        issues.push({severity: "error", path: `${path}.borderRight`, message: "borderRight muss >= 0 sein."});
+      if (size["maxRowClearance"] !== undefined && (!Number.isFinite(maxRowClearance) || maxRowClearance < 0)) {
+        issues.push({severity: "error", path: `${path}.maxRowClearance`, message: "maxRowClearance muss >= 0 sein."});
       }
-      if (!Number.isFinite(spacing) || spacing < diameter) {
-        issues.push({severity: "error", path: `${path}.spacing`, message: "spacing muss >= diameter sein."});
+      if (Number.isFinite(minRowClearance) && Number.isFinite(maxRowClearance) && maxRowClearance < minRowClearance) {
+        issues.push({severity: "error", path: `${path}.maxRowClearance`, message: "maxRowClearance muss >= minRowClearance sein."});
+      }
+      if (!Number.isFinite(channelEdgeClearance) || channelEdgeClearance < 0) {
+        issues.push({severity: "error", path: `${path}.channelEdgeClearance`, message: "channelEdgeClearance muss >= 0 sein."});
+      }
+      if (!Number.isFinite(channelWidth) || channelWidth < diameter) {
+        issues.push({severity: "error", path: `${path}.channelWidth`, message: "channelWidth muss >= diameter sein."});
+      }
+      if (!this.pearlingSpacingModes.includes(spacingMode as any)) {
+        issues.push({severity: "error", path: `${path}.spacingMode`, message: "spacingMode ist unbekannt."});
+      }
+      if (spacingMode === "exact-pitch" && (!Number.isFinite(pitch) || pitch <= 0)) {
+        issues.push({severity: "error", path: `${path}.pitch`, message: "pitch muss fuer exact-pitch > 0 sein."});
+      }
+      if (spacingMode === "fixed-count" && (!Number.isInteger(beadCount) || beadCount <= 0)) {
+        issues.push({severity: "error", path: `${path}.beadCount`, message: "beadCount muss fuer fixed-count eine Ganzzahl > 0 sein."});
       }
     });
     return issues;
@@ -912,31 +1184,34 @@ export class DevelopmentAdminComponent {
   private validateProfileMilgrainRules(appData: iAppData): AdminValidationIssue[]
   {
     const issues: AdminValidationIssue[] = [];
-    const modeIds = new Set(this.recordArray(appData, "milgrainMode").map(mode => String(mode["id"])));
-    const sizeIds = new Set(this.recordArray(appData, "milgrainSize").map(size => String(size["id"])));
+    const sizeIds = new Set(this.recordArray(appData, "pearlingSize").map(size => String(size["id"])));
     this.recordArray(appData, "profile").forEach((profile, index) => {
       const profileName = String(profile["name"] ?? index);
-      const milgrain = profile["milgrain"];
-      if (!milgrain || typeof milgrain !== "object" || Array.isArray(milgrain)) {
-        return;
-      }
-      const rule = milgrain as JsonRecord;
-      this.validateReferenceList(rule["allowedModes"], modeIds, `profile[${profileName}].milgrain.allowedModes`, "unbekannten Modus", issues);
-      this.validateReferenceList(rule["allowedSizes"], sizeIds, `profile[${profileName}].milgrain.allowedSizes`, "unbekannte Groesse", issues);
-      this.requireNonNegative(rule["minRingWidth"], `profile[${profileName}].milgrain.minRingWidth`, issues);
-      this.requireNonNegative(rule["minEdgeDistance"], `profile[${profileName}].milgrain.minEdgeDistance`, issues);
-      this.requireNonNegative(rule["minFeatureDistance"], `profile[${profileName}].milgrain.minFeatureDistance`, issues);
-      this.requireNonNegative(rule["stopBeforeStoneByBeads"], `profile[${profileName}].milgrain.stopBeforeStoneByBeads`, issues);
-      const minStoneDistanceMode = rule["minStoneDistanceMode"];
-      if (minStoneDistanceMode !== undefined && !["beadDiameter", "fixed"].includes(String(minStoneDistanceMode))) {
-        issues.push({severity: "error", path: `profile[${profileName}].milgrain.minStoneDistanceMode`, message: "minStoneDistanceMode muss beadDiameter oder fixed sein."});
-      }
-      const conflictAction = rule["conflictAction"];
-      if (conflictAction !== undefined && !["block", "warn", "autoAdjust"].includes(String(conflictAction))) {
-        issues.push({severity: "error", path: `profile[${profileName}].milgrain.conflictAction`, message: "conflictAction muss block, warn oder autoAdjust sein."});
-      }
+      this.validateProfilePearlingRule(profile["milgrain"], sizeIds, `profile[${profileName}].milgrain`, issues);
+      this.validateProfilePearlingRule(profile["pearling"], sizeIds, `profile[${profileName}].pearling`, issues);
     });
     return issues;
+  }
+
+  private validateProfilePearlingRule(value: unknown, sizeIds: Set<string>, path: string, issues: AdminValidationIssue[]): void
+  {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return;
+    }
+    const rule = value as JsonRecord;
+    this.validateReferenceList(rule["allowedSizes"], sizeIds, `${path}.allowedSizes`, "unbekannte Groesse", issues);
+    this.requireNonNegative(rule["minRingWidth"], `${path}.minRingWidth`, issues);
+    this.requireNonNegative(rule["minEdgeDistance"], `${path}.minEdgeDistance`, issues);
+    this.requireNonNegative(rule["minFeatureDistance"], `${path}.minFeatureDistance`, issues);
+    this.requireNonNegative(rule["stopBeforeStoneByBeads"], `${path}.stopBeforeStoneByBeads`, issues);
+    const minStoneDistanceMode = rule["minStoneDistanceMode"];
+    if (minStoneDistanceMode !== undefined && !["beadDiameter", "fixed"].includes(String(minStoneDistanceMode))) {
+      issues.push({severity: "error", path: `${path}.minStoneDistanceMode`, message: "minStoneDistanceMode muss beadDiameter oder fixed sein."});
+    }
+    const conflictAction = rule["conflictAction"];
+    if (conflictAction !== undefined && !["block", "warn", "autoAdjust"].includes(String(conflictAction))) {
+      issues.push({severity: "error", path: `${path}.conflictAction`, message: "conflictAction muss block, warn oder autoAdjust sein."});
+    }
   }
 
   private validateFeatureRules(appData: iAppData): AdminValidationIssue[]
@@ -946,6 +1221,7 @@ export class DevelopmentAdminComponent {
     if (!featureRules) {
       return issues;
     }
+    const sizeIds = new Set(this.recordArray(appData, "pearlingSize").map(size => String(size["id"])));
     const global = featureRules["global"];
     if (global && typeof global === "object" && !Array.isArray(global)) {
       const globalRules = global as JsonRecord;
@@ -980,7 +1256,17 @@ export class DevelopmentAdminComponent {
         issues.push({severity: "error", path: `featureRules.combinations[${index}].action`, message: "action muss block, warn oder autoAdjust sein."});
       }
     });
+    this.validateFeaturePearlingRule(featureRules["gapPearling"], sizeIds, "featureRules.gapPearling", issues);
+    this.validateFeaturePearlingRule(featureRules["stepPearling"], sizeIds, "featureRules.stepPearling", issues);
     return issues;
+  }
+
+  private validateFeaturePearlingRule(value: unknown, sizeIds: Set<string>, path: string, issues: AdminValidationIssue[]): void
+  {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return;
+    }
+    this.validateReferenceList((value as JsonRecord)["allowedSizes"], sizeIds, `${path}.allowedSizes`, "unbekannte Groesse", issues);
   }
 
   private toValidationResult(issues: AdminValidationIssue[]): ValidationResult
@@ -1074,6 +1360,189 @@ export class DevelopmentAdminComponent {
     const numberValue = Number(value);
     if (!Number.isFinite(numberValue) || numberValue < 0) {
       issues.push({severity: "error", path, message: "muss >= 0 sein."});
+    }
+  }
+
+  private describeAppDataKey(key: string, value: unknown): string
+  {
+    if (value === undefined || value === null) {
+      return "fehlt";
+    }
+
+    if (Array.isArray(value)) {
+      return String(value.length);
+    }
+
+    const expectedArrays = new Set([
+      "profile",
+      "material",
+      "surface",
+      "gapMode",
+      "stepMode",
+      "pearlingSize",
+      "ringModes",
+      "materialExclude",
+      "stoneMode",
+      "stoneType",
+      "stoneQuality",
+      "stoneDistribution",
+      "stonePosition",
+      "engagementHeadLibrary",
+    ]);
+
+    if (typeof value !== "object") {
+      return expectedArrays.has(key) ? `ungueltiger Typ (${typeof value})` : String(value);
+    }
+
+    const record = value as JsonRecord;
+    if (key === "featureRules") {
+      const combinations = Array.isArray(record["combinations"]) ? record["combinations"].length : 0;
+      return `${record["global"] && typeof record["global"] === "object" ? "global" : "global fehlt"} + ${combinations} Kombination(en)`;
+    }
+
+    if (key === "engraving") {
+      return this.describeEngraving(record);
+    }
+
+    if (this.isRangeRecord(record)) {
+      return this.describeRangeRecord(key, record);
+    }
+
+    return expectedArrays.has(key) ? "ungueltiger Typ (object)" : "Objekt";
+  }
+
+  private describeRangeRecord(key: string, record: JsonRecord): string
+  {
+    const min = Number(record["min"]);
+    const max = Number(record["max"]);
+    const step = Number(record["step"]);
+    if (![min, max, step].every(Number.isFinite)) {
+      return "Objekt";
+    }
+
+    if (key === "ringWidth" || key === "ringHeight") {
+      return `${this.formatMmCompact(min)}-${this.formatMmCompact(max)} / ${this.formatMmCompact(step)}`;
+    }
+
+    if (key === "ringSize") {
+      const divisor = Math.max(Math.abs(min), Math.abs(max), Math.abs(step)) > 1000 ? 1000 : 1;
+      return `${this.formatNumber(min / divisor)}-${this.formatNumber(max / divisor)} / ${this.formatNumber(step / divisor)}`;
+    }
+
+    return `${this.formatNumber(min)}-${this.formatNumber(max)} / ${this.formatNumber(step)}`;
+  }
+
+  private describeEngraving(record: JsonRecord): string
+  {
+    const enabled = record["enabled"] === false || record["active"] === false ? "inaktiv" : "aktiv";
+    const maxLength = Number(record["maxLength"] ?? record["maxChars"] ?? record["max"]);
+    const symbolValues = record["symbols"] ?? record["symbol"] ?? record["icons"];
+    const symbolCount = Array.isArray(symbolValues) ? symbolValues.length : undefined;
+    const parts = [enabled];
+
+    if (Number.isFinite(maxLength) && maxLength > 0) {
+      parts.push(`max ${maxLength} Zeichen`);
+    }
+    if (symbolCount !== undefined) {
+      parts.push(`${symbolCount} Symbole`);
+    }
+
+    return parts.join(" / ");
+  }
+
+  private isRangeRecord(record: JsonRecord): boolean
+  {
+    return ["min", "max", "step"].every(key => record[key] !== undefined);
+  }
+
+  private formatMmCompact(value: number): string
+  {
+    return `${this.formatNumber(value / 1000)} mm`;
+  }
+
+  private formatNumber(value: number): string
+  {
+    return new Intl.NumberFormat("de-DE", {minimumFractionDigits: 0, maximumFractionDigits: 3}).format(value);
+  }
+
+  private describeCollectionState(path: string): string
+  {
+    const value = this.getPath(this.working, path);
+    if (Array.isArray(value)) {
+      return `${value.length} Eintrag(e)`;
+    }
+    if (value === undefined) {
+      return "fehlt";
+    }
+    if (value && typeof value === "object") {
+      return "ungueltiger Typ (object)";
+    }
+    return "ungültiger Typ";
+  }
+
+  private ensureFeatureRulesDefaults(): void
+  {
+    const current = this.getPath(this.working, "featureRules");
+    if (!current || typeof current !== "object" || Array.isArray(current)) {
+      this.setPath(this.working, "featureRules", {
+        global: {
+          unit: "micrometer",
+          defaultAction: "block",
+          autoAdjustAllowed: false,
+          minFeatureDistance: 300,
+          minMilgrainToRingEdge: 500,
+          logViolations: false,
+        },
+        gapPearling: {
+          enabled: true,
+          allowedGapModes: [1, 2, 3],
+          allowedSizes: [500, 1000],
+          minDistanceToStone: 500,
+          minDistanceToOtherGap: 300,
+          snapTolerance: 200,
+        },
+        stepPearling: {
+          enabled: true,
+          allowedSides: ["left", "right", "both"],
+          allowedSizes: [500, 1000],
+          singleRowOnly: true,
+        },
+        combinations: [],
+      });
+      return;
+    }
+
+    const rules = current as JsonRecord;
+    if (!rules["global"] || typeof rules["global"] !== "object" || Array.isArray(rules["global"])) {
+      rules["global"] = {
+        unit: "micrometer",
+        defaultAction: "block",
+        autoAdjustAllowed: false,
+        minFeatureDistance: 300,
+        minMilgrainToRingEdge: 500,
+        logViolations: false,
+      };
+    }
+    if (!Array.isArray(rules["combinations"])) {
+      rules["combinations"] = [];
+    }
+    if (!rules["gapPearling"] || typeof rules["gapPearling"] !== "object" || Array.isArray(rules["gapPearling"])) {
+      rules["gapPearling"] = {
+        enabled: true,
+        allowedGapModes: [1, 2, 3],
+        allowedSizes: [500, 1000],
+        minDistanceToStone: 500,
+        minDistanceToOtherGap: 300,
+        snapTolerance: 200,
+      };
+    }
+    if (!rules["stepPearling"] || typeof rules["stepPearling"] !== "object" || Array.isArray(rules["stepPearling"])) {
+      rules["stepPearling"] = {
+        enabled: true,
+        allowedSides: ["left", "right", "both"],
+        allowedSizes: [500, 1000],
+        singleRowOnly: true,
+      };
     }
   }
 
@@ -1199,12 +1668,16 @@ export class DevelopmentAdminComponent {
     return /maxTextureSize|tesselation|ringRotation|ringOffset|refSampler_image/.test(path) ? "reload" : "live";
   }
 
-  private applyWebglLive(): void
+  private applyWebglLive(silentWhenUnavailable = false): void
   {
     this.applyWorkingToRuntime();
+    this.normalizeRingDataForCurrentAppData();
     const webgl = (window as any).__oneRingconfWebgl;
     const settings = this.working?.webglSettings;
     if (!webgl || !settings) {
+      if (silentWhenUnavailable) {
+        return;
+      }
       this.setStatus("3D-Laufzeit ist noch nicht bereit.", "warning");
       return;
     }
@@ -1235,8 +1708,110 @@ export class DevelopmentAdminComponent {
   private applyWorkingToRuntime(): void
   {
     if (this.working && this.app) {
-      this.app.data = this.clone(this.working);
+      const next = this.clone(this.working);
+      normalizePearlingAppData(next);
+      this.applyAppDataToRuntime(next);
     }
+  }
+
+  private applyAppDataToRuntime(appData: iAppData, meta: {versionLabel?: string; hash?: string} = {}): void
+  {
+    if (!this.app) {
+      return;
+    }
+
+    this.app.data = this.clone(appData);
+    if (meta.versionLabel) {
+      this.app.state.appDataVersionLabel = meta.versionLabel;
+    }
+    if (meta.hash) {
+      this.app.state.appDataHash = meta.hash;
+    }
+  }
+
+  private normalizeRingDataForCurrentAppData(): void
+  {
+    if (!this.app?.data) {
+      return;
+    }
+
+    const pearlingAvailable = hasPearlingDefinitions(this.app.data);
+    const sizes = pearlingAvailable ? normalizePearlingSizeList((this.app.data as unknown as JsonRecord)["pearlingSize"]) : [];
+    const validSizeIds = new Set(sizes.map(size => Number(size.id)));
+    const fallbackSize = sizes.find(size => Number(size.id) === 500)?.id ?? sizes[0]?.id ?? 500;
+    const featureRules = (this.app.data as unknown as JsonRecord)["featureRules"];
+    const gapRule = featureRules && typeof featureRules === "object" && !Array.isArray(featureRules)
+      ? (featureRules as JsonRecord)["gapPearling"]
+      : null;
+    const stepRule = featureRules && typeof featureRules === "object" && !Array.isArray(featureRules)
+      ? (featureRules as JsonRecord)["stepPearling"]
+      : null;
+
+    RingData.list.forEach(ringData => {
+      const mutable = ringData as unknown as JsonRecord;
+      delete mutable["_milgrainMode"];
+      delete mutable["_milgrainSize"];
+      delete mutable["milgrainMode"];
+      delete mutable["milgrainSize"];
+
+      if (!pearlingAvailable || sizes.length === 0) {
+        ringData.gapPearlingEnabled = false;
+        ringData.stepPearlingEnabled = false;
+        return;
+      }
+
+      if (!validSizeIds.has(Number(ringData.gapPearlingSize))) {
+        ringData.gapPearlingSize = Number(fallbackSize);
+      }
+      if (!validSizeIds.has(Number(ringData.stepPearlingSize))) {
+        ringData.stepPearlingSize = Number(fallbackSize);
+      }
+
+      if (!gapRule || typeof gapRule !== "object" || Array.isArray(gapRule) || (gapRule as JsonRecord)["enabled"] === false) {
+        ringData.gapPearlingEnabled = false;
+      }
+      if (!stepRule || typeof stepRule !== "object" || Array.isArray(stepRule) || (stepRule as JsonRecord)["enabled"] === false) {
+        ringData.stepPearlingEnabled = false;
+      }
+    });
+
+    if (!pearlingAvailable) {
+      console.info("[PearlingChannel]", {
+        pearlingAvailable: false,
+        disabledReason: "AppData has no pearling definitions",
+      });
+    }
+  }
+
+  private forceBabylonRerender(): void
+  {
+    cRing.list.forEach(ring => {
+      ring.milgrain?.dispose();
+      ring.flags &= ~eRingFlags.IsValid;
+      ring.ringData.isDirty = true;
+    });
+
+    const webgl = WebglComponent.WEBGL ?? (window as any).__oneRingconfWebgl;
+    if (webgl?.renderFrame) {
+      webgl.renderFrame(this.app?.data?.webglSettings?.forceFrames ?? 15);
+    }
+  }
+
+  private hydrateFromRuntime(): void
+  {
+    this.build = this.localBuildInfo();
+    if (!this.app?.data) {
+      this.setStatus("Development-Admin lädt...", "idle");
+      return;
+    }
+
+    this.activeHash = this.app.state.appDataHash || this.activeHash;
+    this.baseline = this.clone(this.app.data);
+    this.working = this.clone(this.app.data);
+    this.ensureActiveVersionResolved();
+    this.refreshMilgrainEditorOptions();
+    this.recalculate();
+    this.setStatus("Runtime-AppData übernommen, Server-Metadaten werden geladen...", "idle");
   }
 
   private setLocalSnapshot(): void
@@ -1252,8 +1827,9 @@ export class DevelopmentAdminComponent {
   private applyVersionLabel(): void
   {
     if (this.app) {
-      this.app.state.appDataVersionLabel = this.activeVersion?.version_label ?? "unversioned";
-      this.app.state.appDataHash = this.activeHash;
+      const label = this.activeVersion?.version_label || this.app.state.appDataVersionLabel || "unversioned";
+      this.app.state.appDataVersionLabel = label;
+      this.app.state.appDataHash = this.activeHash || this.app.state.appDataHash || "";
     }
   }
 
@@ -1265,9 +1841,10 @@ export class DevelopmentAdminComponent {
 
   private localBuildInfo(): BuildInfo
   {
+    const buildLabel = this.app?.state.build || this.build.version_label || this.build.build_key || "2.7.3";
     return {
-      build_key: this.app?.state.build ?? "2.6.6",
-      version_label: this.app?.state.build ?? "2.6.6",
+      build_key: buildLabel,
+      version_label: buildLabel,
       angular_version: "22.0.5",
       babylon_version: "5.25.0",
     };

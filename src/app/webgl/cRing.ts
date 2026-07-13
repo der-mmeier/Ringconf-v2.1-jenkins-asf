@@ -25,6 +25,7 @@ import {
 import {Log} from "../logger/logger.component";
 import {Matrix, Vector3} from "@babylonjs/core/Maths/math.vector";
 import {iStoneCalcData, stoneCalc} from "./stoneCalc";
+import {cMilgrain} from "./cMilgrain";
 
 export enum eRingFlags {
   None,
@@ -140,6 +141,7 @@ export class cRing {
 
   meshData: iMeshData[];
   mesh: Mesh[];
+  milgrain: cMilgrain;
 
   calc = {
     wa_mm: 0,
@@ -335,6 +337,7 @@ export class cRing {
 
     this.meshData = [];
     this.mesh = [];
+    this.milgrain = new cMilgrain(this);
 
     setInterval(function () {
       if (that.ringData.isDirty) {
@@ -5252,6 +5255,7 @@ export class cRing {
         }
       })
 
+      that.milgrain.update();
 
       return true;
     }())
@@ -5707,6 +5711,8 @@ export class cRing {
 
   private disposeMeshes() //
   {
+    this.milgrain?.dispose();
+
     let i, webgl = WebglComponent.WEBGL;
     for (i = 0; i < this.mesh.length; i++) //
     {
@@ -5798,6 +5804,17 @@ export class cRing {
   }
 
   // Ermittle die Positionen für die Designfugen; verschiebe oder entferne die Designfuge wenn notwendig
+  public normalizeFreeGaps(): void
+  {
+    this.gapDiv_adapt();
+  }
+
+  public setFreeGapDiv(gapDiv: number[]): void
+  {
+    RingData.setGapDivArray(this.ringData, Array.isArray(gapDiv) ? gapDiv.slice() : []);
+    this.gapDiv_adapt();
+  }
+
   private gapDiv_adapt() //
   {
     let data = this.ringData;
@@ -5806,6 +5823,12 @@ export class cRing {
       gapDivCount = gapDiv.length;
 
     let i, j: number, t: number, gapDiv_segments, move: boolean, a, b;
+
+    if (gapDiv.length < 2) {
+      RingData.setGapDivArray(data, []);
+      this.calc.gapDivMinMax = this.gapDiv_calc([]);
+      return;
+    }
 
     // Teilungssumme ermitteln; Diese muss 10000 betragen
     let sum = 0;
@@ -5826,8 +5849,6 @@ export class cRing {
       gapDiv_mm.push(t);
       j = t;
     }
-
-    let moved_index = [];
 
     gapDiv_segments = this.gapDiv_calc([10000]); // 10000
 
@@ -5854,21 +5875,18 @@ export class cRing {
               b = gapDiv_segments[j + 1].min - gapDiv_mm[i];
 
               gapDiv_new.push(a < b ? gapDiv_segments[j].max : gapDiv_segments[j + 1].min);
-              moved_index.push(i);
               break;
             }
           }
           if (j == 0) {
             if (gapDiv_mm[i] < gapDiv_segments[j].min) {
               gapDiv_new.push(gapDiv_segments[j].min);
-              moved_index.push(i);
               break;
             }
           }
           if (j == gapDiv_segments.length - 1) {
             if (gapDiv_mm[i] > gapDiv_segments[j].max) {
               gapDiv_new.push(gapDiv_segments[j].max);
-              moved_index.push(i);
               break;
             }
           }
@@ -5890,6 +5908,12 @@ export class cRing {
       gapDiv_segments = this.gapDiv_calc(gapDiv);
     }
 
+    const baseSegments = this.gapDiv_calc([10000]);
+    const normalizedPositions = this.normalizeFreeGapPositions(gapDiv_new, baseSegments);
+    this.debugFreeGapNormalization(gapDiv_mm, normalizedPositions, gapDiv, baseSegments);
+    gapDiv = this.buildGapDivFromPositions(normalizedPositions);
+    gapDiv_segments = this.gapDiv_calc(gapDiv);
+
     RingData.setGapDivArray(data, gapDiv);
     // this.ringData.gapDiv = gapDiv;
     this.calc.gapDivMinMax = gapDiv_segments;
@@ -5898,6 +5922,137 @@ export class cRing {
       Log("info", "Die Anzahl der freien Fugen wurden angepasst.");
     // else if (moved_index.length > 0)
     //   Log("info", "Die freien Fugen wurden verschoben.");
+  }
+
+  private normalizeFreeGapPositions(positions: number[], segments: iMinMaxCur[]): number[]
+  {
+    const data = this.ringData;
+    const normalized: number[] = [];
+    const baseSegments = segments && segments.length ? segments : this.gapDiv_calc([10000]);
+    const minDistance = this.getFreeGapMinimumDistance();
+
+    positions
+      .filter(position => Number.isFinite(position))
+      .sort((a, b) => a - b)
+      .forEach(position => {
+        const snapped = this.findNearestValidFreeGapPosition(position, normalized, baseSegments, minDistance);
+        if (snapped === null) {
+          return;
+        }
+        if (!normalized.some(existing => Math.abs(existing - snapped) < 1)) {
+          normalized.push(snapped);
+          normalized.sort((a, b) => a - b);
+        }
+      });
+
+    return normalized.filter(position => position > 0 && position < data.ringWidth);
+  }
+
+  private findNearestValidFreeGapPosition(position: number, accepted: number[], segments: iMinMaxCur[], minDistance: number): number | null
+  {
+    let best: number | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    segments.forEach(segment => {
+      const min = segment.min;
+      const max = segment.max;
+      if (!Number.isFinite(min) || !Number.isFinite(max) || min > max) {
+        return;
+      }
+
+      const candidates = [
+        Math.max(min, Math.min(max, position)),
+        min,
+        max,
+      ];
+
+      accepted.forEach(existing => {
+        candidates.push(existing - minDistance);
+        candidates.push(existing + minDistance);
+      });
+
+      candidates.forEach(candidate => {
+        if (candidate < min || candidate > max) {
+          return;
+        }
+        if (accepted.some(existing => Math.abs(existing - candidate) < minDistance)) {
+          return;
+        }
+        const distance = Math.abs(candidate - position);
+        if (distance < bestDistance) {
+          best = candidate;
+          bestDistance = distance;
+        }
+      });
+    });
+
+    return best;
+  }
+
+  private buildGapDivFromPositions(positions: number[]): number[]
+  {
+    const data = this.ringData;
+    if (!positions.length || data.ringWidth <= 0) {
+      return [];
+    }
+
+    const gapDiv: number[] = [];
+    let last = 0;
+    positions
+      .filter(position => Number.isFinite(position))
+      .sort((a, b) => a - b)
+      .forEach(position => {
+        const current = Math.max(0, Math.min(data.ringWidth, position));
+        gapDiv.push(Math.round((current - last) * 10000 / data.ringWidth));
+        last = current;
+      });
+
+    const sum = gapDiv.reduce((a, b) => a + b, 0);
+    gapDiv.push(Math.max(0, 10000 - sum));
+    return gapDiv;
+  }
+
+  private getFreeGapMinimumDistance(): number
+  {
+    const data = this.ringData;
+    const profile = AppComponent.app.data.profile.find(function (e: iProfile) {
+      return e.name == data.profileName;
+    });
+    const profileGapDistance = data.hasWave ? profile?.gapGapDistanceWave : profile?.gapGapDistance;
+    const fallback = data.gapWidth + (Number.isFinite(profileGapDistance) ? Number(profileGapDistance) : 300);
+    const rules = (AppComponent.app.data as unknown as Record<string, unknown>)["featureRules"];
+    const freeGapRules = rules && typeof rules === "object" && !Array.isArray(rules)
+      ? (rules as Record<string, unknown>)["freeGap"]
+      : null;
+    const configured = freeGapRules && typeof freeGapRules === "object" && !Array.isArray(freeGapRules)
+      ? Number((freeGapRules as Record<string, unknown>)["minDistanceToOtherGap"] ?? (freeGapRules as Record<string, unknown>)["snapTolerance"])
+      : NaN;
+
+    if (Number.isFinite(configured) && configured > 0) {
+      return configured;
+    }
+    return Number.isFinite(fallback) && fallback > 0 ? fallback : data.gapWidth + 300;
+  }
+
+  private debugFreeGapNormalization(rawPositions: number[], finalPositions: number[], gapDiv: number[], segments: iMinMaxCur[]): void
+  {
+    try {
+      if (!AppComponent.app.state.debug
+        && !window.location.search.includes("debugFreeGap=1")
+        && window.localStorage.getItem("ringconfFreeGapDebug") !== "1") {
+        return;
+      }
+      console.info("[FreeGap]", {
+        ringId: this.ringData.index,
+        ringWidth: this.ringData.ringWidth,
+        rawPositions,
+        finalPositions,
+        gapDiv,
+        finalGapDiv: this.buildGapDivFromPositions(finalPositions),
+        segments,
+      });
+    } catch {
+    }
   }
 
   gapDiv_plus() {

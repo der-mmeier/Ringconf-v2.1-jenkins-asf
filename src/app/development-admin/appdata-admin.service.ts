@@ -30,9 +30,22 @@ export interface AppDataAdminResponse<T = unknown> {
   };
 }
 
+export interface AppDataAdminDebugInfo {
+  action: AppDataAdminAction;
+  endpoint: string;
+  status: "pending" | "ok" | "error";
+  requestId: string;
+  payloadSummary: Record<string, unknown>;
+  errorCode?: string;
+  errorMessage?: string;
+  versionId?: number;
+  baseVersionId?: number;
+}
+
 @Injectable({providedIn: "root"})
 export class AppDataAdminService {
   private readonly endpoint = this.resolveEndpoint();
+  lastDebugInfo: AppDataAdminDebugInfo | null = null;
 
   constructor(private http: HttpClient)
   {
@@ -40,15 +53,51 @@ export class AppDataAdminService {
 
   async request<T>(action: AppDataAdminAction, payload: Record<string, unknown> = {}): Promise<AppDataAdminResponse<T>>
   {
+    const payloadSummary = this.summarizePayload(payload);
+    this.lastDebugInfo = {
+      action,
+      endpoint: this.endpoint,
+      status: "pending",
+      requestId: "",
+      payloadSummary,
+      versionId: this.numberOrUndefined(payload["versionId"]),
+      baseVersionId: this.numberOrUndefined(payload["baseVersionId"]),
+    };
+    if (this.debugEnabled()) {
+      console.info("[AppDataAdmin] request", action, this.endpoint, payloadSummary);
+    }
+
     try {
       const response = await lastValueFrom(this.http.post<AppDataAdminResponse<T>>(this.endpoint, {
         action,
         ...payload,
       }));
 
-      return this.normalizeResponse(action, response);
+      const normalized = this.normalizeResponse(action, response);
+      this.lastDebugInfo = {
+        ...this.lastDebugInfo,
+        status: normalized.ok ? "ok" : "error",
+        requestId: normalized.requestId,
+        errorCode: normalized.error?.code,
+        errorMessage: normalized.error?.message,
+      };
+      if (this.debugEnabled()) {
+        console.info("[AppDataAdmin] response", action, normalized);
+      }
+      return normalized;
     } catch (error) {
-      return this.normalizeError<T>(action, error);
+      const normalized = this.normalizeError<T>(action, error);
+      this.lastDebugInfo = {
+        ...this.lastDebugInfo,
+        status: "error",
+        requestId: normalized.requestId,
+        errorCode: normalized.error?.code,
+        errorMessage: normalized.error?.message,
+      };
+      if (this.debugEnabled()) {
+        console.error("[AppDataAdmin] error", action, normalized);
+      }
+      return normalized;
     }
   }
 
@@ -174,5 +223,58 @@ export class AppDataAdminService {
     }
 
     return `Die Admin-Anfrage ist fehlgeschlagen. HTTP ${error.status} ${error.statusText || ""}`.trim();
+  }
+
+  private debugEnabled(): boolean
+  {
+    try {
+      return new URL(window.location.href).searchParams.get("debugAdmin") === "1" || window.localStorage.getItem("ringconfAdminDebug") === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  private summarizePayload(payload: Record<string, unknown>): Record<string, unknown>
+  {
+    const summary: Record<string, unknown> = {};
+    ["username", "changeReason", "baseVersionId", "baseVersionLabel", "versionId", "targetKey", "status", "note"].forEach(key => {
+      if (payload[key] !== undefined) {
+        summary[key] = key === "pin" ? "***" : payload[key];
+      }
+    });
+    if (payload["pin"] !== undefined) {
+      summary["pin"] = "***";
+    }
+    const appData = payload["appData"];
+    if (appData && typeof appData === "object" && !Array.isArray(appData)) {
+      const data = appData as Record<string, unknown>;
+      summary["appData"] = {
+        profileLength: Array.isArray(data["profile"]) ? data["profile"].length : null,
+        pearlingSize: this.collectionSummary(data["pearlingSize"]),
+        featureRules: !!data["featureRules"],
+      };
+    }
+    if (payload["build"] && typeof payload["build"] === "object") {
+      const build = payload["build"] as Record<string, unknown>;
+      summary["build"] = {
+        build_key: build["build_key"],
+        version_label: build["version_label"],
+      };
+    }
+    return summary;
+  }
+
+  private collectionSummary(value: unknown): Record<string, unknown>
+  {
+    return {
+      type: Array.isArray(value) ? "array" : value === undefined ? "missing" : typeof value,
+      length: Array.isArray(value) ? value.length : null,
+    };
+  }
+
+  private numberOrUndefined(value: unknown): number | undefined
+  {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : undefined;
   }
 }

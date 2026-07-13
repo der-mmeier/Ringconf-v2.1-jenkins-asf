@@ -44,6 +44,10 @@ export class RingData {
     that._gapMode = 3;
     that._gapSurface = 0;
     that._gapEnabled = [1, 1, 1, 1];
+    that._gapPearlingEnabled = false;
+    that._gapPearlingSize = 500;
+    that._stepPearlingEnabled = false;
+    that._stepPearlingSize = 500;
     that._ringWidth = 5000;
     that._ringHeight = 1600;
     that._ringSize = that._index == 0 ? 54000 : 64000;
@@ -675,6 +679,58 @@ export class RingData {
   protected _gapEnabled = [1, 1, 1, 1];
   get gapEnabled() {
     return this._gapEnabled;
+  }
+
+  protected _gapPearlingEnabled = false;
+  get gapPearlingEnabled(): boolean {
+    return this._gapPearlingEnabled;
+  }
+
+  set gapPearlingEnabled(value: boolean) {
+    const next = value === true;
+    if (this._gapPearlingEnabled !== next) {
+      this._gapPearlingEnabled = next;
+      this.isDirty = true;
+    }
+  }
+
+  protected _gapPearlingSize = 500;
+  get gapPearlingSize(): number {
+    return this._gapPearlingSize;
+  }
+
+  set gapPearlingSize(value: number) {
+    const next = Number(value);
+    if (Number.isFinite(next) && this._gapPearlingSize !== next) {
+      this._gapPearlingSize = next;
+      this.isDirty = true;
+    }
+  }
+
+  protected _stepPearlingEnabled = false;
+  get stepPearlingEnabled(): boolean {
+    return this._stepPearlingEnabled;
+  }
+
+  set stepPearlingEnabled(value: boolean) {
+    const next = value === true;
+    if (this._stepPearlingEnabled !== next) {
+      this._stepPearlingEnabled = next;
+      this.isDirty = true;
+    }
+  }
+
+  protected _stepPearlingSize = 500;
+  get stepPearlingSize(): number {
+    return this._stepPearlingSize;
+  }
+
+  set stepPearlingSize(value: number) {
+    const next = Number(value);
+    if (Number.isFinite(next) && this._stepPearlingSize !== next) {
+      this._stepPearlingSize = next;
+      this.isDirty = true;
+    }
   }
 
   static getForceGap(that: RingData): boolean {

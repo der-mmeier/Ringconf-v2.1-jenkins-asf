@@ -45,6 +45,12 @@
       height: 58px;
       position: absolute;
       top: 0;
+      z-index: 120;
+      touch-action: none;
+
+      &.active {
+        z-index: 160;
+      }
 
       .slider-value {
         position: absolute;

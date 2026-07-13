@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 96" role="img" aria-label="Perlfuge 0.5 mm">
+  <rect width="160" height="96" fill="none"/>
+  <path d="M18 34 H142 M18 54 H142" stroke="#d7aa55" stroke-width="1.5" opacity=".75"/>
+  <path d="M18 28 V60 M142 28 V60" stroke="#8a8a8a" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="30" y="24" font-family="Arial, sans-serif" font-size="10" fill="#555">0.1 mm</text>
+  <text x="102" y="24" font-family="Arial, sans-serif" font-size="10" fill="#555">0.1 mm</text>
+  <circle cx="24.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="34.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="44.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="54.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="64.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="74.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="84.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="94.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="104.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="114.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="124.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/><circle cx="134.0" cy="44" r="3.8" fill="#f3c15d" stroke="#7a4a12" stroke-width="1"/>
+  <text x="80" y="84" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#5f3b0e">0.5 mm</text>
+</svg>

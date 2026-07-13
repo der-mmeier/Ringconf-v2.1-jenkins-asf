@@ -118,6 +118,51 @@ export interface iStepMode {
   img: string;
 }
 
+export interface iPearlingSize {
+  id: number;
+  name: string;
+  img?: string;
+  diameter: number;
+  rowClearance: number;
+  minRowClearance?: number;
+  maxRowClearance?: number;
+  channelEdgeClearance: number;
+  channelWidth: number;
+  spacingMode: string;
+  pitch?: number;
+  beadCount?: number;
+}
+
+export interface iFeaturePearlingRule {
+  enabled: boolean;
+  allowedSizes: number[];
+}
+
+export interface iFeatureRules {
+  global?: {
+    unit?: string;
+    defaultAction?: string;
+    autoAdjustAllowed?: boolean;
+    minFeatureDistance?: number;
+    logViolations?: boolean;
+  };
+  gapPearling?: iFeaturePearlingRule & {
+    allowedGapModes: number[];
+    minDistanceToStone: number;
+    minDistanceToOtherGap: number;
+    snapTolerance: number;
+  };
+  stepPearling?: iFeaturePearlingRule & {
+    allowedSides: string[];
+    singleRowOnly: boolean;
+  };
+  freeGap?: {
+    minDistanceToOtherGap: number;
+    snapTolerance: number;
+  };
+  combinations?: unknown[];
+}
+
 export interface iGapMode {
   id: number;
   name: string;
@@ -432,6 +477,9 @@ export interface iAppData {
 
   gapMode: iGapMode[],
   stepMode: iStepMode[],
+  pearlingSize?: iPearlingSize[],
+  featureRules?: iFeatureRules,
+  stepDepthOptions?: number[],
 
   stoneMode: iStoneMode[],
   stoneType: iStoneType[],

@@ -1,5 +1,5 @@
-<button class="admin-gear" type="button" (click)="toggle()" aria-label="Development Admin oeffnen">
-  ADM
+<button class="admin-gear" type="button" (click)="toggle()" aria-label="Development Admin oeffnen" title="Development Admin">
+  &#9881;
 </button>
 
 @if (open) {
@@ -7,7 +7,7 @@
     <header class="admin-header">
       <div>
         <h2>AppData und WebGL-Settings</h2>
-        <p>Build {{build.version_label}} - AppData {{activeVersion?.version_label || 'unversioned'}}</p>
+        <p>Build {{buildLabel}} - AppData {{activeAppDataLabel}}</p>
       </div>
       <button type="button" (click)="toggle()" aria-label="Panel schliessen">x</button>
     </header>
@@ -23,7 +23,7 @@
     @if (activeTab === 'appdata') {
       <section class="admin-body">
         <div class="section-grid">
-          @for (section of appDataSections; track section) {
+          @for (section of appDataSections; track section.title) {
             <button type="button" (click)="selectedJsonPath = section.keys[0]">
               <strong>{{section.title}}</strong>
               @for (key of section.keys; track key) {
@@ -34,58 +34,48 @@
         </div>
         <div class="rule-editor">
           <details open>
-            <summary>Perlfugen</summary>
-            <h3>Perlfugen-Modi</h3>
-            @if (!getMilgrainModes().length) {
-              <p>Keine milgrainMode-Liste vorhanden. Experten-JSON kann sie anlegen.</p>
-            }
-            @if (getMilgrainModes().length) {
-              <div class="admin-table">
-                <div class="admin-table-header mode-grid">
-                  <span>Aktiv</span>
-                  <span>ID</span>
-                  <span>Name</span>
-                  <span>Bild</span>
-                  <span>Rows</span>
-                  <span>Sort</span>
-                </div>
-                @for (mode of getMilgrainModes(); track mode) {
-                  <div class="admin-table-row mode-grid">
-                    <input type="checkbox" [checked]="mode['active'] === true || mode['enabled'] === true" (change)="updateRecordBoolean(mode, mode['active'] !== undefined ? 'active' : 'enabled', $any($event.target).checked)">
-                    <input [ngModel]="mode['id']" (ngModelChange)="updateRecordNumber(mode, 'id', $event)">
-                    <input [ngModel]="mode['name']" (ngModelChange)="updateRecordText(mode, 'name', $event)">
-                    <input [ngModel]="mode['img']" (ngModelChange)="updateRecordText(mode, 'img', $event)">
-                    <input type="number" [ngModel]="mode['rows']" (ngModelChange)="updateRecordNumber(mode, 'rows', $event)">
-                    <input type="number" [ngModel]="mode['sort'] ?? mode['order']" (ngModelChange)="updateRecordNumber(mode, mode['order'] !== undefined ? 'order' : 'sort', $event)">
-                  </div>
-                }
-              </div>
-            }
+            <summary>Perlierung</summary>
             <h3>Perlengroessen</h3>
-            @if (!getMilgrainSizes().length) {
-              <p>Keine milgrainSize-Liste vorhanden. Experten-JSON kann sie anlegen.</p>
+            @if (!milgrainSizeEditorOptions.length) {
+              <p class="validation warnings">pearlingSize: {{getMilgrainSizeState()}}</p>
+              <button type="button" (click)="initializeMilgrainSizeDefaults(true)">pearlingSize als Standardliste neu anlegen</button>
             }
-            @if (getMilgrainSizes().length) {
+            <p>
+              <button type="button" (click)="initializeMilgrainDefaults(false)">Perlierungs-Defaults anlegen</button>
+            </p>
+            @if (milgrainSizeEditorOptions.length) {
               <div class="admin-table">
                 <div class="admin-table-header size-grid">
                   <span>ID</span>
                   <span>Name</span>
                   <span>Durchmesser mm</span>
-                  <span>Radius mm</span>
-                  <span>Rand L mm</span>
-                  <span>Rand R mm</span>
-                  <span>Abstand mm</span>
+                  <span>Perlenabstand mm</span>
+                  <span>Min. Abstand mm</span>
+                  <span>Max. Abstand mm</span>
+                  <span>Kanalrand mm</span>
+                  <span>Kanalbreite mm</span>
+                  <span>Spacing</span>
+                  <span>Pitch mm</span>
+                  <span>Anzahl</span>
                   <span>Bild</span>
                 </div>
-                @for (size of getMilgrainSizes(); track size) {
+                @for (size of milgrainSizeEditorOptions; track getRecordId(size)) {
                   <div class="admin-table-row size-grid">
                     <input [ngModel]="size['id']" (ngModelChange)="updateRecordNumber(size, 'id', $event)">
                     <input [ngModel]="size['name']" (ngModelChange)="updateRecordText(size, 'name', $event)">
                     <input type="number" step="0.001" [ngModel]="toMmValue(size['diameter'])" (ngModelChange)="updateRecordMicrometer(size, 'diameter', $event)">
-                    <input type="number" step="0.001" [ngModel]="toMmValue(size['radius'])" (ngModelChange)="updateRecordMicrometer(size, 'radius', $event)">
-                    <input type="number" step="0.001" [ngModel]="toMmValue(size['borderLeft'])" (ngModelChange)="updateRecordMicrometer(size, 'borderLeft', $event)">
-                    <input type="number" step="0.001" [ngModel]="toMmValue(size['borderRight'])" (ngModelChange)="updateRecordMicrometer(size, 'borderRight', $event)">
-                    <input type="number" step="0.001" [ngModel]="toMmValue(size['spacing'])" (ngModelChange)="updateRecordMicrometer(size, 'spacing', $event)">
+                    <input type="number" step="0.001" [ngModel]="toMmValue(size['rowClearance'])" (ngModelChange)="updateRecordMicrometer(size, 'rowClearance', $event)">
+                    <input type="number" step="0.001" [ngModel]="toMmValue(size['minRowClearance'])" (ngModelChange)="updateRecordMicrometer(size, 'minRowClearance', $event)">
+                    <input type="number" step="0.001" [ngModel]="toMmValue(size['maxRowClearance'])" (ngModelChange)="updateRecordMicrometer(size, 'maxRowClearance', $event)">
+                    <input type="number" step="0.001" [ngModel]="toMmValue(size['channelEdgeClearance'])" (ngModelChange)="updateRecordMicrometer(size, 'channelEdgeClearance', $event)">
+                    <input type="number" step="0.001" [ngModel]="toMmValue(size['channelWidth'])" (ngModelChange)="updateRecordMicrometer(size, 'channelWidth', $event)">
+                    <select [ngModel]="size['spacingMode']" (ngModelChange)="updateRecordText(size, 'spacingMode', $event)">
+                      @for (mode of pearlingSpacingModes; track mode) {
+                        <option [value]="mode">{{mode}}</option>
+                      }
+                    </select>
+                    <input type="number" step="0.001" [ngModel]="toMmValue(size['pitch'])" (ngModelChange)="updateRecordMicrometer(size, 'pitch', $event)">
+                    <input type="number" min="0" step="1" [ngModel]="size['beadCount']" (ngModelChange)="updateRecordNumber(size, 'beadCount', $event)">
                     <input [ngModel]="size['img']" (ngModelChange)="updateRecordText(size, 'img', $event)">
                   </div>
                 }
@@ -127,7 +117,7 @@
                 <span>Modus</span>
                 <span>Action</span>
               </div>
-              @for (rule of getFeatureCombinations(); track rule) {
+                @for (rule of getFeatureCombinations(); track $index) {
                 <div class="admin-table-row combo-grid">
                   <input [ngModel]="rule['a']" (ngModelChange)="updateRecordText(rule, 'a', $event)">
                   <input [ngModel]="rule['b']" (ngModelChange)="updateRecordText(rule, 'b', $event)">
@@ -145,48 +135,29 @@
         </details>
         <details>
           <summary>Profil-Regeln</summary>
-          @for (profile of getProfiles(); track profile) {
+          @for (profile of getProfiles(); track profile['name']) {
             <article class="profile-rule">
               <header>
                 <strong>Profil {{profile['name']}}</strong>
                 @if (!getProfileMilgrain(profile)) {
-                  <button type="button" (click)="initializeProfileMilgrain(profile)">Perlfugen-Regel anlegen</button>
+                  <button type="button" (click)="initializeProfileMilgrain(profile)">Perlierungs-Regel anlegen</button>
                 }
               </header>
               @if (getProfileMilgrain(profile); as milgrain) {
                 <div class="profile-rule-layout">
                   <label class="checkbox-line">
                     <input type="checkbox" [checked]="milgrain['enabled'] === true" (change)="updateRecordBoolean(milgrain, 'enabled', $any($event.target).checked)">
-                    <span>Perlfugen erlaubt</span>
-                    <button type="button" class="help-icon" aria-label="Hilfe zu Perlfugen erlaubt" (click)="openHelp('profile.milgrain.enabled')">?</button>
+                    <span>Perlierung erlaubt</span>
+                    <button type="button" class="help-icon" aria-label="Hilfe zu Perlierung erlaubt" (click)="openHelp('profile.milgrain.enabled')">?</button>
                   </label>
-                  <section class="choice-section">
-                    <div class="field-heading">
-                      <strong>Perlfugen-Modi</strong>
-                      <button type="button" class="help-icon" aria-label="Hilfe zu Perlfugen-Modi" (click)="openHelp('profile.milgrain.allowedModes')">?</button>
-                    </div>
-                    @if (getMilgrainModeOptions().length) {
-                      <div class="option-list">
-                        @for (option of getMilgrainModeOptions(); track option) {
-                          <label>
-                            <input type="checkbox" [checked]="isOptionSelected(milgrain, 'allowedModes', option.id)" (change)="toggleOption(milgrain, 'allowedModes', option.id, $any($event.target).checked)">
-                            <span>{{option.label}}</span>
-                          </label>
-                        }
-                      </div>
-                    } @else {
-                      <p>Keine milgrainMode-Optionen vorhanden.</p>
-                    }
-                    <small>{{describeSelectedOptions(milgrain, 'allowedModes', getMilgrainModeOptions())}}</small>
-                  </section>
                   <section class="choice-section">
                     <div class="field-heading">
                       <strong>Perlengroessen</strong>
                       <button type="button" class="help-icon" aria-label="Hilfe zu Perlengroessen" (click)="openHelp('profile.milgrain.allowedSizes')">?</button>
                     </div>
-                    @if (getMilgrainSizeOptions().length) {
+                    @if (milgrainSizeSelectOptions.length) {
                       <div class="option-list">
-                        @for (option of getMilgrainSizeOptions(); track option) {
+                        @for (option of milgrainSizeSelectOptions; track option.id) {
                           <label>
                             <input type="checkbox" [checked]="isOptionSelected(milgrain, 'allowedSizes', option.id)" (change)="toggleOption(milgrain, 'allowedSizes', option.id, $any($event.target).checked)">
                             <span>{{option.label}}</span>
@@ -196,7 +167,7 @@
                     } @else {
                       <p>Keine milgrainSize-Optionen vorhanden.</p>
                     }
-                    <small>{{describeSelectedOptions(milgrain, 'allowedSizes', getMilgrainSizeOptions())}}</small>
+                    <small>{{describeSelectedOptions(milgrain, 'allowedSizes', milgrainSizeSelectOptions)}}</small>
                   </section>
                   <section class="rule-subsection">
                     <h4>Fertigungsgrenzen</h4>
@@ -244,7 +215,7 @@
   <label class="field">
     <span>JSON-Pfad</span>
     <select [(ngModel)]="selectedJsonPath">
-      @for (section of appDataSections; track section) {
+      @for (section of appDataSections; track section.title) {
         <optgroup [label]="section.title">
           @for (key of section.keys; track key) {
             <option [value]="key">{{key}}</option>
@@ -256,7 +227,7 @@
   <textarea class="json-editor" [ngModel]="getJsonValue(selectedJsonPath)" (ngModelChange)="updateJsonValue(selectedJsonPath, $event)" spellcheck="false"></textarea>
   <div class="dynamic-list">
     <h3>Dynamische Eintraege: {{selectedJsonPath}}</h3>
-    @for (item of getArray(selectedJsonPath); track item; let index = $index) {
+    @for (item of getArray(selectedJsonPath); track $index; let index = $index) {
       <div class="dynamic-row">
         <span>{{index + 1}}</span>
         <strong>{{identify(item)}}</strong>
@@ -268,10 +239,10 @@
 }
 @if (activeTab === 'webgl') {
   <section class="admin-body">
-    @for (group of webglGroups; track group) {
+    @for (group of webglGroups; track group.title) {
       <details open>
         <summary>{{group.title}}</summary>
-        @for (field of group.fields; track field) {
+        @for (field of group.fields; track field.path) {
           <label class="range-field">
             <span>
               {{field.label}}
@@ -293,6 +264,9 @@
     <p>Nur Vorschau: OBJ-Dateinamen und AppData-Referenzen werden lokal validiert; Uploads oder Assetaenderungen erfolgen hier nicht.</p>
     <h3>Live-Vorschau</h3>
     <p [class.warn]="requiresReload">{{requiresReload ? 'Teilweise Neuladen erforderlich' : 'Live angewendet'}}</p>
+    <button type="button" (click)="previewWorkingAppDataInBabylon()" [disabled]="loading || previewingBabylon || !working">
+      {{previewingBabylon ? 'Babylon rendert...' : 'In Babylon testen'}}
+    </button>
     <h3>AppData-Validierung</h3>
     @if (validation.errors.length) {
       <ul class="validation errors">
@@ -311,10 +285,26 @@
     @if (!validation.errors.length && !validation.warnings.length) {
       <p>Keine lokalen Validierungsbefunde.</p>
     }
+    <h3>Letzter Admin-Request</h3>
+    @if (lastAdminRequest; as request) {
+      <div class="diff-list">
+        <article>
+          <strong>{{request.action}} - {{request.status}}</strong>
+          <span>Request: {{request.requestId || 'noch offen'}}</span>
+          <span>Endpoint: {{request.endpoint}}</span>
+          <span>Version: {{request.versionId || '-'}} / Base: {{request.baseVersionId || '-'}}</span>
+          @if (request.errorCode || request.errorMessage) {
+            <code>{{request.errorCode}}: {{request.errorMessage}}</code>
+          }
+        </article>
+      </div>
+    } @else {
+      <p>Noch keine Admin-Anfrage in dieser Sitzung.</p>
+    }
     <h3>Aenderungsvergleich</h3>
     <p>{{diff.length}} Aenderung(en)</p>
     <div class="diff-list">
-      @for (entry of diff; track entry) {
+      @for (entry of diff; track entry.path) {
         <article>
           <strong>{{entry.path}}</strong>
           <span>{{entry.impact}}</span>
@@ -337,7 +327,7 @@
         <label class="field">
           <span>Verfuegbare Builds</span>
           <select [(ngModel)]="selectedPlatformReleaseId" (ngModelChange)="selectPlatformRelease($event)">
-            @for (release of releaseIndex.releases; track release) {
+            @for (release of releaseIndex.releases; track release.id) {
               <option [value]="release.id">
                 {{release.id}} - {{release.status}} - {{release.branch}}/{{release.shortSha}}
               </option>
@@ -374,12 +364,12 @@
       <span>Versionshistorie</span>
       <select [(ngModel)]="selectedVersionId">
         <option value="">Version auswaehlen</option>
-        @for (version of versions; track version) {
+        @for (version of versions; track version.id) {
           <option [value]="version.id">{{version.version_label}} - {{version.state}}</option>
         }
       </select>
     </label>
-    <button type="button" (click)="loadVersion()">Version laden</button>
+    <button type="button" (click)="loadVersion(selectedVersionId)" [disabled]="loading || !selectedVersionId">{{loading ? 'Laedt...' : 'Version laden'}}</button>
     <label class="field">
       <span>Kompatibilitaetsstatus</span>
       <select [(ngModel)]="selectedCompatibilityStatus">
@@ -387,28 +377,28 @@
         <option value="incompatible">incompatible</option>
       </select>
     </label>
-    <button type="button" (click)="openAuth('setCompatibility')" [disabled]="!activeVersion">Kompatibilitaet speichern</button>
+    <button type="button" (click)="openAuth('setCompatibility')" [disabled]="loading || !activeVersion">Kompatibilitaet speichern</button>
     <h3>Produktionsfreigabe</h3>
-    <button type="button" (click)="openAuth('approveVersion')" [disabled]="!activeVersion">Fuer Produktion freigeben</button>
-    <button type="button" (click)="openAuth('retireVersion')" [disabled]="!activeVersion">Version stilllegen</button>
+    <button type="button" (click)="openAuth('approveVersion')" [disabled]="loading || !activeVersion">Fuer Produktion freigeben</button>
+    <button type="button" (click)="openAuth('retireVersion')" [disabled]="loading || !activeVersion">Version stilllegen</button>
     <h3>Ziel-/Kundenzuordnung</h3>
     <label class="field">
       <span>Ziel</span>
       <select [(ngModel)]="selectedTargetKey">
-        @for (target of targets; track target) {
+        @for (target of targets; track target.target_key) {
           <option [value]="target.target_key">{{target.target_name}} - {{target.environment}}</option>
         }
       </select>
     </label>
-    <button type="button" (click)="openAuth('assignTarget')" [disabled]="!activeVersion">Ziel zuordnen</button>
-    <button type="button" (click)="openAuth('rollbackTarget')" [disabled]="!activeVersion">Rollback-Historie fortschreiben</button>
+    <button type="button" (click)="openAuth('assignTarget')" [disabled]="loading || !activeVersion">Ziel zuordnen</button>
+    <button type="button" (click)="openAuth('rollbackTarget')" [disabled]="loading || !activeVersion">Rollback-Historie fortschreiben</button>
     <h3>Baseline</h3>
-    <button type="button" (click)="openAuth('importCurrentBaseline')" [disabled]="versions.length > 0">Aktuelle AppData als Baseline importieren</button>
+    <button type="button" (click)="openAuth('importCurrentBaseline')" [disabled]="loading || versions.length > 0">Aktuelle AppData als Baseline importieren</button>
   </section>
 }
 <footer class="admin-actions">
-  <button type="button" (click)="reset()" [disabled]="!dirty">Aenderungen zuruecksetzen</button>
-  <button type="button" (click)="openAuth('saveVersion')" [disabled]="validation.errors.length > 0 || !dirty">Neue AppData-Version speichern</button>
+  <button type="button" (click)="reset()" [disabled]="loading || !dirty">Aenderungen zuruecksetzen</button>
+  <button type="button" (click)="openAuth('saveVersion')" [disabled]="loading || validation.errors.length > 0 || !dirty">Neue AppData-Version speichern</button>
 </footer>
 </aside>
 }

@@ -7,65 +7,104 @@
           [class.disabled]="isDisabled_gapMode(item.id)"
           (mousedown)="setValue_gapMode(item.id)"
           [title]="item.name"
-        [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
+          [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
       }
     </div>
+
     <x-property-sync-dialog [ringId]="ringId" property="gapMode"></x-property-sync-dialog>
 
     @if (isVisible_gapSettings()) {
       <x-dropdown title="Breite"
-        [options]="getOptions_gapWidth()"
-        [value]="ringData[ringId].gapWidth"
-        [onValueFormat]="onValueFormat_gapWidth"
-        [onValueHidden]="onValueHidden_gapWidth"
-        [that]="this"
-      (onSelect)="setOption_gapWidth($event)"></x-dropdown>
+                  [options]="getOptions_gapWidth()"
+                  [value]="ringData[ringId].gapWidth"
+                  [onValueFormat]="onValueFormat_gapWidth"
+                  [onValueHidden]="onValueHidden_gapWidth"
+                  [that]="this"
+                  (onSelect)="setOption_gapWidth($event)"></x-dropdown>
       <x-property-sync-dialog [ringId]="ringId" property="gapWidth"></x-property-sync-dialog>
-      <x-dropdown title="Oberfläche"
-        [options]="getOptions_gapSurface()"
-        [value]="ringData[ringId].gapSurface"
-        [onValueFormat]="onValueFormat_gapSurface"
-      (onSelect)="setOption_gapSurface($event)"></x-dropdown>
+
+      <x-dropdown title="Oberflaeche"
+                  [options]="getOptions_gapSurface()"
+                  [value]="ringData[ringId].gapSurface"
+                  [onValueFormat]="onValueFormat_gapSurface"
+                  (onSelect)="setOption_gapSurface($event)"></x-dropdown>
+
       <x-property-sync-dialog [ringId]="ringId" property="gapSurface"></x-property-sync-dialog>
-      <h6 class="title">
-        Aufteilung
-      </h6>
-      @for (item of ringData[ringId].gapEnabled; track trackByFn(i, item); let i = $index) {
-        <div class="gap-item"
-          [hidden]="isHidden_gapElement(i)">
+
+      <div class="pearling-modifier" [class.disabled]="isDisabled_gapPearling()">
+        <div class="modifier-row">
+          <div>
+            <h6 class="title">Perlierung</h6>
+            <div class="subtitle">Zusatz zur gewaehlten Fuge</div>
+          </div>
+          <button type="button"
+                  class="switch pearling-toggle"
+                  [class.active]="getGapPearlingEnabled()"
+                  [class.disabled]="isDisabled_gapPearling()"
+                  [disabled]="isDisabled_gapPearling()"
+                  [attr.aria-pressed]="getGapPearlingEnabled()"
+                  (click)="setGapPearlingEnabled(!getGapPearlingEnabled())">
+            <span>{{ getGapPearlingEnabled() ? 'An' : 'Aus' }}</span>
+          </button>
+        </div>
+        @if (getGapPearlingEnabled()) {
+          <div class="image-card-wrapper pearling-size-options">
+            @for (item of getPearlingSizes(); track item.id) {
+              <x-image-card
+                [class.active]="getGapPearlingSize() === item.id"
+                [class.disabled]="isDisabled_pearlingSize(item.id, 'gapPearling')"
+                (mousedown)="setGapPearlingSize(item.id)"
+                [title]="formatPearlingSize(item)"
+                [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
+            }
+          </div>
+          <x-property-sync-dialog [ringId]="ringId" property="gapPearlingSize"></x-property-sync-dialog>
+        }
+        @if (getGapPearlingDisabledReason()) {
+          <div class="disabled-reason">{{ getGapPearlingDisabledReason() }}</div>
+        }
+      </div>
+      <x-property-sync-dialog [ringId]="ringId" property="gapPearlingEnabled"></x-property-sync-dialog>
+
+      <h6 class="title">Aufteilung</h6>
+
+      @for (item of ringData[ringId].gapEnabled; track trackByFn($index, item); let i = $index) {
+        <div class="gap-item" [hidden]="isHidden_gapElement(i)">
           <div class="number">{{ i + 1 }}</div>
           <div class="title">Trennfuge</div>
           <div class="switch" [class.active]="item != 0" (mousedown)="onToggleGapEnabled(i)"></div>
         </div>
       }
-      <ng-template [ngFor] let-item [ngForOf]=ringData[ringId].gapDiv let-i="index">
-        @if (i<ringData[ringId].gapDiv.length-1) {
-          <div class="gap-item"
-            [attr.data-index]="i"
-            [attr.data-ringId]="ringId">
+
+      <ng-template [ngFor] let-item [ngForOf]="ringData[ringId].gapDiv" let-i="index">
+        @if (i < ringData[ringId].gapDiv.length - 1) {
+          <div class="gap-item" [attr.data-index]="i" [attr.data-ringId]="ringId">
             <div class="number -freeGap">{{ i + 1 }}</div>
-            <div class="title">Freie Fuge
-              <div class="position">{{getGapPositionString(i)}}</div>
+            <div class="title">
+              Freie Fuge
+              <div class="position">{{ getGapPositionString(i) }}</div>
             </div>
             <div class="switch delete" (mousedown)="onDeleteGap(i)"></div>
           </div>
         }
       </ng-template>
+
       <div class="gapDiv-plus">
         @if (canAddGaps()) {
           <div class="icon" (mousedown)="onAddGap()"></div>
         }
         @if (canAddGaps()) {
-          <h6 class="title">Freie Fuge hinzufügen</h6>
+          <h6 class="title">Freie Fuge hinzufuegen</h6>
         }
         @if (!canAddGaps()) {
-          <h6 class="title">Keine freien Fugen mehr möglich</h6>
+          <h6 class="title">Keine freien Fugen mehr moeglich</h6>
         }
       </div>
-      <!--      <x-multi-thumb-slider [ringId]=ringId mode="gap" [onThumbChanging]="onGapChanging"></x-multi-thumb-slider>-->
-      <x-mts-horizontal [ringId]=ringId (onValueFreeGapChanged)="onValueFreeGapArrayChanged($event)" mode="gap"></x-mts-horizontal>
+
+      <x-mts-horizontal [ringId]="ringId" (onValueFreeGapChanged)="onValueFreeGapArrayChanged($event)" mode="gap"></x-mts-horizontal>
     }
   </x-tab-page>
+
   @if (canSteps()) {
     <x-tab-page class="step" title="Stufen">
       <div class="image-card-wrapper">
@@ -74,25 +113,66 @@
             [class.active]="ringData[ringId].stepMode===item.id"
             (mousedown)="setValue_stepMode(item.id)"
             [title]="item.name"
-          [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
+            [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
         }
       </div>
+
       <x-property-sync-dialog [ringId]="ringId" property="stepMode"></x-property-sync-dialog>
+
       @if (ringData[ringId].stepMode === 1 || ringData[ringId].stepMode === 3) {
         <x-dropdown title="Breite links"
-          [options]="getOptions_stepWidth()"
-          [value]="ringData[ringId].stepWidth[0]"
-          [onValueFormat]="onValueFormat_stepWidth"
-        (onSelect)="onSelect_stepWidth(0, $event)"></x-dropdown>
+                    [options]="getOptions_stepWidth()"
+                    [value]="ringData[ringId].stepWidth[0]"
+                    [onValueFormat]="onValueFormat_stepWidth"
+                    (onSelect)="onSelect_stepWidth(0, $event)"></x-dropdown>
+
         <x-property-sync-dialog [ringId]="ringId" property="stepWidth_left"></x-property-sync-dialog>
       }
+
       @if (ringData[ringId].stepMode === 2 || ringData[ringId].stepMode === 3) {
         <x-dropdown title="Breite rechts"
-          [options]="getOptions_stepWidth()"
-          [value]="ringData[ringId].stepWidth[1]"
-          [onValueFormat]="onValueFormat_stepWidth"
-        (onSelect)="onSelect_stepWidth(1, $event)"></x-dropdown>
+                    [options]="getOptions_stepWidth()"
+                    [value]="ringData[ringId].stepWidth[1]"
+                    [onValueFormat]="onValueFormat_stepWidth"
+                    (onSelect)="onSelect_stepWidth(1, $event)"></x-dropdown>
         <x-property-sync-dialog [ringId]="ringId" property="stepWidth_right"></x-property-sync-dialog>
+      }
+
+      @if (ringData[ringId].stepMode !== 0) {
+        <div class="pearling-modifier" [class.disabled]="isDisabled_stepPearling()">
+          <div class="modifier-row">
+            <div>
+              <h6 class="title">Perlierung</h6>
+              <div class="subtitle">Zusatz zur gewaehlten Stufe</div>
+            </div>
+            <button type="button"
+                    class="switch pearling-toggle"
+                    [class.active]="getStepPearlingEnabled()"
+                    [class.disabled]="isDisabled_stepPearling()"
+                    [disabled]="isDisabled_stepPearling()"
+                    [attr.aria-pressed]="getStepPearlingEnabled()"
+                    (click)="setStepPearlingEnabled(!getStepPearlingEnabled())">
+              <span>{{ getStepPearlingEnabled() ? 'An' : 'Aus' }}</span>
+            </button>
+          </div>
+          @if (getStepPearlingEnabled()) {
+            <div class="image-card-wrapper pearling-size-options">
+              @for (item of getPearlingSizes(); track item.id) {
+                <x-image-card
+                  [class.active]="getStepPearlingSize() === item.id"
+                  [class.disabled]="isDisabled_pearlingSize(item.id, 'stepPearling')"
+                  (mousedown)="setStepPearlingSize(item.id)"
+                  [title]="formatPearlingSize(item)"
+                  [image]="env.assetFolderLocation+'/assets/imgui/'+item.img"></x-image-card>
+              }
+            </div>
+            <x-property-sync-dialog [ringId]="ringId" property="stepPearlingSize"></x-property-sync-dialog>
+          }
+          @if (getStepPearlingDisabledReason()) {
+            <div class="disabled-reason">{{ getStepPearlingDisabledReason() }}</div>
+          }
+        </div>
+        <x-property-sync-dialog [ringId]="ringId" property="stepPearlingEnabled"></x-property-sync-dialog>
       }
     </x-tab-page>
   }

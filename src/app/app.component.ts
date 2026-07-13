@@ -8,6 +8,7 @@ import {iAppData, iDBSaveItem} from './app.interfaces';
 import {RingData} from './app.ringdata';
 import {Log} from './logger/logger.component';
 import {collectRingScreenshots, createScreenshot} from './webgl/webgl.component';
+import {createDefaultPearlingSizes} from './pearling-size';
 
 @Component({
   selector: 'x-app-root',
@@ -1011,6 +1012,54 @@ export class AppComponent implements OnInit {
           "img": "icon-stufe-rechts.svg"
         }
       ],
+      "pearlingSize": createDefaultPearlingSizes(),
+      "stepDepthOptions": [
+        200,
+        300,
+        400
+      ],
+      "featureRules": {
+        "global": {
+          "unit": "micrometer",
+          "defaultAction": "block",
+          "autoAdjustAllowed": true,
+          "minFeatureDistance": 300,
+          "logViolations": false
+        },
+        "gapPearling": {
+          "enabled": true,
+          "allowedGapModes": [
+            1,
+            2,
+            3
+          ],
+          "allowedSizes": [
+            500,
+            1000
+          ],
+          "minDistanceToStone": 500,
+          "minDistanceToOtherGap": 300,
+          "snapTolerance": 200
+        },
+        "stepPearling": {
+          "enabled": true,
+          "allowedSides": [
+            "left",
+            "right",
+            "both"
+          ],
+          "allowedSizes": [
+            500,
+            1000
+          ],
+          "singleRowOnly": true
+        },
+        "freeGap": {
+          "minDistanceToOtherGap": 300,
+          "snapTolerance": 200
+        },
+        "combinations": []
+      },
       "stoneMode": [
         {
           "mode": 0,

@@ -68,15 +68,31 @@ try {
     ],
   ]);
 } catch (Throwable $error) {
-  error_log('appdata-admin request failed: ' . get_class($error));
-  respond(500, [
+  error_log(sprintf(
+    'appdata-admin request failed [%s]: %s: %s in %s:%d',
+    $requestId,
+    get_class($error),
+    $error->getMessage(),
+    $error->getFile(),
+    $error->getLine()
+  ));
+  $payload = [
     'ok' => false,
     'requestId' => $requestId,
     'error' => [
       'code' => 'SERVER_ERROR',
-      'message' => 'The AppData admin request failed.',
+      'message' => 'The AppData admin request failed. Reference requestId ' . $requestId . '.',
     ],
-  ]);
+  ];
+  if (isLocalDebugRequest()) {
+    $payload['error']['details'] = [
+      'type' => get_class($error),
+      'message' => $error->getMessage(),
+      'file' => basename($error->getFile()),
+      'line' => $error->getLine(),
+    ];
+  }
+  respond(500, $payload);
 }
 
 final class AdminHttpError extends Exception
@@ -100,6 +116,17 @@ function respond(int $status, array $payload): void
 function fail(int $status, string $code, string $message): never
 {
   throw new AdminHttpError($status, $code, $message);
+}
+
+function isLocalDebugRequest(): bool
+{
+  $debug = getenv('ONERINGCONF_APPDATA_ADMIN_DEBUG');
+  if ($debug === '1' || $debug === 'true') {
+    return true;
+  }
+
+  $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+  return in_array($remote, ['127.0.0.1', '::1'], true);
 }
 
 function readJsonBody(): array

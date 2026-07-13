@@ -1,7 +1,6 @@
 import {NgModule} from '@angular/core';
 import {BrowserModule} from '@angular/platform-browser';
 import {provideHttpClient, withInterceptorsFromDi, withXhr} from "@angular/common/http";
-
 import {AppComponent} from './app.component';
 import {MenuComponent} from './menu/menu.component';
 import {WebglComponent} from './webgl/webgl.component';
@@ -29,10 +28,10 @@ import {SaveLoadComponent} from './save-load/save-load.component';
 import {ConfigAdminComponent} from './config-admin/config-admin.component';
 import {RingDetailsComponent} from './ring-details/ring-details.component';
 import {LocalStorageComponent} from './local-storage/local-storage.component';
-import { PropertySyncDialogComponent } from './property-sync-dialog/property-sync-dialog.component';
-import { StonexyComponent } from './stonexy/stonexy.component';
-import { ConfigDiamondComponent } from './config-diamond/config-diamond.component';
-import { SliderGapComponent } from './slider-gap/slider-gap.component';
+import {PropertySyncDialogComponent} from './property-sync-dialog/property-sync-dialog.component';
+import {StonexyComponent} from './stonexy/stonexy.component';
+import {ConfigDiamondComponent} from './config-diamond/config-diamond.component';
+import {SliderGapComponent} from './slider-gap/slider-gap.component';
 import {MtsHorizontalComponent} from "./mts-horizontal/mts-horizontal.component";
 
 @NgModule({
@@ -76,6 +75,5 @@ import {MtsHorizontalComponent} from "./mts-horizontal/mts-horizontal.component"
   providers: [provideHttpClient(withXhr(), withInterceptorsFromDi())],
   bootstrap: [AppComponent]
 })
-export class AppModule
-{
+export class AppModule {
 }

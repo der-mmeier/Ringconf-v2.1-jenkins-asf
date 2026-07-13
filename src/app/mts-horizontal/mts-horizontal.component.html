@@ -4,11 +4,15 @@
 
     @if (is_valueGapObserved()) {
       <div>
-        @for (value of getValueGapArray(); track value; let i = $index) {
-          <div class="slider-handle-wrapper gap" [class.no-events]="_gapNoEvents" [class.disabled]="_gapDisabled" style="left:{{getPercentGapAtIndex(i)}}%"
-            (mousedown)="onThumbSelectMouse($event)"
-            (touchstart)="onThumbSelectTouch($event)"
-            [attr.data-index]="i">
+        @for (thumb of getGapThumbs(); track thumb.id) {
+          <div class="slider-handle-wrapper gap"
+            [class.active]="activeThumbId === thumb.id"
+            [class.no-events]="_gapNoEvents"
+            [class.disabled]="thumb.disabled"
+            [style.left.%]="thumb.leftPercent"
+            (mousedown)="onThumbSelectMouse($event, thumb)"
+            (touchstart)="onThumbSelectTouch($event, thumb)"
+            [attr.data-index]="thumb.index">
             <div class="slider-line"></div>
             <div class="slider-index"></div>
           </div>
@@ -17,20 +21,24 @@
     }
     @if (is_valueFreeGapObserved()) {
       <div>
-        @for (value of getValueGapArray(); track value; let i = $index) {
-          <div class="slider-handle-wrapper no-events" [class.disabled]="_valueGapEnabledArray[i] != 1" style="left:{{getPercentGapAtIndex(i)}}%">
+        @for (thumb of getNaturalGapThumbs(); track thumb.id) {
+          <div class="slider-handle-wrapper no-events"
+            [class.disabled]="thumb.disabled"
+            [style.left.%]="thumb.leftPercent">
             <div class="slider-line"></div>
-            <div class="slider-index">{{i + 1}}</div>
+            <div class="slider-index">{{thumb.label}}</div>
           </div>
         }
-        @for (value of getValueFreeGapArray(); track value; let i = $index) {
-          <div class="slider-handle-wrapper freeGap" style="left:{{getPercentFreeGapAtIndex(i)}}%"
-            (mousedown)="onThumbSelectMouse($event)"
-            (touchstart)="onThumbSelectTouch($event)"
-            [attr.data-index]="i">
-            <div class="slider-value">{{getValueFreeGap(i)}}</div>
+        @for (thumb of getFreeGapThumbs(); track thumb.id) {
+          <div class="slider-handle-wrapper freeGap"
+            [class.active]="activeThumbId === thumb.id"
+            [style.left.%]="thumb.leftPercent"
+            (mousedown)="onThumbSelectMouse($event, thumb)"
+            (touchstart)="onThumbSelectTouch($event, thumb)"
+            [attr.data-index]="thumb.index">
+            <div class="slider-value">{{getValueFreeGap(thumb.index)}}</div>
             <div class="slider-line"></div>
-            <div class="slider-index">{{i + 1}}</div>
+            <div class="slider-index">{{thumb.label}}</div>
           </div>
         }
       </div>
