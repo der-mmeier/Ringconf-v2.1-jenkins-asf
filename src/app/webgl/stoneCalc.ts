@@ -7,11 +7,12 @@ import {
   iPresetStone, iStoneDistances,
   iStoneMode,
   iStoneSize,
-  iStoneType
+  iStoneCut
 } from "../app.interfaces";
 import {CMesh, CVertex, extrude, extrude_2, iPathVectors, subdivide, TEMP} from "./threeD";
 import {Log} from "../logger/logger.component";
 import {getProfile, getRowWidth, getStoneDistances, getStoneMode} from "../app.definitions";
+import {getStoneCuts} from "../stone-taxonomy";
 
 export interface iPoint {
   x: number;
@@ -29,8 +30,8 @@ export interface iStoneCalcData {
 }
 
 function getLowerStoneSize_side(stoneType: number, maxSize: number): number {
-  let type = AppComponent.app.data.stoneType.find(function (e) {
-    return e.id === stoneType;
+  let type = getStoneCuts(AppComponent.app.data).find(function (e) {
+    return (e.legacyId ?? e.id) === stoneType;
   })
   if (type) {
     let size = 0;
@@ -54,8 +55,8 @@ function getLowerStoneSize_front(ringData: RingData, stoneGroup: iPresetStone, s
   // options: stoneRows:number => Die Anzahl der Steinreihen, die zur Berechnung genutzt werden sollen
 
   // console.log("glss: maxSize: "+maxSize);
-  let type = AppComponent.app.data.stoneType.find(function (e) {
-    return e.id === stoneGroup.type;
+  let type = getStoneCuts(AppComponent.app.data).find(function (e) {
+    return (e.legacyId ?? e.id) === stoneGroup.type;
   })
   if (type) {
     let size = 0, calcSize = 0, depth = 0;
@@ -101,8 +102,8 @@ function map(value: number, low1: number, high1: number, low2: number, high2: nu
 }
 
 function getStoneSizeItem(stoneType: number, size: number): iStoneSize | null {
-  let type = AppComponent.app.data.stoneType.find(function (e) {
-    return e.id === stoneType;
+  let type = getStoneCuts(AppComponent.app.data).find(function (e) {
+    return (e.legacyId ?? e.id) === stoneType;
   })
   if (type) {
     for (let i = 0; i < type.size.length; i++) {
@@ -115,8 +116,8 @@ function getStoneSizeItem(stoneType: number, size: number): iStoneSize | null {
 }
 
 function getStoneTypeItem(stoneType: number) {
-  return AppComponent.app.data.stoneType.find(function (e) {
-    return e.id === stoneType;
+  return getStoneCuts(AppComponent.app.data).find(function (e) {
+    return (e.legacyId ?? e.id) === stoneType;
   })
 }
 
@@ -325,7 +326,7 @@ let getProfileMaxStoneDepth = function (ring: cRing, position: number, profileDe
   let back = cRing.interpolate(position, ring.profile.backVertices);
   return back.z - front.z - profileDepthSafeDistanceToStone;
 }
-let getMaxStoneSizeFromDepth = function (stoneType: iStoneType, depth: number): number {
+let getMaxStoneSizeFromDepth = function (stoneType: iStoneCut, depth: number): number {
 
   let found: iStoneSize | null = null;
 
@@ -348,7 +349,7 @@ interface iCalcStoneSize {
   distances: iStoneDistances;
 }
 
-let getStoneSize_2 = function (ringData: RingData, stoneGroup: iPresetStone, stoneType: iStoneType, stoneSize: number, stoneMode: iStoneMode | undefined = undefined, testSafe: boolean = false): iCalcStoneSize {
+let getStoneSize_2 = function (ringData: RingData, stoneGroup: iPresetStone, stoneType: iStoneCut, stoneSize: number, stoneMode: iStoneMode | undefined = undefined, testSafe: boolean = false): iCalcStoneSize {
 
   let result = {
     size: 0,
@@ -588,12 +589,12 @@ export function stoneCalc(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcD
       console.log("Steinmodus nicht erkannt");
       return null;
     }
-    let stoneType = AppComponent.app.data.stoneType.find(e => {
-      return e.id == stoneGroup.type;
+    let stoneType = getStoneCuts(AppComponent.app.data).find(e => {
+      return (e.legacyId ?? e.id) == stoneGroup.type;
     })
     if (!stoneType || stoneType.allowedStoneMode.indexOf(stoneGroup.mode) == -1) {
-      stoneType = AppComponent.app.data.stoneType.find(e => {
-        return e.id == 1;
+      stoneType = getStoneCuts(AppComponent.app.data).find(e => {
+        return (e.legacyId ?? e.id) == 1;
       })
       stoneGroup.type = 1;
       if (!stoneType) {
@@ -666,8 +667,8 @@ export function stoneCalc(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcD
       s = getStoneSize_2(ringData, stoneGroup, stoneType, odmSegment.distXSafe, stoneMode, true);
       // @ts-ignore
       if (s.size == 0) {
-        if (stoneType.id != 1) {
-          stoneType.id = 1;
+        if ((stoneType.legacyId ?? stoneType.id) != 1) {
+          stoneType.legacyId = 1;
           loopA = true;
           continue;
         }
@@ -3707,8 +3708,8 @@ function stoneCalc_crossChannel(ring: cRing, vertexArray: iVertexArray[]): iSton
     profileDepth = 0;
 
 
-  let typeItem = AppComponent.app.data.stoneType.find(function (e) {
-    return e.id === stoneGroup.type;
+  let typeItem = getStoneCuts(AppComponent.app.data).find(function (e) {
+    return (e.legacyId ?? e.id) === stoneGroup.type;
   })
   if (!typeItem) return null;
   let sizeItem = typeItem.size.find(e => {
@@ -3716,8 +3717,8 @@ function stoneCalc_crossChannel(ring: cRing, vertexArray: iVertexArray[]): iSton
   })
   if (!sizeItem) return null;
 
-  let stoneType = AppComponent.app.data.stoneType.find(e => {
-    return e.id == stoneGroup.type;
+  let stoneType = getStoneCuts(AppComponent.app.data).find(e => {
+    return (e.legacyId ?? e.id) == stoneGroup.type;
   })
   if (!stoneType) return null;
 
@@ -4406,7 +4407,7 @@ function stoneCalc_crossChannel(ring: cRing, vertexArray: iVertexArray[]): iSton
 //     profileDepth = 0;
 //
 //
-//   let typeItem = AppComponent.app.data.stoneType.find(function (e) {
+//   let typeItem = getStoneCuts(AppComponent.app.data).find(function (e) {
 //     return e.id === stoneGroup.type;
 //   })
 //   if (!typeItem) return null;
@@ -4415,7 +4416,7 @@ function stoneCalc_crossChannel(ring: cRing, vertexArray: iVertexArray[]): iSton
 //   })
 //   if (!sizeItem) return null;
 //
-//   let stoneType = AppComponent.app.data.stoneType.find(e => {
+//   let stoneType = getStoneCuts(AppComponent.app.data).find(e => {
 //     return e.id == stoneGroup.type;
 //   })
 //   if (!stoneType) return null;
@@ -5092,8 +5093,8 @@ function stoneCalc_clamp(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcDa
     stoneDepth = 0,
     profileDepth = 0;
 
-  let typeItem = AppComponent.app.data.stoneType.find(function (e) {
-    return e.id === stoneGroup.type;
+  let typeItem = getStoneCuts(AppComponent.app.data).find(function (e) {
+    return (e.legacyId ?? e.id) === stoneGroup.type;
   })
   if (!typeItem) return null;
   let sizeItem = typeItem.size.find(e => {
@@ -5783,7 +5784,7 @@ function stoneCalc_side(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcDat
       maxStoneSize = Math.trunc(ring.profile.sideLength[1] - stoneMode.safeDistX * 2);
     }
 
-    maxStoneSize = getLowerStoneSize_side(stoneType.id, maxStoneSize);
+    maxStoneSize = getLowerStoneSize_side(Number(stoneType.legacyId ?? stoneType.id), maxStoneSize);
 
     let stoneSizeX = stoneGroup.size,
       stoneSizeY = 0;
@@ -6628,7 +6629,7 @@ function stoneCalc_side(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcDat
       let numRows = Math.trunc(length / step);
       step = length / (numRows - 1);
       let y, z = -(ringSideRadius - innerRadius);
-      let depth = stoneGroup.size * (<iStoneType>stoneType).sizeDepthFactor * 0.7; // wieder auf Werte der V1 gesetzt am 11.03.2023
+      let depth = stoneGroup.size * (<iStoneCut>stoneType).sizeDepthFactor * 0.7; // wieder auf Werte der V1 gesetzt am 11.03.2023
       if (X < 0) depth = -depth;
       let uv_u, pA, pB, AZ, ZB, AB, scale;
 
@@ -7037,8 +7038,8 @@ function stoneCalc_free(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcDat
     return null;
   }
 
-  let stoneType = AppComponent.app.data.stoneType.find(e => {
-    return e.id == stoneGroup.type;
+  let stoneType = getStoneCuts(AppComponent.app.data).find(e => {
+    return (e.legacyId ?? e.id) == stoneGroup.type;
   })
 
   if (!stoneType) {
@@ -7083,7 +7084,7 @@ function stoneCalc_free(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcDat
   // let
   //   // profileDepthSafeDistanceToStone = 300,
   //   stoneMode = getStoneMode(stoneGroup.mode),
-  //   stoneType = AppComponent.app.data.stoneType.find(e => {
+  //   stoneType = getStoneCuts(AppComponent.app.data).find(e => {
   //     return e.id == 1;
   //   }),
   //   height = ringData.ringSize;
@@ -7542,7 +7543,7 @@ function stoneCalc_free(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcDat
 //     console.log("Steinmodus nicht erkannt!");
 //     return null;
 //   }
-//   let stoneType = AppComponent.app.data.stoneType.find(e => {
+//   let stoneType = getStoneCuts(AppComponent.app.data).find(e => {
 //     return e.id == 1;
 //   });
 //   if (!stoneType) {
@@ -8007,7 +8008,7 @@ function stoneCalc_free(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcDat
 // //
 // // let checkStoneDepth = function (minStoneSize: number): number {
 // //   let profileDepth = getProfileDepth(X, ring) - profileDepthSafeDistanceToStone;
-// //   let stoneDepth = size * (<iStoneType>stoneType).sizeDepthFactor;
+// //   let stoneDepth = size * (<iStoneCut>stoneType).sizeDepthFactor;
 // //   // console.log("Profiledepth: "+profileDepth+", stoneDepth: "+stoneDepth+", stoneSize: "+size);
 // //
 // //   if (stoneDepth > profileDepth) {
@@ -8016,7 +8017,7 @@ function stoneCalc_free(ring: cRing, vertexArray: iVertexArray[]): iStoneCalcDat
 // //       while (1) {
 // //         size = getLowerStoneSize_front(ringData, stoneGroup, <iStoneMode>stoneMode, size - 10, {useRealStoneSize: true})[0];
 // //         if (size > 0 && size >= minStoneSize) {
-// //           stoneDepth = size * (<iStoneType>stoneType).sizeDepthFactor;
+// //           stoneDepth = size * (<iStoneCut>stoneType).sizeDepthFactor;
 // //           if (stoneDepth <= profileDepth) break;
 // //         } else {
 // //           size = 0;
@@ -8792,8 +8793,8 @@ export function stoneCalc_addFreeStone(ring: cRing, size: number, options: any =
     console.log("Steinmodus nicht erkannt!");
     return false;
   }
-  let stoneType = AppComponent.app.data.stoneType.find(e => {
-    return e.id == 1;
+  let stoneType = getStoneCuts(AppComponent.app.data).find(e => {
+    return (e.legacyId ?? e.id) == 1;
   });
   if (!stoneType) {
     console.log("Steintyp nicht erkannt!");

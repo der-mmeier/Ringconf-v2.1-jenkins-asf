@@ -9,6 +9,7 @@ import {RingData} from './app.ringdata';
 import {Log} from './logger/logger.component';
 import {collectRingScreenshots, createScreenshot} from './webgl/webgl.component';
 import {createDefaultPearlingSizes} from './pearling-size';
+import {getStoneCuts, normalizeStoneTaxonomyAppData} from './stone-taxonomy';
 
 @Component({
   selector: 'x-app-root',
@@ -2323,6 +2324,7 @@ export class AppComponent implements OnInit {
 
     this.state.browsertab_id = "_" + Math.floor(Math.random() * 1000000);
 
+    normalizeStoneTaxonomyAppData(this.data);
     this.dataSafeJson = JSON.stringify(this.data);
 
     AppComponent.app = this;
@@ -2362,7 +2364,7 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     dbGetAppData().then(function (data: any) {
       if (data == null) Log("error", "Keine App Daten vorhanden!");
-      else AppComponent.app.data = data;
+      else AppComponent.app.data = normalizeStoneTaxonomyAppData(data);
 
       if (AppComponent.app.state.urlParams["id"] !== undefined && AppComponent.app.state.urlParams["id"].match(/\w{4}-\w{4}/g)) {
         if (AppComponent.app.state.debug) console.log("use url-id: ", AppComponent.app.state.urlParams["id"]);
@@ -2618,10 +2620,10 @@ export class AppComponent implements OnInit {
           return;
 
         let quality = that.data.stoneQuality.find(e => {
-          return e.id == stoneGroup.quality;
+          return e.id == stoneGroup.stoneQuality || e.legacyQuality == stoneGroup.quality || e.id == stoneGroup.quality;
         })
-        let type = that.data.stoneType.find(e => {
-          return e.id == stoneGroup.type;
+        let type = getStoneCuts(that.data).find(e => {
+          return e.id == stoneGroup.stoneCut || e.legacyId == stoneGroup.type || e.id == stoneGroup.type;
         })
         let size = null;
         if (type) size = type.size.find(e => {

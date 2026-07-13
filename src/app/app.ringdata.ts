@@ -10,9 +10,18 @@ import {
   iStoneMode,
   iStoneQuality,
   iStoneSize,
-  iStoneType, iSurface
+  iStoneCut, iSurface
 } from "./app.interfaces";
 import {Log} from "./logger/logger.component";
+import {
+  findStoneCut,
+  getAllowedStoneSizes,
+  getStoneColorById,
+  getStoneCutId,
+  getStoneSettingMode,
+  mapQualityToLegacyIndex,
+  normalizeStoneSelection
+} from "./stone-taxonomy";
 
 export class RingData {
   static list: RingData[] = [];
@@ -33,6 +42,12 @@ export class RingData {
       }
     }
     this._profileName = RingData.validateProfile(this._profileName);
+    this._stone.forEach(stoneGroup => {
+      normalizeStoneSelection(stoneGroup, AppComponent.app.data, {
+        stoneMode: stoneGroup.mode,
+        settingMode: getStoneSettingMode(stoneGroup.mode),
+      });
+    });
     this._blockDirty = false;
     this.isDirty = true;
   }
@@ -74,9 +89,17 @@ export class RingData {
         countReal: 1,
         rows: 1,
         type: 1,
+        stoneCut: "brilliant",
+        stoneType: "natural-diamond",
         size: 1900,
         distribution: 0,
         quality: 0,
+        stoneQuality: "diamond-g-si1",
+        stoneColor: null,
+        colorId: null,
+        color: null,
+        colorName: null,
+        colorHex: null,
         positionValue: 0.0,
         positionDiv: [5000, 5000]
       }];
@@ -905,11 +928,12 @@ export class RingData {
     }
   }
 
-  static setStoneType(that: RingData, group: number, type: iStoneType) {
+  static setStoneCut(that: RingData, group: number, type: iStoneCut) {
     if (group < 0 || group >= that.stone.length)
       return;
     let G = that.stone[group];
-    G.type = type.id;
+    G.stoneCut = getStoneCutId(type);
+    G.type = Number(type.legacyId ?? type.id);
 
     // prüfe ob die vorhandene Steingröße beim gewählten Typ möglich ist
 
@@ -919,11 +943,27 @@ export class RingData {
     that.isDirty = true;
   }
 
+  static setStoneType(that: RingData, group: number, stoneType: string) {
+    if (group < 0 || group >= that.stone.length)
+      return;
+    const G = that.stone[group];
+    G.stoneType = stoneType;
+    normalizeStoneSelection(G, AppComponent.app.data, {
+      stoneMode: G.mode,
+      settingMode: getStoneSettingMode(G.mode),
+    });
+    that.isDirty = true;
+  }
+
   static setStoneSize(that: RingData, group: number, size: iStoneSize) {
     if (group < 0 || group >= that.stone.length)
       return;
     let G = that.stone[group];
     G.size = size.size;
+    normalizeStoneSelection(G, AppComponent.app.data, {
+      stoneMode: G.mode,
+      settingMode: getStoneSettingMode(G.mode),
+    });
     that.isDirty = true;
   }
 
@@ -931,7 +971,23 @@ export class RingData {
     if (group < 0 || group >= that.stone.length)
       return;
     let G = that.stone[group];
-    G.quality = quality.id;
+    G.stoneQuality = String(quality.id);
+    G.quality = mapQualityToLegacyIndex(AppComponent.app.data, G.stoneQuality, G.quality);
+    that.isDirty = true;
+  }
+
+  static setStoneColor(that: RingData, group: number, color: string | null) {
+    if (group < 0 || group >= that.stone.length)
+      return;
+    if (color !== null && !getStoneColorById(AppComponent.app.data, color))
+      return;
+    let G = that.stone[group];
+    const colorDef = color ? getStoneColorById(AppComponent.app.data, color) : null;
+    G.stoneColor = colorDef?.id ?? null;
+    G.colorId = colorDef?.id ?? null;
+    G.color = colorDef?.name ?? null;
+    G.colorName = colorDef?.name ?? null;
+    G.colorHex = colorDef?.hex ? colorDef.hex.toUpperCase() : null;
     that.isDirty = true;
   }
 
@@ -1014,9 +1070,17 @@ export class RingData {
     G.countReal = 1;
     G.rows = 1;
     G.type = 1;
+    G.stoneCut = "brilliant";
+    G.stoneType = "natural-diamond";
     G.size = 1900;
     G.distribution = 0;
     G.quality = 0;
+    G.stoneQuality = "diamond-g-si1";
+    G.stoneColor = null;
+    G.colorId = null;
+    G.color = null;
+    G.colorName = null;
+    G.colorHex = null;
     G.positionValue = 0.0;
     G.positionDiv = [5000, 5000];
   }

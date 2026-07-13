@@ -1,7 +1,7 @@
 @if (mode=='material') {
   <div class="mts" [class.hasValue]="showValue">
     <div class="track">
-      @for (item of ringData[ringId].materialDiv; track item; let i = $index; let first = $first; let last = $last) {
+      @for (item of ringData[ringId].materialDiv; track getMaterialDivTrackKey($index); let i = $index; let first = $first; let last = $last) {
         <div class="segment"
           style="background-color:{{getMaterialColor(i)}}; width:{{getMaterialPercent(i)}}">
           <div class="index">{{(i + 1)}}</div>
@@ -10,7 +10,7 @@
       <!--      <div class="segment safe left" style="width:{{getMaterialSafeSegmentPercent(0)}}"></div>-->
       <!--      <div class="segment safe right" style="width:{{getMaterialSafeSegmentPercent(1)}}"></div>-->
       <div class="valueWrapper">
-        @for (item of ringData[ringId].materialDiv; track item; let i = $index) {
+        @for (item of ringData[ringId].materialDiv; track getMaterialValueTrackKey($index); let i = $index) {
           <div class="value"
             style="width:{{getMaterialPercent(i)}}">
             {{getMaterialValue(i)}}
@@ -36,7 +36,7 @@
 @if (mode=='gap') {
   <div class="mts" [class.hasValue]="showValue">
     <div class="track">
-      @for (item of getMaterialDiv(); track item; let i = $index; let first = $first; let last = $last) {
+      @for (item of getMaterialDiv(); track getGapMaterialDivTrackKey($index); let i = $index; let first = $first; let last = $last) {
         <div class="segment"
           style="background-color:{{getMaterialColor(i)}}; width:{{getMaterialPercent(i)}}">
         </div>
@@ -71,20 +71,20 @@
 @if (mode=='stonePosition') {
   <div class="mts" [class.hasValue]="showValue">
     <div class="track stone">
-      @for (item of segmentDiv; track item) {
+      @for (item of segmentDiv; track getStoneSegmentTrackKey($index)) {
         <div class="segment"
           style="background-color:{{item.color}}; width:{{item.width}}">
         </div>
       }
       <div style="position:absolute; left:0; top:0; width:100%;height:100%;background:transparent;z-index:11">
-        @for (item of gapSegments; track item) {
+        @for (item of gapSegments; track getStoneGapSegmentTrackKey($index)) {
           <div class="segment"
             style="background-color:{{item.color}}; width:{{item.width}}; opacity:0.4;">
           </div>
         }
       </div>
       <div class="valueWrapper">
-        @for (item of ringData[ringId].stone[0].positionDiv; track item; let i = $index) {
+        @for (item of ringData[ringId].stone[0].positionDiv; track getStonePositionValueTrackKey($index); let i = $index) {
           <div class="value"
             style="width:{{getStonePositionPercent(i)}}">
             {{getStonePositionValue(i)}}

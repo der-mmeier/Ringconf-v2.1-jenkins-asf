@@ -3,6 +3,7 @@ import '@babylonjs/loaders/OBJ'; // WICHTIG: sonst Fehlermeldung beim laden der 
 import {WebglComponent} from "./webgl/webgl.component";
 import {AppComponent} from "./app.component";
 import {environment} from "../environments/environment";
+import {getStoneCuts} from "./stone-taxonomy";
 
 export interface iPreloadPrf
 {
@@ -19,7 +20,8 @@ export interface iPreloadSurface
 
 export interface iPreloadStone
 {
-  id: number;
+  id: number | string;
+  legacyId?: number;
   mesh: Mesh;
 }
 
@@ -82,7 +84,7 @@ export let Preload = {
       }
     })
 
-    AppComponent.app.data.stoneType.forEach(function (e)
+    getStoneCuts(AppComponent.app.data).forEach(function (e)
     {
       if (e.obj)
       {
@@ -96,7 +98,7 @@ export let Preload = {
           // mesh.material = webgl.matStandard;
           mesh.material = webgl.matShader;
           mesh.alwaysSelectAsActiveMesh = true;
-          Preload.stone.push({id: parseInt(task.name), mesh: mesh});
+          Preload.stone.push({id: e.id, legacyId: e.legacyId, mesh: mesh});
         };
 
         T.onError = function (task, message)

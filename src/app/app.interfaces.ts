@@ -245,8 +245,9 @@ export interface iStoneSize {
   price: number[]; // für jede Qualitätsstufe
 }
 
-export interface iStoneType {
-  id: number;
+export interface iStoneCut {
+  id: number | string;
+  legacyId?: number;
   name: string;
   img: string;
   obj: string;
@@ -264,9 +265,55 @@ export interface iStoneType {
   // distributionFactor?:number;
 }
 
-export interface iStoneQuality {
-  id: number;
+export interface iStoneType {
+  id: string;
   name: string;
+  defaultQuality: string | null;
+  defaultColor: string | null;
+  requiresQuality: boolean;
+  requiresColor: boolean;
+  sort?: number;
+}
+
+export interface iStoneQuality {
+  id: number | string;
+  name?: string;
+  label?: string;
+  description?: string;
+  helpText?: string;
+  stoneType?: string;
+  colorGrade?: string;
+  clarityGrade?: string;
+  legacyQuality?: number;
+  sort?: number;
+}
+
+export interface iStoneColor {
+  id: string;
+  name: string;
+  hex: string;
+  imageUrl?: string;
+  img?: string;
+  sort?: number;
+  enabled?: boolean;
+  tintStrength?: number;
+  brightness?: number;
+}
+
+export interface iStoneAvailabilityRule {
+  id: string;
+  stoneTypes: string[];
+  stoneCuts: string[];
+  sizes?: number[];
+  sizeMin?: number;
+  sizeMax?: number;
+  sizeStep?: number;
+  qualities?: string[];
+  colors?: string[];
+  ringTypes?: string[];
+  settingModes?: string[];
+  enabled?: boolean;
+  sort?: number;
 }
 
 export interface iStoneDistribution {
@@ -370,6 +417,8 @@ export interface iPresetStone {
   5 = Baguette längs
   */
   type: number,
+  stoneCut?: string;
+  stoneType?: string;
   size: number,
   /* distribution
     ============
@@ -383,6 +432,12 @@ export interface iPresetStone {
  */
   distribution: number,
   quality: number,
+  stoneQuality?: string | null;
+  stoneColor?: string | null;
+  colorId?: string | null;
+  color?: string | null;
+  colorName?: string | null;
+  colorHex?: string | null;
 
   /* positionDiv
      ===========
@@ -482,8 +537,11 @@ export interface iAppData {
   stepDepthOptions?: number[],
 
   stoneMode: iStoneMode[],
-  stoneType: iStoneType[],
+  stoneType: Array<iStoneType | iStoneCut>,
+  stoneCut?: iStoneCut[],
   stoneQuality: iStoneQuality[],
+  stoneColor?: iStoneColor[],
+  stoneAvailabilityRules?: iStoneAvailabilityRule[],
   stoneDistribution: iStoneDistribution[];
   stonePosition: iStonePosition[];
   stoneRowsMax: number,

@@ -22,30 +22,50 @@
 
 @if (ringData[ringId].stone[curStoneGroup()].mode > 0 && ringData[ringId].stone[curStoneGroup()].mode != 11) {
   <div class="stone-wrapper">
-    <x-dropdown class="desktop-stone-select" title="Schliff / Ausrichting"
-      [options]="app.data.stoneType"
-      [value]="getValue_stoneType()"
-      [onValueFormat]="onValueFormat_stoneType"
-      [onValueHidden]="onValueHidden_stoneType"
+    <x-dropdown class="desktop-stone-select" title="Steinart"
+      [options]="stoneMaterialTypeOptions"
+      [value]="selectedStoneMaterialType"
+      [onValueFormat]="onValueFormat_stoneMaterialType"
       [that]="this"
-    (onSelect)="onSelect_stoneType($event)"></x-dropdown>
+    (onSelect)="onSelect_stoneMaterialType($event)"></x-dropdown>
+    <x-dropdown class="desktop-stone-select" title="Schliff"
+      [options]="stoneCutOptions"
+      [value]="selectedStoneCut"
+      [onValueFormat]="onValueFormat_stoneCut"
+      [onValueHidden]="onValueHidden_stoneCut"
+      [that]="this"
+    (onSelect)="onSelect_stoneCut($event)"></x-dropdown>
+    <div class="mobile-stone-strip">
+      <h6 class="title">Steinart</h6>
+      <div class="mobile-option-strip">
+        @for (item of stoneMaterialTypeOptions; track item.id) {
+          <div class="mobile-option-item stone-type-chip"
+            [class.active]="selectedStoneMaterialType?.id === item.id"
+            (mousedown)="onSelect_stoneMaterialType(item)">
+            <span class="mobile-option-label">{{item.name}}</span>
+          </div>
+        }
+      </div>
+    </div>
     <div class="mobile-stone-strip">
       <h6 class="title">Schliff</h6>
       <div class="mobile-option-strip">
-        @for (item of app.data.stoneType; track item.id) {
+        @for (item of stoneCutOptions; track item.id) {
           <div class="mobile-option-item stone-type-chip"
-            [class.active]="getValue_stoneType()?.id === item.id"
-            [class.disabled]="onValueHidden_stoneType(this, item)"
-            (mousedown)="onSelect_stoneType(item)">
+            [class.active]="selectedStoneCut?.id === item.id"
+            [class.disabled]="onValueHidden_stoneCut(this, item)"
+            (mousedown)="onSelect_stoneCut(item)">
             <img class="mobile-option-icon" src="{{env.assetFolderLocation}}/assets/imgui/{{item.img}}" alt="">
             <span class="mobile-option-label">{{item.name}}</span>
           </div>
         }
       </div>
     </div>
+  </div>
+  <div class="stone-wrapper">
     <x-dropdown class="desktop-stone-select" title="Steingr&ouml;&szlig;e / Carat"
-      [options]="getOptions_stoneSize()"
-      [value]="getValue_stoneSize()"
+      [options]="stoneSizeOptions"
+      [value]="selectedStoneSize"
       [onValueFormat]="onValueFormat_stoneSize"
       [onValueHidden]="onValueHidden_stoneSize"
       [that]="this"
@@ -54,9 +74,9 @@
     <div class="mobile-stone-strip">
       <h6 class="title">Gr&ouml;&szlig;e</h6>
       <div class="mobile-option-strip">
-        @for (item of getOptions_stoneSize(); track item.size) {
+        @for (item of stoneSizeOptions; track item.size) {
           <div class="mobile-option-item"
-            [class.active]="getValue_stoneSize()?.size === item.size"
+            [class.active]="selectedStoneSize?.size === item.size"
             [class.disabled]="onValueHidden_stoneSize(this, item)"
             (mousedown)="onSelect_stoneSize(item)">
             {{onValueFormat_stoneSize(item)}}
@@ -68,13 +88,30 @@
   <h6 class="title">
     Steinfarbe und Qualität
   </h6>
-  @for (item of app.data.stoneQuality; track trackByFn($index, item)) {
-    <x-checkbox
-      [checked]="ringData[ringId].stone[curStoneGroup()].quality==item.id"
-      (onCheck)="setValue_stoneQuality(item)"
-      class="quality">
-      {{item.name}}
-    </x-checkbox>
+  @if (stoneQualityVisible) {
+    @for (item of stoneQualityOptions; track item.id) {
+      <x-checkbox
+        [checked]="ringData[ringId].stone[curStoneGroup()].stoneQuality==item.id"
+        (onCheck)="setValue_stoneQuality(item)"
+        class="quality">
+        <span class="quality-label">{{getStoneQualityLabel(item)}}</span>
+        @if (getStoneQualityHelp(item)) {
+          <span class="quality-help">{{getStoneQualityHelp(item)}}</span>
+        }
+      </x-checkbox>
+    }
+  }
+  @if (stoneColorVisible) {
+    <div class="mobile-option-strip stone-color-strip">
+      @for (item of stoneColorOptions; track item.id) {
+        <div class="mobile-option-item stone-color-chip"
+          [class.active]="ringData[ringId].stone[curStoneGroup()].stoneColor === item.id"
+          (mousedown)="setValue_stoneColor(item)">
+          <span class="stone-color-swatch" [style.background]="item.hex"></span>
+          <span class="mobile-option-label">{{item.name}}</span>
+        </div>
+      }
+    </div>
   }
   <div class="division-wrapper">
     @if (isVisible_distribution() && isVisible_count()) {
@@ -112,7 +149,7 @@
       Position
     </h6>
     <div class="position-wrapper">
-      @for (item of app.data.stonePosition; track item) {
+      @for (item of app.data.stonePosition; track item.id) {
         <x-image-card
           (mousedown)="setValue_stonePosition(item)"
           [title]="item.name"
@@ -139,7 +176,7 @@
           <th class="title" style="width:20%">Y</th>
           <th class="title" style="width:20%">Löschen</th>
         </tr>
-        @for (item of ringData[ringId].stone[curStoneGroup()].freeStones; track trackByFn(i, item); let i = $index) {
+        @for (item of ringData[ringId].stone[curStoneGroup()].freeStones; track $index; let i = $index) {
           <tr [class.selected]="stonexy.lastSelectedShapeIndex == i">
             <td>{{getValue_freeStoneSize(item.size)}}</td>
             <td>{{getValue_freeStoneX(item.xDiv)}}</td>
@@ -151,8 +188,8 @@
       <div class="stone-wrapper">
         <x-dropdown #stoneSize_mode11
           title="Steingröße / Carat"
-          [options]="getOptions_stoneSize()"
-          [value]="getValue_stoneSize()"
+          [options]="stoneSizeOptions"
+          [value]="selectedStoneSize"
           [onValueFormat]="onValueFormat_stoneSize"
           [onValueHidden]="onValueHidden_stoneSize"
           [that]="this">
@@ -165,13 +202,30 @@
       <h6 class="title">
         Steinfarbe und Qualität
       </h6>
-      @for (item of app.data.stoneQuality; track trackByFn($index, item)) {
-        <x-checkbox
-          [checked]="ringData[ringId].stone[curStoneGroup()].quality==item.id"
-          (onCheck)="setValue_stoneQuality(item)"
-          class="quality">
-          {{item.name}}
-        </x-checkbox>
+      @if (stoneQualityVisible) {
+        @for (item of stoneQualityOptions; track item.id) {
+          <x-checkbox
+            [checked]="ringData[ringId].stone[curStoneGroup()].stoneQuality==item.id"
+            (onCheck)="setValue_stoneQuality(item)"
+            class="quality">
+            <span class="quality-label">{{getStoneQualityLabel(item)}}</span>
+            @if (getStoneQualityHelp(item)) {
+              <span class="quality-help">{{getStoneQualityHelp(item)}}</span>
+            }
+          </x-checkbox>
+        }
+      }
+      @if (stoneColorVisible) {
+        <div class="mobile-option-strip stone-color-strip">
+          @for (item of stoneColorOptions; track item.id) {
+            <div class="mobile-option-item stone-color-chip"
+              [class.active]="ringData[ringId].stone[curStoneGroup()].stoneColor === item.id"
+              (mousedown)="setValue_stoneColor(item)">
+              <span class="stone-color-swatch" [style.background]="item.hex"></span>
+              <span class="mobile-option-label">{{item.name}}</span>
+            </div>
+          }
+        </div>
       }
     </div>
   </div>

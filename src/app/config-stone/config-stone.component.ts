@@ -1,4 +1,4 @@
-import {Component, Input, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
+import {Component, DoCheck, Input, OnInit, ViewChild, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {
@@ -7,7 +7,9 @@ import {
   iStoneMode, iStonePosition,
   iStoneQuality,
   iStoneSize,
-  iStoneType
+  iStoneCut,
+  iStoneType,
+  iStoneColor
 } from "../app.interfaces";
 import {environment} from "../../environments/environment";
 import {cRing} from "../webgl/cRing";
@@ -15,6 +17,20 @@ import {map} from "../app.helper";
 import {DropdownComponent} from "../dropdown/dropdown.component";
 import {StonexyComponent} from "../stonexy/stonexy.component";
 import {stoneCalc_addFreeStone} from "../webgl/stoneCalc";
+import {
+  findStoneCut,
+  findStoneCutByLegacyId,
+  getAllowedStoneColors,
+  getAllowedStoneCuts,
+  getAllowedStoneQualities,
+  getAllowedStoneSizes,
+  getAllowedStoneTypes,
+  getStoneCutId,
+  getStoneCuts,
+  getStoneSettingMode,
+  getStoneTypes,
+  normalizeStoneSelection
+} from "../stone-taxonomy";
 
 @Component({
     selector: 'x-config-stone',
@@ -25,7 +41,7 @@ import {stoneCalc_addFreeStone} from "../webgl/stoneCalc";
     standalone: false
 })
 
-export class ConfigStoneComponent implements OnInit {
+export class ConfigStoneComponent implements OnInit, DoCheck {
   @Input() ringId: number = 0;
   app = AppComponent.app;
   ringData = RingData.list;
@@ -36,6 +52,17 @@ export class ConfigStoneComponent implements OnInit {
 
   stoneCount = [] as number[];
   stoneRows = [] as number[];
+  stoneMaterialTypeOptions: iStoneType[] = [];
+  stoneCutOptions: iStoneCut[] = [];
+  stoneSizeOptions: iStoneSize[] = [];
+  stoneQualityOptions: iStoneQuality[] = [];
+  stoneColorOptions: iStoneColor[] = [];
+  selectedStoneMaterialType: iStoneType | null = null;
+  selectedStoneCut: iStoneCut | null = null;
+  selectedStoneSize: iStoneSize | null = null;
+  stoneQualityVisible = false;
+  stoneColorVisible = false;
+  private stoneOptionsSignature = "";
 
   @ViewChild('stonexy') stonexy: StonexyComponent | undefined = undefined;
   @ViewChild('stoneSize_mode11') stoneSize_mode11: DropdownComponent | undefined = undefined;
@@ -66,6 +93,10 @@ export class ConfigStoneComponent implements OnInit {
       this.stoneRows.push(i);
     // <= stoneRows
 
+  }
+
+  ngDoCheck() {
+    this.refreshStoneOptions();
   }
 
   curStoneGroup() {
@@ -157,64 +188,144 @@ export class ConfigStoneComponent implements OnInit {
 
   // <= Mode
 
-  // => Type ===========================================================================================================
-  getValue_stoneType() {
-    let ringData = this.ringData[this.ringId];
-    let stoneGroup = ringData.stone[cRing.curStoneGroup];
-    let result = this.app.data.stoneType.find(function (e: iStoneType) {
-      return e.id == stoneGroup.type;
-    })
-    return result;
+  // => Stone taxonomy ================================================================================================
+  getStoneGroup() {
+    const ringData = this.ringData[this.ringId];
+    return ringData.stone[cRing.curStoneGroup];
   }
 
-  onValueFormat_stoneType(value: iStoneType) {
+  getSelectionContext() {
+    const stoneGroup = this.getStoneGroup();
+    return {
+      stoneMode: stoneGroup.mode,
+      settingMode: getStoneSettingMode(stoneGroup.mode),
+    };
+  }
+
+  normalizeCurrentStoneSelection() {
+    return normalizeStoneSelection(this.getStoneGroup(), this.app.data, this.getSelectionContext());
+  }
+
+  refreshStoneOptions(force = false) {
+    const stoneGroup = this.getStoneGroup();
+    const taxonomySignature = [
+      (this.app.data.stoneType ?? []).length,
+      (this.app.data.stoneCut ?? []).length,
+      (this.app.data.stoneQuality ?? []).length,
+      (this.app.data.stoneColor ?? []).length,
+      (this.app.data.stoneAvailabilityRules ?? []).length,
+    ].join(":");
+    const rawSignature = [
+      this.ringId,
+      cRing.curStoneGroup,
+      stoneGroup.mode,
+      stoneGroup.type,
+      stoneGroup.stoneType,
+      stoneGroup.stoneCut,
+      stoneGroup.size,
+      stoneGroup.stoneQuality,
+      stoneGroup.stoneColor,
+      taxonomySignature,
+    ].join("|");
+
+    if (!force && rawSignature === this.stoneOptionsSignature) {
+      return;
+    }
+
+    const selection = this.normalizeCurrentStoneSelection();
+    const normalizedSignature = [
+      this.ringId,
+      cRing.curStoneGroup,
+      stoneGroup.mode,
+      stoneGroup.type,
+      selection.stoneType,
+      selection.stoneCut,
+      selection.stoneSize,
+      selection.stoneQuality,
+      selection.stoneColor,
+      taxonomySignature,
+    ].join("|");
+
+    this.stoneOptionsSignature = normalizedSignature;
+    const context = this.getSelectionContext();
+    this.stoneMaterialTypeOptions = getAllowedStoneTypes(this.app.data, context);
+    this.selectedStoneMaterialType = getStoneTypes(this.app.data).find(item => item.id === selection.stoneType) ?? null;
+    this.stoneCutOptions = getAllowedStoneCuts(this.app.data, selection.stoneType, context);
+    this.selectedStoneCut = findStoneCut(this.app.data, selection.stoneCut);
+
+    const cut = this.selectedStoneCut;
+    const allowedSizes = getAllowedStoneSizes(this.app.data, selection.stoneType, selection.stoneCut, context);
+    this.stoneSizeOptions = cut
+      ? cut.size.filter(size => !allowedSizes.length || allowedSizes.includes(size.size))
+      : [];
+    this.selectedStoneSize = this.stoneSizeOptions.find(size => size.size === stoneGroup.size) ?? null;
+
+    this.stoneQualityOptions = getAllowedStoneQualities(this.app.data, selection.stoneType, selection.stoneCut, selection.stoneSize, context);
+    this.stoneColorOptions = getAllowedStoneColors(this.app.data, selection.stoneType, selection.stoneCut, selection.stoneSize, context);
+    this.stoneQualityVisible = this.stoneQualityOptions.length > 0;
+    const type = getStoneTypes(this.app.data).find(item => item.id === selection.stoneType);
+    this.stoneColorVisible = type?.requiresColor === true;
+  }
+
+  getOptions_stoneMaterialType(): iStoneType[] {
+    this.refreshStoneOptions();
+    return this.stoneMaterialTypeOptions;
+  }
+
+  getValue_stoneMaterialType(): iStoneType | null {
+    this.refreshStoneOptions();
+    return this.selectedStoneMaterialType;
+  }
+
+  onValueFormat_stoneMaterialType(value: iStoneType) {
+    return value?.name ?? null;
+  }
+
+  onSelect_stoneMaterialType(value: iStoneType) {
+    RingData.setStoneType(this.ringData[this.ringId], cRing.curStoneGroup, value.id);
+    this.refreshStoneOptions(true);
+  }
+
+  getValue_stoneCut(): iStoneCut | null {
+    this.refreshStoneOptions();
+    return this.selectedStoneCut;
+  }
+
+  getOptions_stoneCut(): iStoneCut[] {
+    this.refreshStoneOptions();
+    return this.stoneCutOptions;
+  }
+
+  onValueFormat_stoneCut(value: iStoneCut) {
     if (value)
       return "<img class='icon' src='" + environment.assetFolderLocation + "/assets/imgui/" + value.img + "'></img>" + value.name;
     return null;
   }
 
-  onValueHidden_stoneType(that: ConfigStoneComponent, value: iStoneType) {
+  onValueHidden_stoneCut(that: ConfigStoneComponent, value: iStoneCut) {
     let ringData = that.ringData[that.ringId];
-    let stoneGroup = ringData.stone[cRing.curStoneGroup];
 
-    return (value.allowedStoneMode.indexOf(stoneGroup.mode) == -1 ||
+    return (value.allowedStoneMode.indexOf(that.getStoneGroup().mode) == -1 ||
       value.size[0].minRingWidth >= ringData.ringWidth ||
       value.size[0].minRingHeight >= ringData.ringHeight);
   }
 
-  onSelect_stoneType(value: iStoneType) {
-    RingData.setStoneType(this.ringData[this.ringId], cRing.curStoneGroup, value);
+  onSelect_stoneCut(value: iStoneCut) {
+    RingData.setStoneCut(this.ringData[this.ringId], cRing.curStoneGroup, value);
+    this.refreshStoneOptions(true);
   }
 
-  // <= Type
+  // <= Stone taxonomy
 
   // => Size ===========================================================================================================
   getOptions_stoneSize() {
-    let ringData = this.ringData[this.ringId];
-    let stoneGroup = ringData.stone[cRing.curStoneGroup];
-    let stoneType = this.app.data.stoneType.find(function (e: iStoneType) {
-      return e.id == stoneGroup.type;
-    })
-
-    if (stoneType) {
-      return stoneType.size;
-    }
-
-    return [];
+    this.refreshStoneOptions();
+    return this.stoneSizeOptions;
   }
 
   getValue_stoneSize() {
-    let ringData = this.ringData[this.ringId];
-    let stoneGroup = ringData.stone[cRing.curStoneGroup];
-    let stoneType = this.app.data.stoneType.find(function (e: iStoneType) {
-      return e.id == stoneGroup.type;
-    })
-
-    if (!stoneType) return null;
-
-    return stoneType.size.find(function (e) {
-      return e.size == stoneGroup.size;
-    })
+    this.refreshStoneOptions();
+    return this.selectedStoneSize;
   }
 
   onValueFormat_stoneSize(sizeItem: iStoneSize) {
@@ -248,6 +359,7 @@ export class ConfigStoneComponent implements OnInit {
 
   onSelect_stoneSize(value: iStoneSize) {
     RingData.setStoneSize(this.ringData[this.ringId], cRing.curStoneGroup, value);
+    this.refreshStoneOptions(true);
   }
 
   // <= Size
@@ -255,6 +367,40 @@ export class ConfigStoneComponent implements OnInit {
   // => Quality ========================================================================================================
   setValue_stoneQuality(item: iStoneQuality) {
     RingData.setStoneQuality(this.ringData[this.ringId], cRing.curStoneGroup, item);
+    this.refreshStoneOptions(true);
+  }
+
+  getOptions_stoneQuality(): iStoneQuality[] {
+    this.refreshStoneOptions();
+    return this.stoneQualityOptions;
+  }
+
+  getOptions_stoneColor(): iStoneColor[] {
+    this.refreshStoneOptions();
+    return this.stoneColorOptions;
+  }
+
+  isVisible_stoneQuality(): boolean {
+    this.refreshStoneOptions();
+    return this.stoneQualityVisible;
+  }
+
+  isVisible_stoneColor(): boolean {
+    this.refreshStoneOptions();
+    return this.stoneColorVisible;
+  }
+
+  getStoneQualityLabel(item: iStoneQuality): string {
+    return item.label ?? item.name ?? String(item.id);
+  }
+
+  getStoneQualityHelp(item: iStoneQuality): string | null {
+    return item.description ?? item.helpText ?? null;
+  }
+
+  setValue_stoneColor(item: iStoneColor) {
+    RingData.setStoneColor(this.ringData[this.ringId], cRing.curStoneGroup, item.id);
+    this.refreshStoneOptions(true);
   }
 
   // <=
@@ -432,9 +578,7 @@ export class ConfigStoneComponent implements OnInit {
   getValue_freeStoneSize(size: number) {
     let ringData = this.ringData[this.ringId];
     let stoneGroup = ringData.stone[cRing.curStoneGroup];
-    let stoneType = this.app.data.stoneType.find(function (e: iStoneType) {
-      return e.id == stoneGroup.type;
-    })
+    let stoneType = findStoneCutByLegacyId(this.app.data, stoneGroup.type);
 
     if (!stoneType) return "???";
 

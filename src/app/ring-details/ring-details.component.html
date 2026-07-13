@@ -31,12 +31,12 @@
         </div>
       }
     </div>
-    @for (item of app.getDetails(); track item) {
+    @for (item of app.getDetails(); track item.section) {
       <div>
         <div class="row">
           <div class="section">{{ item.section }}</div>
         </div>
-        @for (data of item.data; track data) {
+        @for (data of item.data; track $index) {
           <div class="row">
             <div class="data">{{ data.col_0 }}</div>
             @if (ringData[0].cartActive) {

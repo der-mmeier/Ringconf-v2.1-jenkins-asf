@@ -17,6 +17,7 @@ import {
 } from "../pearling-size";
 import {cRing, eRingFlags} from "../webgl/cRing";
 import {WebglComponent} from "../webgl/webgl.component";
+import {isStoneColorHex, normalizeStoneTaxonomyAppData} from "../stone-taxonomy";
 
 type StatusType = "idle" | "success" | "warning" | "error";
 type AdminAction = "importCurrentBaseline" | "saveVersion" | "setCompatibility" | "approveVersion" | "retireVersion" | "assignTarget" | "rollbackTarget";
@@ -224,7 +225,7 @@ export class DevelopmentAdminComponent {
     {title: "Materialkombinationen", keys: ["materialExclude"]},
     {title: "Oberflächen", keys: ["surface"]},
     {title: "Teilungen, Fugen und Stufen", keys: ["gapMode", "stepMode"]},
-    {title: "Steinbesatz", keys: ["stoneMode", "stoneType", "stoneQuality", "stoneDistribution", "stonePosition"]},
+    {title: "Steinbesatz", keys: ["stoneMode", "stoneType", "stoneQuality", "stoneColor", "stoneCut", "stoneAvailabilityRules", "stoneDistribution", "stonePosition"]},
     {title: "Gravur", keys: ["engraving"]},
     {title: "Verlobungsring-Kopfbibliothek", keys: ["engagementHeadLibrary"]},
   ];
@@ -719,6 +720,7 @@ export class DevelopmentAdminComponent {
     try {
       const next = this.clone(this.working);
       const pearlingNormalized = normalizePearlingAppData(next).changed;
+      normalizeStoneTaxonomyAppData(next);
       this.applyAppDataToRuntime(next, {
         versionLabel: this.activeVersion?.version_label ?? "unsaved-preview",
         hash: this.activeHash || "unsaved-preview",
@@ -1067,6 +1069,9 @@ export class DevelopmentAdminComponent {
   private recalculate(): void
   {
     this.normalizeWorkingPearlingLegacy();
+    if (this.working) {
+      normalizeStoneTaxonomyAppData(this.working);
+    }
     this.validation = this.validate(this.working);
     this.diff = this.createDiff(this.baseline, this.working).slice(0, 500);
     this.dirty = this.diff.length > 0;
@@ -1082,7 +1087,9 @@ export class DevelopmentAdminComponent {
 
     this.requireUnique(value.material, "material.id", errors);
     this.requireUnique(value.stoneType, "stoneType.id", errors);
+    this.requireUnique(value.stoneCut, "stoneCut.id", errors);
     this.requireUnique(value.stoneQuality, "stoneQuality.id", errors);
+    this.requireUnique(value.stoneColor, "stoneColor.id", errors);
     this.requireUnique(value.surface, "surface.id", errors);
 
     this.checkMinMax(value.ringWidth, "ringWidth", errors);
@@ -1102,7 +1109,10 @@ export class DevelopmentAdminComponent {
     });
 
     if (!Array.isArray(value.stoneType) || value.stoneType.length === 0) {
-      errors.push("Mindestens eine aktive Schliffform ist erforderlich.");
+      errors.push("Mindestens eine Steinart ist erforderlich.");
+    }
+    if (!Array.isArray(value.stoneCut) || value.stoneCut.length === 0) {
+      errors.push("Mindestens eine Schliffform ist erforderlich.");
     }
 
     const json = JSON.stringify(value);
@@ -1117,7 +1127,74 @@ export class DevelopmentAdminComponent {
       ...this.validateMilgrainSizes(value),
       ...this.validateProfileMilgrainRules(value),
       ...this.validateFeatureRules(value),
+      ...this.validateStoneTaxonomy(value),
     ]);
+  }
+
+  private validateStoneTaxonomy(appData: iAppData): AdminValidationIssue[]
+  {
+    const issues: AdminValidationIssue[] = [];
+    const stoneTypeIds = new Set(this.recordArray(appData, "stoneType").map(item => String(item["id"])));
+    const stoneCutIds = new Set(this.recordArray(appData, "stoneCut").map(item => String(item["id"])));
+    const qualityRecords = this.recordArray(appData, "stoneQuality");
+    const qualityIds = new Set(qualityRecords.map(item => String(item["id"])));
+    const colorRecords = this.recordArray(appData, "stoneColor");
+    const colorIds = new Set(colorRecords.map(item => String(item["id"])));
+
+    this.validateUniqueRecordIds(this.recordArray(appData, "stoneType"), "stoneType", issues);
+    this.validateUniqueRecordIds(this.recordArray(appData, "stoneCut"), "stoneCut", issues);
+    this.validateUniqueRecordIds(qualityRecords, "stoneQuality", issues);
+    this.validateUniqueRecordIds(colorRecords, "stoneColor", issues);
+    this.validateUniqueRecordIds(this.recordArray(appData, "stoneAvailabilityRules"), "stoneAvailabilityRules", issues);
+
+    this.recordArray(appData, "stoneType").forEach((type, index) => {
+      const defaultQuality = type["defaultQuality"];
+      const defaultColor = type["defaultColor"];
+      if (defaultQuality !== undefined && defaultQuality !== null && !qualityIds.has(String(defaultQuality))) {
+        issues.push({severity: "error", path: `stoneType[${index}].defaultQuality`, message: "referenziert unbekannte Qualitaet."});
+      }
+      if (defaultColor !== undefined && defaultColor !== null && !colorIds.has(String(defaultColor))) {
+        issues.push({severity: "error", path: `stoneType[${index}].defaultColor`, message: "referenziert unbekannte Farbe."});
+      }
+    });
+
+    qualityRecords.forEach((quality, index) => {
+      const stoneType = String(quality["stoneType"] ?? "");
+      if (stoneType && !stoneTypeIds.has(stoneType)) {
+        issues.push({severity: "error", path: `stoneQuality[${index}].stoneType`, message: "referenziert unbekannte Steinart."});
+      }
+    });
+
+    colorRecords.forEach((color, index) => {
+      if (!isStoneColorHex(color["hex"])) {
+        issues.push({severity: "warning", path: `stoneColor[${index}].hex`, message: "Hexwert sollte im Format #RRGGBB vorliegen; Runtime verwendet sonst den Fallback."});
+      }
+      if (color["enabled"] !== undefined && typeof color["enabled"] !== "boolean") {
+        issues.push({severity: "warning", path: `stoneColor[${index}].enabled`, message: "enabled sollte boolean sein."});
+      }
+    });
+
+    this.recordArray(appData, "stoneAvailabilityRules").forEach((rule, index) => {
+      const path = `stoneAvailabilityRules[${index}]`;
+      this.validateReferenceList(rule["stoneTypes"], stoneTypeIds, `${path}.stoneTypes`, "unbekannte Steinart", issues);
+      this.validateReferenceList(rule["stoneCuts"], stoneCutIds, `${path}.stoneCuts`, "unbekannte Schliffform", issues);
+      this.validateReferenceList(rule["qualities"], qualityIds, `${path}.qualities`, "unbekannte Qualitaet", issues);
+      this.validateReferenceList(rule["colors"], colorIds, `${path}.colors`, "unbekannte Farbe", issues);
+      const sizeMin = Number(rule["sizeMin"]);
+      const sizeMax = Number(rule["sizeMax"]);
+      const sizeStep = Number(rule["sizeStep"]);
+      if (rule["sizes"] !== undefined && (!Array.isArray(rule["sizes"]) || !rule["sizes"].every(size => Number(size) > 0))) {
+        issues.push({severity: "error", path: `${path}.sizes`, message: "sizes muss positive Zahlen enthalten."});
+      }
+      if (rule["sizeMin"] !== undefined && rule["sizeMax"] !== undefined && (!Number.isFinite(sizeMin) || !Number.isFinite(sizeMax) || sizeMin > sizeMax)) {
+        issues.push({severity: "error", path: `${path}.sizeMin`, message: "sizeMin muss <= sizeMax sein."});
+      }
+      if (rule["sizeStep"] !== undefined && (!Number.isFinite(sizeStep) || sizeStep <= 0)) {
+        issues.push({severity: "error", path: `${path}.sizeStep`, message: "sizeStep muss > 0 sein."});
+      }
+    });
+
+    return issues;
   }
 
   private validateMilgrainModes(appData: iAppData): AdminValidationIssue[]
@@ -1385,6 +1462,9 @@ export class DevelopmentAdminComponent {
       "stoneMode",
       "stoneType",
       "stoneQuality",
+      "stoneColor",
+      "stoneCut",
+      "stoneAvailabilityRules",
       "stoneDistribution",
       "stonePosition",
       "engagementHeadLibrary",
@@ -1710,6 +1790,7 @@ export class DevelopmentAdminComponent {
     if (this.working && this.app) {
       const next = this.clone(this.working);
       normalizePearlingAppData(next);
+      normalizeStoneTaxonomyAppData(next);
       this.applyAppDataToRuntime(next);
     }
   }

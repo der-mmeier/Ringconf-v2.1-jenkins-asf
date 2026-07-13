@@ -22,7 +22,7 @@ import {
   Texture,
   Vector3
 } from "@babylonjs/core";
-import {iMaterial, iWebGLSettings} from "../app.interfaces";
+import {iMaterial, iStoneColor, iWebGLSettings} from "../app.interfaces";
 import {OBJExport} from "@babylonjs/serializers";
 import {Preload} from "../app.preload";
 import {RingData} from "../app.ringdata";
@@ -68,6 +68,8 @@ export class WebglComponent {
 
   // @ts-ignore
   matShader: ShaderMaterial;
+  stoneMaterialCache = new Map<string, ShaderMaterial>();
+  private stoneMaterialSerial = 0;
 
   renderLoopEnabled: boolean = false;
   renderIntervalId: number = 0;
@@ -119,6 +121,132 @@ export class WebglComponent {
   }
 
   // ngAfterViewInit() {
+  getStoneColorMaterial(color: iStoneColor | null | undefined, ringIndex: number, meshCount: number): ShaderMaterial | null {
+    if (!color || !this.matShader || !this.scene) {
+      return null;
+    }
+
+    const hex = this.normalizeStoneHex(color.hex);
+    if (!hex) {
+      return null;
+    }
+
+    const tintStrength = this.clampNumber(color.tintStrength ?? 0.75, 0, 1);
+    const brightness = this.clampNumber(color.brightness ?? 1.2, 0.1, 3);
+    if (tintStrength <= 0) {
+      return this.matShader;
+    }
+
+    const key = [color.id, hex, tintStrength.toFixed(4), brightness.toFixed(4)].join("|");
+    let material = this.stoneMaterialCache.get(key) ?? null;
+    if (material && (material as any).isDisposed instanceof Function && (material as any).isDisposed()) {
+      material = null;
+      this.stoneMaterialCache.delete(key);
+    }
+
+    if (!material) {
+      try {
+        material = this.matShader.clone(`stone_shader_${color.id}_${this.stoneMaterialSerial++}`) as ShaderMaterial;
+        material.backFaceCulling = false;
+        this.applyStoneTintUniforms(material, hex, tintStrength, brightness);
+        this.syncDiamondShaderUniforms(material);
+        this.stoneMaterialCache.set(key, material);
+      } catch (error) {
+        console.error("[StoneColorMaterial] Shader clone failed", error);
+        return this.matShader;
+      }
+    } else {
+      this.applyStoneTintUniforms(material, hex, tintStrength, brightness);
+      this.syncDiamondShaderUniforms(material);
+    }
+
+    if (this.isStoneColorDebugEnabled()) {
+      console.info("[StoneColorMaterial]", {
+        colorId: color.id,
+        hex,
+        tintStrength,
+        brightness,
+        materialName: material.name,
+        usesShaderMaterial: true,
+        meshCount,
+        ringIndex,
+      });
+    }
+
+    return material;
+  }
+
+  private applyStoneTintUniforms(material: ShaderMaterial, hex: string, tintStrength: number, brightness: number) {
+    material.setVector3("stoneTint", this.hexToVector3(hex));
+    material.setFloat("stoneTintStrength", tintStrength);
+    material.setFloat("stoneBrightness", brightness);
+  }
+
+  private syncDiamondShaderUniforms(material: ShaderMaterial) {
+    if (!material || !this.camera) {
+      return;
+    }
+
+    material.setFloat("cameraRadius", this.camera.radius);
+    material.setVector3("cameraPosition", this.camera.position ?? Vector3.Zero());
+
+    const preset = AppComponent.app.data.webglSettings.environmentPreset;
+    material.setFloat("reflect_refSampler", Number(preset.refSampler_reflect) || 0);
+    material.setFloat("camRad_refSampler", Number(preset.refSampler_camRad) || 0);
+    material.setFloat("factor_refSampler", Number(preset.refSampler_factor) || 0);
+    material.setFloat("reflect_tri1", Number(preset.tri1_reflect) || 0);
+    material.setFloat("camRad_tri1", Number(preset.tri1_camRad) || 0);
+    material.setFloat("factor_tri1", Number(preset.tri1_factor) || 0);
+    material.setFloat("reflect_tri2", Number(preset.tri2_reflect) || 0);
+    material.setFloat("camRad_tri2", Number(preset.tri2_camRad) || 0);
+    material.setFloat("factor_tri2", Number(preset.tri2_factor) || 0);
+    material.setFloat("reflect_high", Number(preset.high_reflect) || 0);
+    material.setFloat("camRad_high", Number(preset.high_camRad) || 0);
+    material.setFloat("factor_high", Number(preset.high_factor) || 0);
+    material.setFloat("reflect_sparkle", Number(preset.sparkle_reflect) || 0);
+    material.setFloat("camRad_sparkle", Number(preset.sparkle_camRad) || 0);
+    material.setFloat("factor_sparkle", Number(preset.sparkle_factor) || 0);
+    material.setFloat("reflect_fire", Number(preset.fire_reflect) || 0);
+    material.setFloat("camRad_fire", Number(preset.fire_camRad) || 0);
+    material.setFloat("factor_fire", Number(preset.fire_factor) || 0);
+  }
+
+  private syncStoneMaterialCacheUniforms() {
+    this.stoneMaterialCache.forEach(material => this.syncDiamondShaderUniforms(material));
+  }
+
+  private syncStoneMaterialTexture(name: string, texture: Texture) {
+    this.stoneMaterialCache.forEach(material => material.setTexture(name, texture));
+  }
+
+  private normalizeStoneHex(value: string | undefined): string | null {
+    if (typeof value !== "string" || !/^#[0-9a-fA-F]{6}$/.test(value)) {
+      return null;
+    }
+    return value.toUpperCase();
+  }
+
+  private hexToVector3(hex: string): Vector3 {
+    const color = Color3.FromHexString(hex);
+    return new Vector3(color.r, color.g, color.b);
+  }
+
+  private clampNumber(value: number, min: number, max: number): number {
+    if (!Number.isFinite(value)) {
+      return min;
+    }
+    return Math.min(max, Math.max(min, value));
+  }
+
+  private isStoneColorDebugEnabled(): boolean {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("debugStoneColor") === "1" || localStorage.getItem("ringconfStoneColorDebug") === "1";
+    } catch {
+      return false;
+    }
+  }
+
   InitAfterAppReady() {
     let that = this;
     this.canvas = this.elem.nativeElement.querySelector('#webgl');
@@ -302,6 +430,9 @@ export class WebglComponent {
               uniform sampler2D refSamplerHighlight;
               uniform float alpha;
               uniform float cameraRadius;
+              uniform vec3 stoneTint;
+              uniform float stoneTintStrength;
+              uniform float stoneBrightness;
 
               float random (vec2 st) {
                   return fract(sin(dot(st.xy, vec2(12.9898,78.233)))*43758.5453123);
@@ -346,13 +477,22 @@ export class WebglComponent {
                   // vec3 tri2 = texture2D( refSamplerTri2, vN).rgb * 0.4;
                   // result = result + tri2;
 
+                  float stoneLuma = dot(result, vec3(0.299, 0.587, 0.114));
+                  vec3 tintBase = result * stoneTint;
+                  vec3 tintGlow = stoneTint * stoneLuma;
+                  vec3 tintedResult = mix(
+                    result,
+                    mix(tintBase, tintGlow, 0.35),
+                    clamp(stoneTintStrength, 0.0, 1.0)
+                  );
+                  result = max(vec3(0.0), tintedResult * max(stoneBrightness, 0.0));
                   gl_FragColor = vec4( result, alpha );
               }`;
 
       this.matShader = new ShaderMaterial("shader", this.scene, "custom",
         {
           attributes: ["position", "normal", "camera"],
-          uniforms: ["world", "worldView", "viewProjection", "view", "projection", "camera"],
+          uniforms: ["world", "worldView", "viewProjection", "view", "projection", "camera", "stoneTint", "stoneTintStrength", "stoneBrightness"],
           defines: ["#define INSTANCES"]
         });
     }
@@ -407,6 +547,9 @@ export class WebglComponent {
               uniform sampler2D refSamplerHighlight;
               uniform float alpha;
               uniform float cameraRadius;
+              uniform vec3 stoneTint;
+              uniform float stoneTintStrength;
+              uniform float stoneBrightness;
 
               uniform float reflect_refSampler;
               uniform float camRad_refSampler;
@@ -475,13 +618,22 @@ export class WebglComponent {
                   vN = (reflect( e, n2).xy / m + .1) * ((cameraRadius) * camRad_fire);
                   result += texture2D( refSamplerFire, vN).rgb * factor_fire;
 
+                  float stoneLuma = dot(result, vec3(0.299, 0.587, 0.114));
+                  vec3 tintBase = result * stoneTint;
+                  vec3 tintGlow = stoneTint * stoneLuma;
+                  vec3 tintedResult = mix(
+                    result,
+                    mix(tintBase, tintGlow, 0.35),
+                    clamp(stoneTintStrength, 0.0, 1.0)
+                  );
+                  result = max(vec3(0.0), tintedResult * max(stoneBrightness, 0.0));
                   gl_FragColor = vec4( result, alpha );
               }`;
 
       this.matShader = new ShaderMaterial("shader", this.scene, "custom",
         {
           attributes: ["position", "normal", "camera", "uv"],
-          uniforms: ["world", "worldView", "worldViewProjection", "viewProjection", "view", "projection", "camera"],
+          uniforms: ["world", "worldView", "worldViewProjection", "viewProjection", "view", "projection", "camera", "stoneTint", "stoneTintStrength", "stoneBrightness"],
           defines: ["#define INSTANCES"]
         });
 
@@ -517,6 +669,9 @@ export class WebglComponent {
     // this.matShader.needDepthPrePass = true;
     this.matShader.setFloat("alpha", 1.0);
     this.matShader.setFloat("cameraRadius", this.camera.radius);
+    this.matShader.setVector3("stoneTint", new Vector3(1, 1, 1));
+    this.matShader.setFloat("stoneTintStrength", 0);
+    this.matShader.setFloat("stoneBrightness", 1);
 
     this.matShader.setTexture("cubeMap", this.envTexture);
 
@@ -525,6 +680,7 @@ export class WebglComponent {
     let T = assetsManager.addTextureTask("", this.env.assetFolderLocation + '/assets/img3d/'+webglSettings.environmentPreset.refSampler_image);
     T.onSuccess = function (task) {
       that.matShader.setTexture("refSampler", task.texture);
+      that.syncStoneMaterialTexture("refSampler", task.texture);
     };
     T.onError = function (task, message) {
       console.log("failed refSampler: ", message);
@@ -532,6 +688,7 @@ export class WebglComponent {
     T = assetsManager.addTextureTask("", this.env.assetFolderLocation + '/assets/img3d/'+this.tri1_image);
     T.onSuccess = function (task) {
       that.matShader.setTexture("refSamplerTri1", task.texture);
+      that.syncStoneMaterialTexture("refSamplerTri1", task.texture);
     };
     T.onError = function (task, message) {
       console.log("failed refSamplerTri1: ", message);
@@ -539,6 +696,7 @@ export class WebglComponent {
     T = assetsManager.addTextureTask("", this.env.assetFolderLocation + '/assets/img3d/'+this.tri2_image);
     T.onSuccess = function (task) {
       that.matShader.setTexture("refSamplerTri2", task.texture);
+      that.syncStoneMaterialTexture("refSamplerTri2", task.texture);
     };
     T.onError = function (task, message) {
       console.log("failed refSamplerTri2: ", message);
@@ -546,6 +704,7 @@ export class WebglComponent {
     T = assetsManager.addTextureTask("", this.env.assetFolderLocation + '/assets/img3d/'+this.high_image);
     T.onSuccess = function (task) {
       that.matShader.setTexture("refSamplerHighlight", task.texture);
+      that.syncStoneMaterialTexture("refSamplerHighlight", task.texture);
     };
     T.onError = function (task, message) {
       console.log("failed refSamplerHighlight: ", message);
@@ -553,6 +712,7 @@ export class WebglComponent {
     T = assetsManager.addTextureTask("", this.env.assetFolderLocation + '/assets/img3d/'+this.sparkle_image);
     T.onSuccess = function (task) {
       that.matShader.setTexture("refSamplerSparkle", task.texture);
+      that.syncStoneMaterialTexture("refSamplerSparkle", task.texture);
     };
     T.onError = function (task, message) {
       console.log("failed refSamplerSparkle: ", message);
@@ -560,6 +720,7 @@ export class WebglComponent {
     T = assetsManager.addTextureTask("", this.env.assetFolderLocation + '/assets/img3d/'+this.fire_image);
     T.onSuccess = function (task) {
       that.matShader.setTexture("refSamplerFire", task.texture);
+      that.syncStoneMaterialTexture("refSamplerFire", task.texture);
     };
     T.onError = function (task, message) {
       console.log("failed refSamplerFire: ", message);
@@ -967,6 +1128,7 @@ export class WebglComponent {
             that.matShader.setFloat("camRad_fire", preset.fire_camRad);
             that.matShader.setFloat("factor_fire", preset.fire_factor);
 
+            that.syncStoneMaterialCacheUniforms();
             that.scene.render();
             curTime = new Date().getTime();
 
@@ -1037,6 +1199,7 @@ export class WebglComponent {
         that.matShader.setFloat("camRad_fire", preset.fire_camRad);
         that.matShader.setFloat("factor_fire", preset.fire_factor);
 
+        that.syncStoneMaterialCacheUniforms();
         that.scene.render();
       };
       this.engine.runRenderLoop(renderLoop);

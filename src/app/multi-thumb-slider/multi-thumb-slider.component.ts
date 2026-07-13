@@ -3,6 +3,7 @@ import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {iMaterial, iStoneSize} from "../app.interfaces";
 import {cRing} from "../webgl/cRing";
+import {getStoneCuts} from "../stone-taxonomy";
 
 @Component({
     selector: 'x-multi-thumb-slider',
@@ -33,6 +34,7 @@ export class MultiThumbSliderComponent {
   gapSegments: iGetSegmentDivResult[] | null = null;
 
   lastComputed = -1;
+  private updateIntervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor(private elem: ElementRef) {
   }
@@ -41,7 +43,7 @@ export class MultiThumbSliderComponent {
 
     let that = this;
 
-    setInterval(function () {
+    this.updateIntervalId = setInterval(function () {
 
       let ring = cRing.list[that.ringId];
       // @ts-ignore
@@ -53,6 +55,37 @@ export class MultiThumbSliderComponent {
         that.lastComputed = ring.calc.lastComputed;
       }
     }, 500);
+  }
+
+  ngOnDestroy() {
+    if (this.updateIntervalId !== null) {
+      clearInterval(this.updateIntervalId);
+      this.updateIntervalId = null;
+    }
+  }
+
+  getMaterialDivTrackKey(index: number): string {
+    return `material-segment:${this.ringId}:${index}`;
+  }
+
+  getMaterialValueTrackKey(index: number): string {
+    return `material-value:${this.ringId}:${index}`;
+  }
+
+  getGapMaterialDivTrackKey(index: number): string {
+    return `gap-material-segment:${this.ringId}:${index}`;
+  }
+
+  getStoneSegmentTrackKey(index: number): string {
+    return `stone-segment:${this.ringId}:${index}`;
+  }
+
+  getStoneGapSegmentTrackKey(index: number): string {
+    return `stone-gap-segment:${this.ringId}:${index}`;
+  }
+
+  getStonePositionValueTrackKey(index: number): string {
+    return `stone-position-value:${this.ringId}:0:${index}`;
   }
 
   onThumbSelectMouse(e: MouseEvent) {
@@ -629,7 +662,7 @@ export class MultiThumbSliderComponent {
       //   //
       //   let getStoneSizeItem = function (): iStoneSize | undefined
       //   {
-      //     let stoneType = AppComponent.app.data.stoneType.find(e =>
+      //     let stoneType = getStoneCuts(AppComponent.app.data).find(e =>
       //     {
       //       // @ts-ignore
       //       return e.id == webglRing.ringData.stone[that.curStoneGroup].type;
@@ -708,9 +741,9 @@ export class MultiThumbSliderComponent {
         // })
         //
         let getStoneSizeItem = function (): iStoneSize | undefined {
-          let stoneType = AppComponent.app.data.stoneType.find(e => {
+          let stoneType = getStoneCuts(AppComponent.app.data).find(e => {
             // @ts-ignore
-            return e.id == ring.ringData.stone[that.curStoneGroup].type;
+            return (e.legacyId ?? e.id) == ring.ringData.stone[that.curStoneGroup].type;
           })
           if (stoneType) {
             return stoneType.size.find(e => {

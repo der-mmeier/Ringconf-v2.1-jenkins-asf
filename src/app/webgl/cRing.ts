@@ -1,5 +1,6 @@
 import {RingData} from "../app.ringdata";
 import {
+  Color3,
   CreatePlane,
   DynamicTexture,
   ICanvasRenderingContext, Material,
@@ -20,12 +21,13 @@ import {
   iProfileResponse,
   iStoneCalc,
   iStonePositionSegment,
-  iStoneSize, iStoneType, iSurface
+  iStoneSize, iStoneCut, iSurface
 } from "../app.interfaces";
 import {Log} from "../logger/logger.component";
 import {Matrix, Vector3} from "@babylonjs/core/Maths/math.vector";
 import {iStoneCalcData, stoneCalc} from "./stoneCalc";
 import {cMilgrain} from "./cMilgrain";
+import {getStoneColorById, getStoneCuts} from "../stone-taxonomy";
 
 export enum eRingFlags {
   None,
@@ -498,8 +500,8 @@ export class cRing {
                 }
               }
 
-              let stoneType = AppComponent.app.data.stoneType.find(e => {
-                return e.id == stoneGroup.type;
+              let stoneType = getStoneCuts(AppComponent.app.data).find(e => {
+                return (e.legacyId ?? e.id) == stoneGroup.type;
               })
 
               if (stoneType) {
@@ -975,7 +977,7 @@ export class cRing {
                     stoneGroup.rows = 1;
                     stoneGroup.count = 1;
                   }
-                  let getLowerStoneSize = function (stoneType: iStoneType, size: number): iStoneSize | undefined {
+                  let getLowerStoneSize = function (stoneType: iStoneCut, size: number): iStoneSize | undefined {
                     let result = undefined;
                     stoneType.size.forEach(function (e) {
                       if (e.calcSize && e.calcSize <= size)
@@ -986,7 +988,7 @@ export class cRing {
 
                     return result;
                   }
-                  let getHigherOrEqualStoneSize = function (stoneType: iStoneType, size: number): iStoneSize | undefined {
+                  let getHigherOrEqualStoneSize = function (stoneType: iStoneCut, size: number): iStoneSize | undefined {
                     let result = [] as iStoneSize[];
                     stoneType.size.forEach(function (e) {
                       if (e.calcSize && e.calcSize >= size && e.minRingHeight <= that.ringData.ringHeight)
@@ -1151,7 +1153,7 @@ export class cRing {
 
                     // zu kleine Segmente entfernen, ermittle dazu den kleinst möglichen Stein
                     let smallestStoneSize = 10000;
-                    AppComponent.app.data.stoneType.forEach(e => {
+                    getStoneCuts(AppComponent.app.data).forEach(e => {
                       if (e.size[0].size < smallestStoneSize)
                         smallestStoneSize = e.size[0].size;
                     })
@@ -1362,12 +1364,12 @@ export class cRing {
                         }
 
                         // Kombination Steinmodus und Steintyp zulässig?
-                        let stoneType = AppComponent.app.data.stoneType.find(function (e) {
-                          return e.allowedStoneMode.indexOf(stoneGroup.mode) !== -1 && e.id == stoneGroup.type;
+                        let stoneType = getStoneCuts(AppComponent.app.data).find(function (e) {
+                          return e.allowedStoneMode.indexOf(stoneGroup.mode) !== -1 && (e.legacyId ?? e.id) == stoneGroup.type;
                         })
 
                         if (!stoneType) {
-                          stoneType = AppComponent.app.data.stoneType.find(function (e) {
+                          stoneType = getStoneCuts(AppComponent.app.data).find(function (e) {
                             return (e.allowedStoneMode.indexOf(stoneGroup.mode) !== -1);
                           })
 
@@ -1377,7 +1379,7 @@ export class cRing {
                             return;
                           }
 
-                          stoneGroup.type = stoneType.id;
+                          stoneGroup.type = Number(stoneType.legacyId ?? stoneType.id);
                           Log("info", "Die Steinart wurde angepasst");
                           adaptLoop = true;
                           continue;
@@ -1449,7 +1451,7 @@ export class cRing {
                             continue;
                           } else {
                             // Keine passende Steingröße für diese Steinart gefunden, versuche Steinart Brillant
-                            if (stoneType.id != 1) {
+                            if ((stoneType.legacyId ?? stoneType.id) != 1) {
                               Log("info", "Die Steinart wurde angepasst");
                               stoneGroup.type = 1;
                               adaptLoop = true;
@@ -1523,7 +1525,7 @@ export class cRing {
                             }
                           } else {
                             // Keine passende Steingröße für diese Steinart gefunden, versuche Steinart Brillant
-                            if (stoneType.id != 1) {
+                            if ((stoneType.legacyId ?? stoneType.id) != 1) {
                               Log("info", "Die Steinart wurde angepasst");
                               stoneGroup.type = 1;
                               adaptLoop = true;
@@ -3121,7 +3123,7 @@ export class cRing {
         //   return result;
         // }
         // let getLowerStoneSize = function (stoneType: number, maxSize: number, onSide: boolean = false): number {
-        //   let type = AppComponent.app.data.stoneType.find(function (e) {
+        //   let type = getStoneCuts(AppComponent.app.data).find(function (e) {
         //     return e.id === stoneType;
         //   })
         //   if (type) {
@@ -3152,7 +3154,7 @@ export class cRing {
         //   return 0;
         // }
         // let getStoneSizeItem = function (stoneType: number, size: number): iStoneSize | null {
-        //   let type = AppComponent.app.data.stoneType.find(function (e) {
+        //   let type = getStoneCuts(AppComponent.app.data).find(function (e) {
         //     return e.id === stoneType;
         //   })
         //   if (type) {
@@ -3165,7 +3167,7 @@ export class cRing {
         //   return null;
         // }
         // let getStoneTypeItem = function (stoneType: number) {
-        //   return AppComponent.app.data.stoneType.find(function (e) {
+        //   return getStoneCuts(AppComponent.app.data).find(function (e) {
         //     return e.id === stoneType;
         //   })
         // }
@@ -3785,7 +3787,7 @@ export class cRing {
         {
           that.ringData.stone.forEach(function (stoneGroup: iPresetStone, stoneGroupIndex: number) {
               let stone = Preload.stone.find(function (e) {
-                return e.id == stoneGroup.type;
+                return (e.legacyId ?? e.id) == stoneGroup.type;
               });
 
               if (stone) {
@@ -3819,7 +3821,7 @@ export class cRing {
                     let krabbeDistance = [] as number[][];
                     if ([20, 44, 45].includes(stoneGroup.mode)) {
                       let krabbe = Preload.stone.find(function (e) {
-                        return e.id == 99;
+                        return (e.legacyId ?? e.id) == 99;
                       });
 
                       if (krabbe) {
@@ -3853,6 +3855,13 @@ export class cRing {
                     that.mesh.push(<Mesh><unknown>stoneMesh);
                     stoneMesh.parent = that.pivot;
                     stoneMesh.setEnabled(true);
+                    const stoneColor = stoneGroup.stoneColor === "weiss"
+                      ? null
+                      : getStoneColorById(AppComponent.app.data, stoneGroup.stoneColor);
+                    const stoneColorMaterial = webgl.getStoneColorMaterial(stoneColor, that.ringData.index, path.positions.length);
+                    if (stoneColorMaterial) {
+                      stoneMesh.material = stoneColorMaterial;
+                    }
 
                     for (let j = 0; j < path.positions.length; j++) {
                       if (stoneMesh) {
@@ -5719,8 +5728,13 @@ export class cRing {
       if (this.mesh[i]) //
       {
         webgl?.scene.removeMesh(this.mesh[i]);
-        if (this.mesh[i].material && !this.mesh[i].name.includes("instance"))
+        const meshMaterial = this.mesh[i].material;
+        if (meshMaterial && !this.mesh[i].name.includes("instance")) {
+          if (meshMaterial.name?.startsWith("stone_color_")) {
+            meshMaterial.dispose();
+          }
           this.mesh[i].material = null;
+        }
         try {
           this.mesh[i].dispose();
         } catch (e) {
@@ -6172,7 +6186,7 @@ export class cRing {
   //         loopCount = 1000,
   //         safeDistance = 300,
   //         pos = xCenter - Math.trunc((xCenter - that.calc.stoneSafeLeft - stoneSize / 2) / step) * step,
-  //         stoneType = AppComponent.app.data.stoneType.find(e => {
+  //         stoneType = getStoneCuts(AppComponent.app.data).find(e => {
   //           return e.id == 1;
   //         });
   //
