@@ -3,6 +3,36 @@
 x-config-engraving {
   width: 100%;
 
+  .engraving-intro {
+    margin-bottom: 14px;
+    color: #555;
+    line-height: 1.35;
+  }
+
+  .engraving-panel {
+    border-top: 1px solid #d5d8d8;
+    padding-top: 14px;
+    margin-bottom: 24px;
+
+    &.exterior {
+      margin-bottom: 8px;
+    }
+  }
+
+  .engraving-panel-header {
+    @include flexbox();
+    @include justify-content(space-between);
+    @include align-items(center);
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .engraving-state {
+    font-size: 12px;
+    color: #666;
+    white-space: nowrap;
+  }
+
   h6.title {
     margin-bottom: 10px;
   }
@@ -13,6 +43,16 @@ x-config-engraving {
 
   button.applyText {
     width: 100%;
+  }
+
+  .font-row {
+    @include flexbox();
+    @include flex-wrap(wrap);
+    gap: 8px;
+
+    &.compact {
+      margin-top: 8px;
+    }
   }
 
   .symbol-wrapper {
@@ -44,6 +84,140 @@ x-config-engraving {
       &:hover {
         background-color: #d5d8d8;
       }
+    }
+  }
+
+  .exterior-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .exterior-card {
+    @include flexbox();
+    @include flex-direction(column);
+    gap: 6px;
+    min-height: 190px;
+    padding: 10px;
+    border: 1px solid #d5d8d8;
+    background: #fff;
+    color: #222;
+    cursor: pointer;
+    text-align: left;
+
+    img {
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      object-fit: cover;
+      background: #f2f2f2;
+    }
+
+    &.active {
+      border-color: #111;
+      box-shadow: inset 0 0 0 1px #111;
+    }
+
+    &.disabled {
+      opacity: 0.55;
+    }
+  }
+
+  .exterior-card-title {
+    font-weight: 700;
+  }
+
+  .exterior-card-description,
+  .exterior-card-reason,
+  .exterior-card-price,
+  .engraving-counter,
+  .engraving-note,
+  .engraving-warning,
+  .engraving-preview {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .exterior-card-reason,
+  .engraving-warning {
+    color: #9b2d20;
+  }
+
+  .exterior-card-price {
+    color: #444;
+    margin-top: auto;
+  }
+
+  .exterior-editor {
+    margin-top: 14px;
+  }
+
+  .placement-row,
+  .exterior-actions {
+    @include flexbox();
+    @include flex-wrap(wrap);
+    gap: 8px;
+    margin-bottom: 12px;
+
+    button {
+      border: 1px solid #c6c9c9;
+      background: #f7f7f7;
+      padding: 9px 10px;
+      cursor: pointer;
+
+      &.active {
+        border-color: #111;
+        background: #fff;
+        box-shadow: inset 0 0 0 1px #111;
+      }
+    }
+  }
+
+  .engraving-field {
+    display: block;
+    margin-bottom: 10px;
+
+    span {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #c6c9c9;
+      padding: 9px;
+    }
+  }
+
+  .coordinate-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .engraving-toggle {
+    @include flexbox();
+    @include align-items(center);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .engraving-note,
+  .engraving-preview {
+    padding: 10px;
+    background: #f2f2f2;
+    margin-bottom: 12px;
+  }
+
+  button.secondary {
+    background: #fff;
+  }
+
+  @media (max-width: 640px) {
+    .exterior-card-grid,
+    .coordinate-grid {
+      grid-template-columns: 1fr;
     }
   }
 }

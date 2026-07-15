@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="Koordinatengravur außen">
+  <rect width="600" height="400" fill="#f4f4f4"/>
+  <path d="M90 245c85-62 335-62 420 0" fill="none" stroke="#d8c79d" stroke-width="54" stroke-linecap="round"/>
+  <circle cx="156" cy="220" r="24" fill="none" stroke="#242424" stroke-width="4" opacity=".75"/>
+  <path d="M156 191v58M127 220h58M140 204l32 32M172 204l-32 32" stroke="#242424" stroke-width="3" opacity=".75"/>
+  <text x="335" y="231" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" fill="#242424" opacity=".78">52.5200° N 13.4050° E</text>
+</svg>

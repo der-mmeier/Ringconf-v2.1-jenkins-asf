@@ -10,6 +10,7 @@ import {Log} from './logger/logger.component';
 import {collectRingScreenshots, createScreenshot} from './webgl/webgl.component';
 import {createDefaultPearlingSizes} from './pearling-size';
 import {getStoneCuts, normalizeStoneTaxonomyAppData} from './stone-taxonomy';
+import {formatCoordinates, normalizeEngravingAppData} from './exterior-engraving';
 
 @Component({
   selector: 'x-app-root',
@@ -2254,7 +2255,18 @@ export class AppComponent implements OnInit {
           }
         ],
         "color": "#333333",
-        "alpha": 0.6
+        "alpha": 0.6,
+        "exterior": {
+          "maxTextLength": 34,
+          "edgeClearance": 500,
+          "offers": [
+            {"id": "inner-text", "enabled": true, "price": 29, "priceKey": "engravingInnerText"},
+            {"id": "exterior-text", "enabled": true, "price": 49, "priceKey": "engravingExteriorText"},
+            {"id": "exterior-coordinates", "enabled": true, "price": 59, "priceKey": "engravingExteriorCoordinates"},
+            {"id": "exterior-waveform", "enabled": true, "price": 69, "priceKey": "engravingExteriorWaveform"},
+            {"id": "exterior-fingerprint", "enabled": true, "price": 69, "priceKey": "engravingExteriorFingerprint"}
+          ]
+        }
       },
       "webglSettings": {
         "maxTextureSize": 2048,
@@ -2324,7 +2336,7 @@ export class AppComponent implements OnInit {
 
     this.state.browsertab_id = "_" + Math.floor(Math.random() * 1000000);
 
-    normalizeStoneTaxonomyAppData(this.data);
+    normalizeEngravingAppData(normalizeStoneTaxonomyAppData(this.data));
     this.dataSafeJson = JSON.stringify(this.data);
 
     AppComponent.app = this;
@@ -2364,7 +2376,7 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     dbGetAppData().then(function (data: any) {
       if (data == null) Log("error", "Keine App Daten vorhanden!");
-      else AppComponent.app.data = normalizeStoneTaxonomyAppData(data);
+      else AppComponent.app.data = normalizeEngravingAppData(normalizeStoneTaxonomyAppData(data));
 
       if (AppComponent.app.state.urlParams["id"] !== undefined && AppComponent.app.state.urlParams["id"].match(/\w{4}-\w{4}/g)) {
         if (AppComponent.app.state.debug) console.log("use url-id: ", AppComponent.app.state.urlParams["id"]);
@@ -2686,12 +2698,33 @@ export class AppComponent implements OnInit {
       return "-"
     }
     data.push({
-      col_0: "Gravurtext",
+      col_0: "Innengravur",
       col_1: gravurText(preset_0),
       col_2: gravurText(preset_1),
       class: "engraving-0"
     });
-    data.push({col_0: "Schriftart", col_1: "" + preset_0.engravingFont, col_2: "" + preset_1.engravingFont});
+    data.push({col_0: "Schriftart innen", col_1: "" + preset_0.engravingFont, col_2: "" + preset_1.engravingFont});
+
+    let aussenGravur = function (ringData: RingData) {
+      const config = ringData.exteriorEngraving;
+      if (!config.enabled || config.type === "none") return "-";
+      let result = "";
+      if (config.type === "text") {
+        result = "Text außen: " + (config.text || "");
+      } else if (config.type === "coordinates") {
+        result = "Koordinaten außen: " + (formatCoordinates(config) || "ungültige Koordinaten");
+        result += config.showShipWheel === false ? ", ohne Schiffssteuerrad" : ", mit Schiffssteuerrad";
+      } else if (config.type === "waveform") {
+        result = "Stimmwelle außen: Vorlage wird nach Bestellung angefordert";
+      } else if (config.type === "fingerprint") {
+        result = "Fingerabdruck außen: Vorlage wird nach Bestellung angefordert";
+      }
+
+      if (config.placement === "both-identical") result += " (beide Ringe identisch)";
+      if (config.placement === "split-pair") result += " (geteiltes Paarmotiv)";
+      return result;
+    }
+    data.push({col_0: "Außengravur", col_1: aussenGravur(preset_0), col_2: aussenGravur(preset_1)});
 
     result.push({section: "Gravur", data: data});
 
