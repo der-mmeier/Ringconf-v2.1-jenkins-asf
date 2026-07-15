@@ -173,6 +173,11 @@ export class ConfigStoneComponent implements OnInit, DoCheck {
     if (item.items) {
       this.items = item.items;
     } else if (item.mode != undefined) {
+      if (item.mode !== 0 && this.ringData[this.ringId].hasExteriorEngraving) {
+        const ok = window.confirm("Außengravur und Steinbesatz sind auf demselben Ring nicht kombinierbar. Außengravur entfernen und Steinbesatz wählen?");
+        if (!ok) return;
+        RingData.setExteriorEngravingType(this.ringData[this.ringId], "none");
+      }
 
       if (item.defaultStoneSize != undefined && item.defaultStoneSize > 0)
         this.ringData[this.ringId].stone[cRing.curStoneGroup].size = item.defaultStoneSize;

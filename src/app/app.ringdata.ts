@@ -11,6 +11,7 @@ import {
   iStoneQuality,
   iStoneSize,
   iStoneCut, iSurface
+  , ExteriorEngravingType
 } from "./app.interfaces";
 import {Log} from "./logger/logger.component";
 import {
@@ -22,6 +23,12 @@ import {
   mapQualityToLegacyIndex,
   normalizeStoneSelection
 } from "./stone-taxonomy";
+import {
+  cloneExteriorEngravingConfig,
+  hasActiveStoneGroups,
+  normalizeExteriorEngravingConfig,
+  parseCoordinateInput
+} from "./exterior-engraving";
 
 export class RingData {
   static list: RingData[] = [];
@@ -48,6 +55,7 @@ export class RingData {
         settingMode: getStoneSettingMode(stoneGroup.mode),
       });
     });
+    this._exteriorEngraving = normalizeExteriorEngravingConfig(this._exteriorEngraving);
     this._blockDirty = false;
     this.isDirty = true;
   }
@@ -80,8 +88,9 @@ export class RingData {
     if (AppComponent.app.state.debug) {
       that._engraving = "Build " + AppComponent.app.state.build;
     } else
-      that._engraving = "";
+    that._engraving = "";
     that._engravingFont = 0;
+    that._exteriorEngraving = cloneExteriorEngravingConfig();
     that._stone =
       [{
         mode: that._index == 0 ? 10 : 0,
@@ -882,10 +891,96 @@ export class RingData {
     this.isDirty = true;
   }
 
+  protected _exteriorEngraving = cloneExteriorEngravingConfig();
+  get exteriorEngraving() {
+    return this._exteriorEngraving;
+  }
+
+  set exteriorEngraving(value) {
+    this._exteriorEngraving = normalizeExteriorEngravingConfig(value);
+    this.isDirty = true;
+  }
+
+  get hasExteriorEngraving(): boolean {
+    return this._exteriorEngraving.enabled && this._exteriorEngraving.type !== "none";
+  }
+
+  get hasActiveStoneSetting(): boolean {
+    return hasActiveStoneGroups(this._stone);
+  }
+
   protected _stone = [] as iPresetStone[];
   get stone() {
     return this._stone
   };
+
+  static setExteriorEngravingType(that: RingData, type: ExteriorEngravingType) {
+    const next = cloneExteriorEngravingConfig(that._exteriorEngraving);
+    next.enabled = type !== "none";
+    next.type = type;
+    if (type === "none") {
+      that._exteriorEngraving = cloneExteriorEngravingConfig();
+    } else {
+      if ((type === "text" || type === "coordinates") && next.placement === "split-pair") {
+        next.placement = "single-ring";
+      }
+      if (type === "waveform") {
+        next.previewAssetId = "waveform-sample";
+        next.customerAssetRequiredAfterOrder = true;
+      } else if (type === "fingerprint") {
+        next.previewAssetId = "fingerprint-sample";
+        next.customerAssetRequiredAfterOrder = true;
+      } else {
+        next.previewAssetId = null;
+        next.customerAssetRequiredAfterOrder = false;
+      }
+      that._exteriorEngraving = normalizeExteriorEngravingConfig(next);
+    }
+    that.isDirty = true;
+  }
+
+  static setExteriorEngravingPlacement(that: RingData, placement: "single-ring" | "both-identical" | "split-pair") {
+    const next = cloneExteriorEngravingConfig(that._exteriorEngraving);
+    next.placement = placement;
+    that._exteriorEngraving = normalizeExteriorEngravingConfig(next);
+    that.isDirty = true;
+  }
+
+  static setExteriorEngravingText(that: RingData, text: string) {
+    const maxLength = AppComponent.app.data.engraving?.exterior?.maxTextLength ?? AppComponent.app.data.engraving.maxLength;
+    const nextText = String(text ?? "").slice(0, maxLength);
+    if (!nextText.trim()) {
+      that._exteriorEngraving = cloneExteriorEngravingConfig();
+      that.isDirty = true;
+      return;
+    }
+    const next = cloneExteriorEngravingConfig(that._exteriorEngraving);
+    next.text = nextText;
+    next.type = "text";
+    next.enabled = true;
+    that._exteriorEngraving = normalizeExteriorEngravingConfig(next);
+    that.isDirty = true;
+  }
+
+  static setExteriorEngravingFont(that: RingData, fontId: number | string) {
+    const next = cloneExteriorEngravingConfig(that._exteriorEngraving);
+    next.fontId = fontId;
+    that._exteriorEngraving = normalizeExteriorEngravingConfig(next);
+    that.isDirty = true;
+  }
+
+  static setExteriorCoordinates(that: RingData, latitudeInput: string, longitudeInput: string, showShipWheel: boolean) {
+    const next = cloneExteriorEngravingConfig(that._exteriorEngraving);
+    next.type = "coordinates";
+    next.enabled = true;
+    next.latitudeInput = latitudeInput;
+    next.longitudeInput = longitudeInput;
+    next.latitude = parseCoordinateInput(latitudeInput, -90, 90);
+    next.longitude = parseCoordinateInput(longitudeInput, -180, 180);
+    next.showShipWheel = showShipWheel;
+    that._exteriorEngraving = normalizeExteriorEngravingConfig(next);
+    that.isDirty = true;
+  }
 
   static setStoneMode(that: RingData, group: number, mode: iStoneMode) {
     if (group < 0 || group >= that.stone.length)
@@ -940,6 +1035,18 @@ export class RingData {
     if (type.size[0].size > G.size)
       G.size = type.size[0].size;
 
+    that.isDirty = true;
+  }
+
+  static clearStonegroup(that: RingData, group: number) {
+    if (group < 0 || group >= that.stone.length)
+      return;
+    const G = that.stone[group];
+    G.mode = 0;
+    G.count = 0;
+    G.countReal = 0;
+    G.rows = 1;
+    G.freeStones = [];
     that.isDirty = true;
   }
 

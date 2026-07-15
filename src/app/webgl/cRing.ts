@@ -28,6 +28,7 @@ import {Matrix, Vector3} from "@babylonjs/core/Maths/math.vector";
 import {iStoneCalcData, stoneCalc} from "./stoneCalc";
 import {cMilgrain} from "./cMilgrain";
 import {getStoneColorById, getStoneCuts} from "../stone-taxonomy";
+import {formatCoordinates} from "../exterior-engraving";
 
 export enum eRingFlags {
   None,
@@ -44,6 +45,9 @@ interface iRingMaterial {
   uScale: number;
   vScale: number;
 }
+
+type EngravingSurface = "inner" | "outer";
+type EngravingTextureTarget = "roughness" | "albedo";
 
 interface iRectPosition {
   x: number;
@@ -255,6 +259,12 @@ export class cRing {
       mat.reflectionTexture = webgl.envTexture;
 
       mat.albedoTexture = that.texture.albedo;
+      if (e.id == 0) {
+        mat.useRoughnessFromMetallicTextureAlpha = false;
+        mat.useRoughnessFromMetallicTextureGreen = true;
+        mat.useMetallnessFromMetallicTextureBlue = true;
+        mat.metallicTexture = that.texture.roughnessEngraving;
+      }
 
       // mat.environmentIntensity = 1.5; // Einstellung nur in V2 zum testen
 
@@ -4407,13 +4417,12 @@ export class cRing {
         ctxEngraving.strokeStyle = "#00f";
         ctxEngraving.fillStyle = ctxEngraving.strokeStyle
 
-        ctxEngraving.fillRect(textureSize, 0, textureSize, textureSize * 2);
+        ctxEngraving.fillRect(0, 0, textureSize * 2, textureSize * 2);
 
         ctxEngraving.strokeStyle = "#00ff00";
         ctxEngraving.fillStyle = ctxEngraving.strokeStyle;
 
-        ctxEngraving.translate(textureSize_half * 3, textureSize);
-        ctxEngraving.rotate(-Math.PI / 2.0);
+        that.applyEngravingCanvasTransform(ctxEngraving, "inner", textureSize, textureSize_half, 0.5, 1.0);
 
         let xPos = 0;
 
@@ -4426,11 +4435,7 @@ export class cRing {
         let fs = 1000 * textureSize / that.profile.maxVerticeLength / scaleHeight; // 1mm
 
         if (that.ringData.engraving.length > 0) {
-          let fsEgt = fs;
-          let t = that.ringData.ringWidth / 2 - 0.5;
-          if (t > 2500) fsEgt *= 2.2;
-          else if (t < 1500) fsEgt *= 1.5;
-          else fsEgt *= 2.0;
+          let fsEgt = that.getEngravingTextFontSize(fs);
 
           ctxEngraving.font = fsEgt + 'px "engraving-' + that.ringData.engravingFont + '"';
           let egt = decodeURI(that.ringData.engraving);
@@ -4476,6 +4481,7 @@ export class cRing {
         // @ts-ignore
         ctxEngraving.fillText(textPunzierung, xPos, (sizePunzierung.fontBoundingBoxAscent - sizePunzierung.fontBoundingBoxDescent) / 2);
         ctxEngraving.restore();
+        that.drawExteriorEngraving(ctxEngraving, textureSize, textureSize_half, scaleHeight, fs, "roughness");
         that.texture.roughnessEngraving.update(false);
 
 
@@ -4488,8 +4494,7 @@ export class cRing {
       // kein else: die Gravur mittels metallic und roughness wird hier nochmals farblich abgesetzt
       {
         ctx.save();
-        ctx.translate(textureSize_half * 3, textureSize);
-        ctx.rotate(-Math.PI / 2.0);
+        that.applyEngravingCanvasTransform(ctx, "inner", textureSize, textureSize_half, 0.5, 1.0);
         ctx.lineWidth = 0.1;
         ctx.fillStyle = AppComponent.app.data.engraving.color;
         ctx.fillStyle = "#000000";
@@ -4508,11 +4513,7 @@ export class cRing {
         let fs = 1000 * textureSize / that.profile.maxVerticeLength / scaleHeight; // 1mm
 
         if (that.ringData.engraving.length > 0) {
-          let fsEgt = fs;
-          let t = that.ringData.ringWidth / 2 - 0.5;
-          if (t > 2500) fsEgt *= 2.2;
-          else if (t < 1500) fsEgt *= 1.5;
-          else fsEgt *= 2.0;
+          let fsEgt = that.getEngravingTextFontSize(fs);
 
           ctx.font = fsEgt + 'px "engraving-' + that.ringData.engravingFont + '"';
           let egt = decodeURI(that.ringData.engraving);
@@ -4582,6 +4583,7 @@ export class cRing {
         // ctx.strokeText(textPunzierung, xPos, (sizePunzierung.fontBoundingBoxAscent - sizePunzierung.fontBoundingBoxDescent) / 2);
         // ctx.fillText(textPunzierung, xPos, (sizePunzierung.fontBoundingBoxAscent - sizePunzierung.fontBoundingBoxDescent) / 2);
         ctx.restore();
+        that.drawExteriorEngraving(ctx, textureSize, textureSize_half, scaleHeight, fs, "albedo");
       }
 
       that.texture.albedo.update(false);
@@ -5271,6 +5273,7 @@ export class cRing {
       return;
 
     that.flags &= ~eRingFlags.IsComputing;
+    that.flags &= ~eRingFlags.InvalidateMaterialOnly;
     this.flags |= eRingFlags.IsValid;
     this.ringData.isDirty = false;
 
@@ -5278,6 +5281,185 @@ export class cRing {
 
     WebglComponent.busyCounter++;
     WebglComponent.WEBGL.renderFrame(AppComponent.app.data.webglSettings.forceFrames);
+  }
+
+  private drawExteriorEngraving(
+    ctx: ICanvasRenderingContext,
+    textureSize: number,
+    textureSizeHalf: number,
+    scaleHeight: number,
+    baseFontSize: number,
+    target: EngravingTextureTarget
+  ) {
+    const config = this.ringData.exteriorEngraving;
+    if (!config.enabled || config.type === "none") return;
+
+    const ringPairActive = RingData.list[0]?.cartActive && RingData.list[1]?.cartActive;
+    const isSplitPair = ringPairActive && config.placement === "split-pair" && (config.type === "waveform" || config.type === "fingerprint");
+    const splitIndex = this.ringData.index === 0 ? 0 : 1;
+    const width = textureSize * 0.78;
+    const height = Math.max(textureSize * 0.11, baseFontSize * 2.4);
+    const drawY = 0;
+    const fontSize = this.getEngravingTextFontSize(baseFontSize) * 1.35;
+
+    ctx.save();
+    this.applyEngravingCanvasTransform(ctx, "outer", textureSize, textureSizeHalf, this.getOuterEngravingProfileU(), 1.0);
+    ctx.scale(1.0, scaleHeight);
+    ctx.globalAlpha = target === "albedo" ? (AppComponent.app.data.engraving.alpha ?? 0.5) : 1.0;
+    ctx.fillStyle = target === "albedo" ? (AppComponent.app.data.engraving.color || "#000000") : "#00ff00";
+    ctx.strokeStyle = ctx.fillStyle;
+    (ctx as unknown as CanvasRenderingContext2D).lineCap = "round";
+    (ctx as unknown as CanvasRenderingContext2D).lineJoin = "round";
+
+    if (isSplitPair) {
+      ctx.beginPath();
+      if (splitIndex === 0) {
+        ctx.rect(-width / 2, -height, width / 2, height * 2);
+      } else {
+        ctx.rect(0, -height, width / 2, height * 2);
+      }
+      ctx.clip();
+    }
+
+    switch (config.type) {
+      case "text":
+        this.drawExteriorText(ctx, String(config.text ?? ""), Number(config.fontId ?? 0), fontSize, drawY, width);
+        break;
+      case "coordinates":
+        this.drawExteriorCoordinates(ctx, fontSize, drawY, width);
+        break;
+      case "waveform":
+        this.drawExteriorWaveform(ctx, width, height, drawY, isSplitPair ? splitIndex : -1);
+        break;
+      case "fingerprint":
+        this.drawExteriorFingerprint(ctx, width, height * 1.35, drawY, isSplitPair ? splitIndex : -1);
+        break;
+    }
+
+    ctx.restore();
+  }
+
+  private applyEngravingCanvasTransform(
+    ctx: ICanvasRenderingContext,
+    surface: EngravingSurface,
+    textureSize: number,
+    textureSizeHalf: number,
+    profileU: number,
+    _scaleHeight: number
+  ) {
+    const clampedU = Math.max(0.08, Math.min(0.92, profileU));
+    const x = surface === "inner"
+      ? textureSize + clampedU * textureSize
+      : clampedU * textureSize;
+    ctx.translate(x, textureSize);
+    ctx.rotate(-Math.PI / 2.0);
+  }
+
+  private getEngravingTextFontSize(baseFontSize: number): number {
+    const t = this.ringData.ringWidth / 2 - 0.5;
+    if (t > 2500) return baseFontSize * 2.2;
+    if (t < 1500) return baseFontSize * 1.5;
+    return baseFontSize * 2.0;
+  }
+
+  private getOuterEngravingProfileU(): number {
+    const vertices = this.profile.frontVertices;
+    if (!vertices.length) return 0.5;
+    let minZ = Infinity;
+    vertices.forEach(vertex => {
+      if (Number.isFinite(vertex.z) && vertex.z < minZ) minZ = vertex.z;
+    });
+    if (!Number.isFinite(minZ)) return 0.2;
+
+    const outerBand = vertices.filter(vertex => Math.abs(vertex.z - minZ) < 30 && Number.isFinite(vertex.u));
+    if (!outerBand.length) return 0.2;
+    const u = outerBand.reduce((sum, vertex) => sum + vertex.u, 0) / outerBand.length;
+    return Number.isFinite(u) ? u : 0.2;
+  }
+
+  private drawExteriorText(ctx: ICanvasRenderingContext, text: string, fontId: number, fontSize: number, y: number, maxWidth: number) {
+    if (!text.trim()) return;
+    ctx.font = `${fontSize}px "engraving-${fontId}"`;
+    const metrics = ctx.measureText(text);
+    const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.7;
+    const descent = metrics.actualBoundingBoxDescent || fontSize * 0.25;
+    const fitScale = metrics.width > maxWidth ? maxWidth / metrics.width : 1.0;
+    ctx.save();
+    ctx.scale(fitScale, fitScale);
+    ctx.fillText(text, -metrics.width / 2, (y / fitScale) + (ascent - descent) / 2);
+    ctx.restore();
+  }
+
+  private drawExteriorCoordinates(ctx: ICanvasRenderingContext, fontSize: number, y: number, maxWidth: number) {
+    const config = this.ringData.exteriorEngraving;
+    const text = formatCoordinates(config);
+    if (!text) return;
+    ctx.font = `${fontSize * 0.72}px Arial`;
+    const metrics = ctx.measureText(text);
+    const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.5;
+    const descent = metrics.actualBoundingBoxDescent || fontSize * 0.2;
+    const fitScale = metrics.width > maxWidth ? maxWidth / metrics.width : 1.0;
+    ctx.save();
+    ctx.scale(fitScale, fitScale);
+    ctx.fillText(text, -metrics.width / 2, y + (ascent - descent) / 2);
+    ctx.restore();
+  }
+
+  private drawExteriorWaveform(ctx: ICanvasRenderingContext, width: number, height: number, y: number, splitIndex: number) {
+    const startX = -width / 2;
+    const points = 120;
+    ctx.lineWidth = Math.max(1.5, height * 0.085);
+    ctx.beginPath();
+    for (let i = 0; i <= points; i++) {
+      const t = i / points;
+      const x = startX + t * width;
+      const amp = (
+        Math.sin(t * Math.PI * 10.0) * 0.42 +
+        Math.sin(t * Math.PI * 23.0 + 0.8) * 0.25 +
+        Math.sin(t * Math.PI * 41.0 + 1.7) * 0.13
+      );
+      const envelope = Math.sin(Math.PI * t);
+      const yy = y + amp * envelope * height;
+      if (i === 0) ctx.moveTo(x, yy);
+      else ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
+
+    if (splitIndex >= 0) {
+      ctx.lineWidth = Math.max(1, height * 0.035);
+      ctx.beginPath();
+      ctx.moveTo(0, y - height * 0.85);
+      ctx.lineTo(0, y + height * 0.85);
+      ctx.stroke();
+    }
+  }
+
+  private drawExteriorFingerprint(ctx: ICanvasRenderingContext, width: number, height: number, y: number, splitIndex: number) {
+    ctx.lineWidth = Math.max(1.1, height * 0.025);
+    const rings = 9;
+    for (let i = 0; i < rings; i++) {
+      const rx = width * (0.08 + i * 0.035);
+      const ry = height * (0.13 + i * 0.045);
+      const start = -Math.PI * (0.78 - i * 0.018);
+      const end = Math.PI * (0.78 - i * 0.02);
+      ctx.beginPath();
+      (ctx as unknown as CanvasRenderingContext2D).ellipse(0, y, rx, ry, -0.18, start, end);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 6; i++) {
+      const x = -width * 0.22 + i * width * 0.085;
+      ctx.beginPath();
+      ctx.moveTo(x, y - height * 0.12);
+      ctx.quadraticCurveTo(x + width * 0.035, y - height * 0.38, x + width * 0.12, y - height * 0.28);
+      ctx.stroke();
+    }
+    if (splitIndex >= 0) {
+      ctx.lineWidth = Math.max(1, height * 0.018);
+      ctx.beginPath();
+      ctx.moveTo(0, y - height * 0.78);
+      ctx.lineTo(0, y + height * 0.78);
+      ctx.stroke();
+    }
   }
 
   static interpolate(xPos: number, vecArray: CVertex[], startIndex: number = 0/*, range: number = 50*/): iInterpolateResult //

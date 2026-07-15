@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="Textgravur außen">
+  <rect width="600" height="400" fill="#f2f2f2"/>
+  <path d="M90 245c85-62 335-62 420 0" fill="none" stroke="#c9b37e" stroke-width="54" stroke-linecap="round"/>
+  <path d="M116 246c74-38 294-38 368 0" fill="none" stroke="#fff7df" stroke-width="16" stroke-linecap="round" opacity=".8"/>
+  <text x="300" y="230" text-anchor="middle" font-family="Georgia,serif" font-size="38" fill="#262626" opacity=".78">Anna &amp; Max</text>
+</svg>

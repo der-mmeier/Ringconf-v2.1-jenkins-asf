@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="Fingerabdruck außen">
+  <rect width="600" height="400" fill="#f4f4f4"/>
+  <path d="M90 245c85-62 335-62 420 0" fill="none" stroke="#d8c79d" stroke-width="54" stroke-linecap="round"/>
+  <g fill="none" stroke="#242424" stroke-width="5" opacity=".72" transform="translate(300 222) rotate(-8)">
+    <ellipse rx="36" ry="22"/>
+    <ellipse rx="58" ry="35"/>
+    <ellipse rx="80" ry="49"/>
+    <ellipse rx="104" ry="63"/>
+    <path d="M-96 0c18-72 170-72 192 0"/>
+    <path d="M-116 13c23-98 210-98 232 0"/>
+  </g>
+</svg>

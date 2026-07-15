@@ -459,9 +459,41 @@ export interface iPresetStone {
   lastSetting?: "distribution" | "count";
 }
 
+export type ExteriorEngravingType = "none" | "text" | "coordinates" | "waveform" | "fingerprint";
+export type ExteriorEngravingPlacement = "single-ring" | "both-identical" | "split-pair";
+
+export interface iExteriorEngravingConfig {
+  enabled: boolean;
+  type: ExteriorEngravingType;
+  placement: ExteriorEngravingPlacement;
+  text?: string;
+  fontId?: number | string;
+  latitudeInput?: string;
+  longitudeInput?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  coordinateFormat?: "decimal" | "dms";
+  showShipWheel?: boolean;
+  previewAssetId?: "waveform-sample" | "fingerprint-sample" | null;
+  customerAssetRequiredAfterOrder?: boolean;
+}
+
 export interface iEngravingSymbol {
   unicode: string;
   img: string;
+}
+
+export interface iEngravingOffer {
+  id: "inner-text" | "exterior-text" | "exterior-coordinates" | "exterior-waveform" | "exterior-fingerprint";
+  enabled?: boolean;
+  price?: number | string | null;
+  priceKey?: string;
+}
+
+export interface iExteriorEngravingAppData {
+  maxTextLength?: number;
+  edgeClearance?: number;
+  offers?: iEngravingOffer[];
 }
 
 export interface iEnvironmentPreset {
@@ -552,6 +584,7 @@ export interface iAppData {
     symbols: iEngravingSymbol[],
     color: string,
     alpha?: number;
+    exterior?: iExteriorEngravingAppData;
   },
 
   webglSettings: iWebGLSettings;

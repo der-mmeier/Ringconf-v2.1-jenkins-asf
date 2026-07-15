@@ -1,6 +1,6 @@
 {
   "name": "ringconf-v2.1",
-  "version": "2.7.4",
+  "version": "2.7.5",
   "scripts": {
     "start": "ng serve --host 127.0.0.1 --port 4200 --proxy-config proxy.conf.json",
     "start & open": "ng serve --host 127.0.0.1 --port 4200 --open",

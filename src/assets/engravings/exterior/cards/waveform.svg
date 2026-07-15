@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="Stimmwelle außen">
+  <rect width="600" height="400" fill="#f2f2f2"/>
+  <path d="M90 245c85-62 335-62 420 0" fill="none" stroke="#c9b37e" stroke-width="54" stroke-linecap="round"/>
+  <path d="M110 225c20-30 35 25 55-10s34 34 53-4 37 29 57-13 38 40 58 0 37 28 59-8 36 22 54 7 28-5 44 10" fill="none" stroke="#242424" stroke-width="8" stroke-linecap="round" opacity=".75"/>
+</svg>
