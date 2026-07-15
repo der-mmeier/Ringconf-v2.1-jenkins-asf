@@ -165,7 +165,7 @@ export function formatCoordinates(config: iExteriorEngravingConfig): string {
   const lat = Number.isFinite(config.latitude as number) ? Number(config.latitude) : null;
   const lon = Number.isFinite(config.longitude as number) ? Number(config.longitude) : null;
   if (lat === null || lon === null) return "";
-  const prefix = config.showShipWheel === false ? "" : "Schiffssteuerrad ";
+  const prefix = config.showShipWheel === false ? "" : "⚙ ";
   return `${prefix}${formatCoordinate(lat, "N", "S")} ${formatCoordinate(lon, "E", "W")}`;
 }
 
