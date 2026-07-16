@@ -1,0 +1,42 @@
+# Ringconf 2.7.6 marker layout example.
+# Marker geometry is documentation/test input only, not productive ring geometry.
+
+o RCFG_RING0_ORIGIN
+v -7.1 -0.1 -0.1
+v -6.9 -0.1 0.1
+v -7.0 0.1 0.0
+
+o RCFG_RING0_X
+v -4.1 -0.1 -0.1
+v -3.9 -0.1 0.1
+v -4.0 0.1 0.0
+
+o RCFG_RING0_Y
+v -7.1 2.9 -0.1
+v -6.9 2.9 0.1
+v -7.0 3.1 0.0
+
+o RCFG_RING0_Z
+v -7.1 -0.1 2.9
+v -6.9 -0.1 3.1
+v -7.0 0.1 3.0
+
+o RCFG_RING1_ORIGIN
+v 6.9 -0.1 -0.1
+v 7.1 -0.1 0.1
+v 7.0 0.1 0.0
+
+o RCFG_RING1_X
+v 9.9 -0.1 -0.1
+v 10.1 -0.1 0.1
+v 10.0 0.1 0.0
+
+o RCFG_RING1_Y
+v 6.9 2.9 -0.1
+v 7.1 2.9 0.1
+v 7.0 3.1 0.0
+
+o RCFG_RING1_Z
+v 6.9 -0.1 2.9
+v 7.1 -0.1 3.1
+v 7.0 0.1 3.0

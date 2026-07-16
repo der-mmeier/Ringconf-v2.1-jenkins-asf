@@ -30,6 +30,7 @@ import {environment} from "../../environments/environment";
 import {initCamera, USE_ORTHO_CAMERA, zoomExtends} from "./camera";
 import {cRing} from "./cRing";
 import {computeRenderQuality, RenderQualitySettings} from "./render-quality";
+import {RingViewButton, RingViewService} from "./ring-view.service";
 
 @Component({
     selector: 'x-webgl',
@@ -76,6 +77,7 @@ export class WebglComponent {
   renderQuality: RenderQualitySettings | null = null;
   resizeAnimationFrameId: number = 0;
   resizeTimeoutId: number = 0;
+  ringViewService: RingViewService | null = null;
 
   renderCount = 0;
 
@@ -306,7 +308,7 @@ export class WebglComponent {
     this.camera = initCamera(this.engine, this.scene, this.canvas);
 
     let onResize = function () {
-      if (USE_ORTHO_CAMERA) {
+      if (USE_ORTHO_CAMERA && !that.ringViewService?.hasPresentationOverride()) {
         zoomExtends(that.engine, that.canvas, that.scene, that.camera);
         // that.camera.radius = 30;
         // For the orthographic camera mode we need to set the left, right, bottom and
@@ -768,6 +770,7 @@ export class WebglComponent {
 
     this.canvas.addEventListener("pointerdown", function () {
       that.cameraIntroAnimate = false;
+      that.ringViewService?.handleManualCameraInput();
     });
     // this.canvas.addEventListener("pointerup", function () {
     //   let camera: iCameraCookie = {
@@ -805,10 +808,12 @@ export class WebglComponent {
         //   new WebglRing(e);
         // new Ring3D(e);
       })
+      that.ringViewService = new RingViewService(that);
 
       // LocalStorageComponent.that.show();
       // dbLoadPreset(AppComponent.app.state.preset_id).then(r => {});
       dbLoadPreset("0000-0000").then(r => {
+        that.ringViewService?.captureNaturalSceneState(true);
         window.setTimeout(function () {
           that.scheduleResize();
         }, 0);
@@ -835,6 +840,20 @@ export class WebglComponent {
     this.scheduleResize();
   }
 
+  getRingViewButtons(): RingViewButton[] {
+    return this.ringViewService?.getButtons() || [];
+  }
+
+  applyRingViewPreset(id: string): void {
+    this.cameraIntroAnimate = false;
+    void this.ringViewService?.applyViewPreset(id);
+  }
+
+  resetRingView(): void {
+    this.cameraIntroAnimate = false;
+    void this.ringViewService?.resetPresentation();
+  }
+
   scheduleResize(forceFrames: number = 2) {
     if (this.resizeAnimationFrameId) {
       window.cancelAnimationFrame(this.resizeAnimationFrameId);
@@ -856,8 +875,10 @@ export class WebglComponent {
   resizeViewport(forceFrames: number = 2) {
     this.applyRenderQuality();
     this.engine?.resize();
-    if (this.engine && this.canvas && this.scene && this.camera) {
+    if (this.engine && this.canvas && this.scene && this.camera && !this.ringViewService?.hasPresentationOverride()) {
       zoomExtends(this.engine, this.canvas, this.scene, this.camera);
+    } else {
+      this.ringViewService?.refitActiveView();
     }
     this.cameraChanged = true;
     this.renderFrame(forceFrames);
@@ -896,6 +917,7 @@ export class WebglComponent {
     })
 
     // if (AppComponent.app.state.test25) //
+    if (!this.ringViewService?.hasPresentationOverride())
     {
       if (t[0] && !t[1]) //
       {
@@ -1098,7 +1120,9 @@ export class WebglComponent {
 
           if (ready && (that.cameraChanged || that.forceFrames > 0)) {
 
-            zoomExtends(that.engine, that.canvas, that.scene, that.camera);
+            if (!that.ringViewService?.hasPresentationOverride()) {
+              zoomExtends(that.engine, that.canvas, that.scene, that.camera);
+            }
 
             that.matShader.setFloat("cameraRadius", that.camera.radius);
             that.matShader.setVector3("cameraPosition", that.camera.position);

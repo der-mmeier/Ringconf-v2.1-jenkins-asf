@@ -18,6 +18,9 @@ import {
 import {cRing, eRingFlags} from "../webgl/cRing";
 import {WebglComponent} from "../webgl/webgl.component";
 import {isStoneColorHex, normalizeStoneTaxonomyAppData} from "../stone-taxonomy";
+import {layoutPresetFromParsed, ObjMarkerLayoutResult, parseObjMarkerLayout} from "../webgl/ring-layout-obj";
+import {normalizeRingViewAppData} from "../webgl/ring-view-presets";
+import {ViewCalibrationComponent} from "./view-calibration/view-calibration.component";
 
 type StatusType = "idle" | "success" | "warning" | "error";
 type AdminAction = "importCurrentBaseline" | "saveVersion" | "setCompatibility" | "approveVersion" | "retireVersion" | "assignTarget" | "rollbackTarget";
@@ -145,7 +148,7 @@ interface MilgrainOption {
 @Component({
   selector: "x-development-admin",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ViewCalibrationComponent],
   templateUrl: "./development-admin.component.html",
   styleUrls: ["./development-admin.component.scss"],
 })
@@ -180,8 +183,8 @@ export class DevelopmentAdminComponent {
   helpEntry: AdminHelpEntry | null = null;
 
   build: BuildInfo = {
-    build_key: "2.7.3",
-    version_label: "2.7.3",
+    build_key: "2.7.6",
+    version_label: "2.7.6",
   };
   activeVersion: AppDataVersion | null = null;
   activeHash = "";
@@ -199,6 +202,10 @@ export class DevelopmentAdminComponent {
   milgrainModeSelectOptions: MilgrainOption[] = [];
   milgrainSizeSelectOptions: MilgrainOption[] = [];
   readonly pearlingSpacingModes = PEARLING_SPACING_MODES;
+  layoutObjScale = 1;
+  layoutObjPresetId = "presentation-layout";
+  layoutObjPresetLabel = "Präsentationsaufstellung";
+  layoutObjResult: ObjMarkerLayoutResult | null = null;
 
   get lastAdminRequest(): AppDataAdminDebugInfo | null
   {
@@ -207,7 +214,7 @@ export class DevelopmentAdminComponent {
 
   get buildLabel(): string
   {
-    return this.app?.state.build || this.build.version_label || this.build.build_key || "2.7.3";
+    return this.app?.state.build || this.build.version_label || this.build.build_key || "2.7.6";
   }
 
   get activeAppDataLabel(): string
@@ -220,7 +227,7 @@ export class DevelopmentAdminComponent {
     {title: "Perlierung", keys: ["pearlingSize"]},
     {title: "Regelwerk", keys: ["featureRules"]},
     {title: "Profil-Regeln", keys: ["profile"]},
-    {title: "Ringarten und Ansichten", keys: ["ringModes"]},
+    {title: "Ringarten und Ansichten", keys: ["ringModes", "viewPresets", "layoutPresets"]},
     {title: "Materialien und Legierungen", keys: ["material"]},
     {title: "Materialkombinationen", keys: ["materialExclude"]},
     {title: "Oberflächen", keys: ["surface"]},
@@ -721,6 +728,7 @@ export class DevelopmentAdminComponent {
       const next = this.clone(this.working);
       const pearlingNormalized = normalizePearlingAppData(next).changed;
       normalizeStoneTaxonomyAppData(next);
+      normalizeRingViewAppData(next);
       this.applyAppDataToRuntime(next, {
         versionLabel: this.activeVersion?.version_label ?? "unsaved-preview",
         hash: this.activeHash || "unsaved-preview",
@@ -1071,6 +1079,7 @@ export class DevelopmentAdminComponent {
     this.normalizeWorkingPearlingLegacy();
     if (this.working) {
       normalizeStoneTaxonomyAppData(this.working);
+      normalizeRingViewAppData(this.working);
     }
     this.validation = this.validate(this.working);
     this.diff = this.createDiff(this.baseline, this.working).slice(0, 500);
@@ -1128,7 +1137,33 @@ export class DevelopmentAdminComponent {
       ...this.validateProfileMilgrainRules(value),
       ...this.validateFeatureRules(value),
       ...this.validateStoneTaxonomy(value),
+      ...this.validateRingViews(value),
     ]);
+  }
+
+  private validateRingViews(appData: iAppData): AdminValidationIssue[]
+  {
+    const issues: AdminValidationIssue[] = [];
+    const layoutIds = new Set<string>();
+    this.validateUniqueRecordIds(this.recordArray(appData, "layoutPresets"), "layoutPresets", issues);
+    this.recordArray(appData, "layoutPresets").forEach((layout, index) => {
+      const id = String(layout["id"] ?? "");
+      if (id) layoutIds.add(id);
+      const transforms = layout["ringTransforms"] && typeof layout["ringTransforms"] === "object" && !Array.isArray(layout["ringTransforms"])
+        ? layout["ringTransforms"] as JsonRecord
+        : null;
+      if (!transforms || (!transforms["ring0"] && !transforms["ring1"])) {
+        issues.push({severity: "error", path: `layoutPresets[${index}].ringTransforms`, message: "Mindestens ein Ring-Transform ist erforderlich."});
+      }
+    });
+    this.validateUniqueRecordIds(this.recordArray(appData, "viewPresets"), "viewPresets", issues);
+    this.recordArray(appData, "viewPresets").forEach((view, index) => {
+      const layoutId = view["layoutId"];
+      if (layoutId !== undefined && layoutId !== null && String(layoutId).trim() && !layoutIds.has(String(layoutId))) {
+        issues.push({severity: "error", path: `viewPresets[${index}].layoutId`, message: "View-Preset referenziert ein nicht vorhandenes Layout."});
+      }
+    });
+    return issues;
   }
 
   private validateStoneTaxonomy(appData: iAppData): AdminValidationIssue[]
@@ -1791,6 +1826,7 @@ export class DevelopmentAdminComponent {
       const next = this.clone(this.working);
       normalizePearlingAppData(next);
       normalizeStoneTaxonomyAppData(next);
+      normalizeRingViewAppData(next);
       this.applyAppDataToRuntime(next);
     }
   }
@@ -1864,6 +1900,60 @@ export class DevelopmentAdminComponent {
     }
   }
 
+  onLayoutObjFileSelected(event: Event): void
+  {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".obj")) {
+      this.layoutObjResult = {ok: false, errors: ["Bitte eine OBJ-Datei auswählen."], warnings: []};
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.layoutObjResult = {ok: false, errors: ["Die OBJ-Datei ist größer als 5 MB."], warnings: []};
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.layoutObjResult = parseObjMarkerLayout(String(reader.result || ""), this.layoutObjScale);
+      this.setStatus(
+        this.layoutObjResult.ok ? "Marker-OBJ wurde analysiert." : "Marker-OBJ enthält Validierungsfehler.",
+        this.layoutObjResult.ok ? "success" : "warning"
+      );
+    };
+    reader.onerror = () => {
+      this.layoutObjResult = {ok: false, errors: ["Die OBJ-Datei konnte nicht gelesen werden."], warnings: []};
+    };
+    reader.readAsText(file);
+  }
+
+  previewLayoutObjResult(): void
+  {
+    if (!this.layoutObjResult?.ok || !this.layoutObjResult.layout) return;
+    const webgl = WebglComponent.WEBGL ?? (window as any).__oneRingconfWebgl;
+    void webgl?.ringViewService?.previewLayoutTransforms(this.layoutObjResult.layout);
+  }
+
+  resetLayoutObjPreview(): void
+  {
+    const webgl = WebglComponent.WEBGL ?? (window as any).__oneRingconfWebgl;
+    void webgl?.ringViewService?.resetPresentation();
+  }
+
+  saveLayoutObjResultToWorking(): void
+  {
+    if (!this.working || !this.layoutObjResult?.ok || !this.layoutObjResult.layout) return;
+    const preset = layoutPresetFromParsed(this.layoutObjPresetId, this.layoutObjPresetLabel, this.layoutObjResult.layout);
+    const layouts = Array.isArray(this.working.layoutPresets) ? [...this.working.layoutPresets] : [];
+    const index = layouts.findIndex(item => item.id === preset.id);
+    if (index >= 0) layouts[index] = preset;
+    else layouts.push(preset);
+    this.working.layoutPresets = layouts;
+    normalizeRingViewAppData(this.working);
+    this.markChanged(false);
+    this.setStatus("Layout wurde in den aktuellen AppData-Draft übernommen.", "success");
+  }
+
   private forceBabylonRerender(): void
   {
     cRing.list.forEach(ring => {
@@ -1922,7 +2012,7 @@ export class DevelopmentAdminComponent {
 
   private localBuildInfo(): BuildInfo
   {
-    const buildLabel = this.app?.state.build || this.build.version_label || this.build.build_key || "2.7.3";
+    const buildLabel = this.app?.state.build || this.build.version_label || this.build.build_key || "2.7.6";
     return {
       build_key: buildLabel,
       version_label: buildLabel,

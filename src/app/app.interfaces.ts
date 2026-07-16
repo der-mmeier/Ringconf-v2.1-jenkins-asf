@@ -550,6 +550,64 @@ export interface iWebGLSettings {
   environmentPresetId: string | undefined;
 }
 
+export type RingViewAvailability = "all" | "single" | "pair";
+export type RingViewFocus = "all" | "ring0" | "ring1";
+export type RingViewTargetMode = "selection-center" | "fixed";
+export type RingViewFitMode = "auto" | "fixed" | "zoom-out-only";
+export type RingViewProjectionMode = "orthographic" | "perspective";
+
+export interface iRingPresentationTransform {
+  position: [number, number, number];
+  rotationQuaternion: [number, number, number, number];
+}
+
+export interface iRingViewPreset {
+  id: string;
+  label: string;
+  enabled: boolean;
+  sortOrder: number;
+  availability: RingViewAvailability;
+  focus: RingViewFocus;
+  targetMode?: RingViewTargetMode;
+  camera: RingViewCameraPreset;
+  layoutId?: string | null;
+}
+
+export interface RingViewCameraPreset {
+  alpha: number;
+  beta: number;
+  target: [number, number, number];
+  projection: {
+    mode: RingViewProjectionMode;
+    orthoHeight?: number;
+    radius?: number;
+    screenOffsetX?: number;
+    screenOffsetY?: number;
+  };
+  safety: {
+    fitMode: RingViewFitMode;
+    paddingTop: number;
+    paddingRight: number;
+    paddingBottom: number;
+    paddingLeft: number;
+    includeShadowEnvelope: boolean;
+    shadowExtraBottom?: number;
+    shadowExtraLeft?: number;
+    shadowExtraRight?: number;
+  };
+}
+
+export interface iRingLayoutPreset {
+  id: string;
+  label: string;
+  enabled: boolean;
+  source: "obj-markers" | "manual";
+  ringTransforms: {
+    ring0?: iRingPresentationTransform;
+    ring1?: iRingPresentationTransform;
+  };
+}
+
 export interface iAppData {
   profile: iProfile[];
 
@@ -588,6 +646,8 @@ export interface iAppData {
   },
 
   webglSettings: iWebGLSettings;
+  viewPresets?: iRingViewPreset[];
+  layoutPresets?: iRingLayoutPreset[];
 }
 
 export interface iDBSaveItem {

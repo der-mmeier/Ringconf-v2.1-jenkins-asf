@@ -262,6 +262,41 @@
   <section class="admin-body">
     <h3>OBJ-Validator und Canvas-Vorschau</h3>
     <p>Nur Vorschau: OBJ-Dateinamen und AppData-Referenzen werden lokal validiert; Uploads oder Assetaenderungen erfolgen hier nicht.</p>
+    <x-view-calibration></x-view-calibration>
+    <div class="admin-tool-panel">
+      <h4>Kameraansichten / Ringaufstellungen</h4>
+      <p>Marker-OBJ lokal analysieren. Gespeichert werden nur Position und Quaternion pro Ring, nicht die OBJ-Geometrie.</p>
+      <div class="profile-rule-grid">
+        <label><span>Layout-ID</span><input [(ngModel)]="layoutObjPresetId"></label>
+        <label><span>Label</span><input [(ngModel)]="layoutObjPresetLabel"></label>
+        <label><span>Positions-Maßstab</span><input type="number" min="0.0001" step="0.1" [(ngModel)]="layoutObjScale"></label>
+        <label><span>Marker-OBJ</span><input type="file" accept=".obj" (change)="onLayoutObjFileSelected($event)"></label>
+      </div>
+      @if (layoutObjResult) {
+        @if (layoutObjResult.errors.length) {
+          <ul class="validation errors">
+            @for (error of layoutObjResult.errors; track error) {
+              <li>{{error}}</li>
+            }
+          </ul>
+        }
+        @if (layoutObjResult.warnings.length) {
+          <ul class="validation warnings">
+            @for (warning of layoutObjResult.warnings; track warning) {
+              <li>{{warning}}</li>
+            }
+          </ul>
+        }
+        @if (layoutObjResult.ok && layoutObjResult.layout) {
+          <code>{{layoutObjResult.layout | json}}</code>
+          <div class="inline-actions">
+            <button type="button" (click)="previewLayoutObjResult()">Vorschau anwenden</button>
+            <button type="button" (click)="resetLayoutObjPreview()">Vorschau zurücksetzen</button>
+            <button type="button" (click)="saveLayoutObjResultToWorking()" [disabled]="!working">In AppData-Draft übernehmen</button>
+          </div>
+        }
+      }
+    </div>
     <h3>Live-Vorschau</h3>
     <p [class.warn]="requiresReload">{{requiresReload ? 'Teilweise Neuladen erforderlich' : 'Live angewendet'}}</p>
     <button type="button" (click)="previewWorkingAppDataInBabylon()" [disabled]="loading || previewingBabylon || !working">

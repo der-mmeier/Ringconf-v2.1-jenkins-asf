@@ -11,6 +11,7 @@ import {collectRingScreenshots, createScreenshot} from './webgl/webgl.component'
 import {createDefaultPearlingSizes} from './pearling-size';
 import {getStoneCuts, normalizeStoneTaxonomyAppData} from './stone-taxonomy';
 import {formatCoordinates, normalizeEngravingAppData} from './exterior-engraving';
+import {normalizeRingViewAppData} from "./webgl/ring-view-presets";
 
 @Component({
   selector: 'x-app-root',
@@ -2336,7 +2337,7 @@ export class AppComponent implements OnInit {
 
     this.state.browsertab_id = "_" + Math.floor(Math.random() * 1000000);
 
-    normalizeEngravingAppData(normalizeStoneTaxonomyAppData(this.data));
+    normalizeRingViewAppData(normalizeEngravingAppData(normalizeStoneTaxonomyAppData(this.data)));
     this.dataSafeJson = JSON.stringify(this.data);
 
     AppComponent.app = this;
@@ -2376,7 +2377,7 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     dbGetAppData().then(function (data: any) {
       if (data == null) Log("error", "Keine App Daten vorhanden!");
-      else AppComponent.app.data = normalizeEngravingAppData(normalizeStoneTaxonomyAppData(data));
+      else AppComponent.app.data = normalizeRingViewAppData(normalizeEngravingAppData(normalizeStoneTaxonomyAppData(data)));
 
       if (AppComponent.app.state.urlParams["id"] !== undefined && AppComponent.app.state.urlParams["id"].match(/\w{4}-\w{4}/g)) {
         if (AppComponent.app.state.debug) console.log("use url-id: ", AppComponent.app.state.urlParams["id"]);
