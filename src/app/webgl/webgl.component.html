@@ -1,5 +1,20 @@
 <div class="webgl" id="webglWrapper">
   <canvas id="webgl"></canvas>
+  @if (getRingViewButtons().length) {
+    <nav class="ring-view-toolbar" aria-label="3D-Ansichten">
+      @for (view of getRingViewButtons(); track view.id) {
+        <button
+          type="button"
+          [class.active]="view.active"
+          [attr.aria-pressed]="view.active"
+          [attr.aria-label]="'Ansicht ' + view.label"
+          (click)="applyRingViewPreset(view.id)">
+          {{view.label}}
+        </button>
+      }
+      <button type="button" class="reset" aria-label="Ansicht und Ringaufstellung zurücksetzen" (click)="resetRingView()">Reset</button>
+    </nav>
+  }
   <div class="build">{{getBuildString()}}</div>
   <!--  <div class="build">{{app.state.build}}<br/>{{renderCount}}</div>-->
   <div class="ringId">{{app.state.preset_id}}</div>
