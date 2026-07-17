@@ -14,6 +14,15 @@ const forbiddenText = [
   "user-verification.php",
 ];
 
+const forbiddenWooCommerceFiles = new Set([
+  "api.php",
+  "config.php",
+  "database.php",
+  "index.php",
+  "appdata-admin.php",
+  "user-verification.php",
+]);
+
 const textExtensions = new Set([
   ".css",
   ".html",
@@ -51,6 +60,12 @@ for (const root of roots) {
 
   for (const file of walk(root)) {
     const fileName = file.replace(/\\/g, "/");
+    const baseName = fileName.split("/").pop().toLowerCase();
+    if (root === "_shop/woocommerce/OneRingconf/dist" && (forbiddenWooCommerceFiles.has(baseName) || extensionOf(file) === ".php")) {
+      violations.push(`${relative(process.cwd(), file)}: PHP file copied to WooCommerce output`);
+      continue;
+    }
+
     if (fileName.endsWith("/appdata-admin.php")) {
       violations.push(`${relative(process.cwd(), file)}: development-only endpoint copied to output`);
       continue;

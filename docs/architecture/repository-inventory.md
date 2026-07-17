@@ -434,11 +434,11 @@ Statisch vorhandene Teile:
 | Teil | Evidenz | Befund |
 |---|---|---|
 | Angular-Konfiguration | `angular.json` `woocommerce` | outputPath `_shop/woocommerce/OneRingconf/dist`, `outputHashing: all`, `deleteOutputPath: true`, Environment-Replacement |
-| Environment | `src/environments/environment.woocommerce.ts` | `assetFolderLocation: "/wp-content/plugins/OneRingconf/dist/"`, `isWooCommerce: true` |
-| PHP Copy | `angular.json` assets | kopiert generische PHP-Dateien und Shopware5 config als root `config.php` auch in Woo-Build |
-| Postbuild | `postbuild.woocommerce.js` | ersetzt Assetpfade in CSS/JS; Plugin-XML Update auskommentiert |
+| Environment | `src/environments/environment.woocommerce.ts` | `assetFolderLocation: "."`, Runtime-URLs kommen aus dem Shortcode-JSON, `isWooCommerce: true` |
+| PHP Copy | `angular.json` assets | WooCommerce ueberschreibt die Assetliste auf Browserassets; Standalone-PHP-Dateien werden nicht in den Woo-Build kopiert |
+| Paketierung | `tools/build-woocommerce-package.mjs` | erzeugt Manifest und installierbare ZIP ohne String-Replacements fuer Pluginpfade |
 
-Nicht vorhanden: `_shop/woocommerce/OneRingconf` Pluginquellen fehlen im Checkout. Keine WordPress-/WooCommerce-Hooks, REST- oder AJAX-PHP-Dateien sind getrackt. WooCommerce-Vertrag ist daher nur ueber Angular Environment und Outputpfad belegbar.
+Vorhanden: `_shop/woocommerce/OneRingconf` enthaelt das Shortcode-Plugin mit REST-RPC, Manifest-Assetregistrierung und WooCommerce-Warenkorb-/Bestell-Meta.
 
 ## 15. Assets
 

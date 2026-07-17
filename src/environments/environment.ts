@@ -4,4 +4,5 @@ export const environment: iEnvironment = {
   assetFolderLocation:".",
   pdfEndpoint:"/3d-konfigurator/pdf/create.php",
   isWooCommerce: false,
+  standaloneApiFile: "api.php",
 }
