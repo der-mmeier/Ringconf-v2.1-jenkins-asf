@@ -23,6 +23,7 @@
 /.deployrc.json
 /.deployrc.local.json
 /.deploy/
+/config.local.php
 
 # Logs
 *.log
