@@ -78,10 +78,25 @@
             "woocommerce": {
               "baseHref": "./",
               "outputHashing": "all",
+              "optimization": true,
+              "sourceMap": false,
+              "extractLicenses": true,
+              "namedChunks": false,
               "outputPath": {
                 "base": "_shop/woocommerce/OneRingconf/dist"
               },
               "deleteOutputPath": true,
+              "assets": [
+                "src/favicon.ico",
+                {
+                  "glob": "**/*",
+                  "input": "src/assets",
+                  "output": "assets",
+                  "ignore": [
+                    "**/*.php"
+                  ]
+                }
+              ],
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",

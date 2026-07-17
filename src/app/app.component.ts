@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, ElementRef, OnInit} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {lastValueFrom} from 'rxjs';
 import packageInfo from '../../package.json';
@@ -12,6 +12,7 @@ import {createDefaultPearlingSizes} from './pearling-size';
 import {getStoneCuts, normalizeStoneTaxonomyAppData} from './stone-taxonomy';
 import {formatCoordinates, normalizeEngravingAppData} from './exterior-engraving';
 import {normalizeRingViewAppData} from "./webgl/ring-view-presets";
+import {applyRuntimeEnvironment, getRuntimeNonce, resolveRingconfRuntime} from "./runtime-config";
 
 @Component({
   selector: 'x-app-root',
@@ -2328,9 +2329,17 @@ export class AppComponent implements OnInit {
   dataSafeJson: string = "";
 
   env = environment;
+  private runtimeAvailable = true;
 
-  constructor(public http: HttpClient) {
-    if (!window.location.pathname.endsWith('/')) {
+  constructor(public http: HttpClient, private hostElement: ElementRef<HTMLElement>) {
+    const runtime = applyRuntimeEnvironment(this.hostElement.nativeElement);
+    if (environment.isWooCommerce && !runtime) {
+      this.runtimeAvailable = false;
+      AppComponent.app = this;
+      return;
+    }
+
+    if (!environment.isWooCommerce && !window.location.pathname.endsWith('/')) {
       window.location.pathname += '/';
       return;
     }
@@ -2363,6 +2372,10 @@ export class AppComponent implements OnInit {
       if (this.state.urlParams["id"]) this.state.urlParams["id"] = this.state.urlParams["id"].toUpperCase();
     }
 
+    if (environment.isWooCommerce && runtime?.initialPresetId) {
+      this.state.urlParams["id"] = runtime.initialPresetId;
+    }
+
     if (!this.state.mobile && this.state.urlParams["mobile"] !== undefined && this.state.urlParams["mobile"] !== "0")
       this.state.mobile = true;
     this.state.debug = this.state.urlParams["debug"] !== undefined && this.state.urlParams["debug"] !== "0";
@@ -2375,6 +2388,10 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
+    if (!this.runtimeAvailable) {
+      return;
+    }
+
     dbGetAppData().then(function (data: any) {
       if (data == null) Log("error", "Keine App Daten vorhanden!");
       else AppComponent.app.data = normalizeRingViewAppData(normalizeEngravingAppData(normalizeStoneTaxonomyAppData(data)));
@@ -2852,19 +2869,35 @@ export interface iDetails {
 }
 
 function makeHttpHeaders(): HttpHeaders {
-  return new HttpHeaders({
+  let headers = new HttpHeaders({
     'Content-Type': 'application/x-www-form-urlencoded',
   });
+  return addWordPressHeaders(headers);
 }
 
 function makeJsonHttpHeaders(): HttpHeaders {
-  return new HttpHeaders({
+  let headers = new HttpHeaders({
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   });
+  return addWordPressHeaders(headers);
+}
+
+function addWordPressHeaders(headers: HttpHeaders): HttpHeaders {
+  if (!environment.isWooCommerce) {
+    return headers;
+  }
+  const nonce = getRuntimeNonce();
+  if (nonce) {
+    headers = headers.set("X-WP-Nonce", nonce);
+  }
+  return headers.set("X-Ringconf-Mode", "woocommerce");
 }
 
 function getPdfEndpoint(): string {
+  if (environment.isWooCommerce) {
+    return resolveRingconfRuntime().pdfUrl;
+  }
   let configured = environment.pdfEndpoint;
   if (configured && configured.startsWith("http")) return configured;
   if (configured) return window.location.origin + configured;
@@ -2929,12 +2962,16 @@ function makeHttpParams(rpc: string, rpp: any[]): HttpParams {
 }
 
 function getDistRootUrl() {
+  if (environment.isWooCommerce) {
+    return resolveRingconfRuntime().apiUrl;
+  }
+
   let result = window.location.protocol + '//' + window.location.host + window.location.pathname;
 
   if (!window.location.pathname.endsWith('/'))
     result += '/';
 
-  result += 'api.php';
+  result += environment.standaloneApiFile || "";
 
   return result;
 }
@@ -3001,7 +3038,9 @@ async function dbGetAppData(): Promise<any> {
   }
 
   if (result == null) {
-    dbSetAppData().then();
+    if (!environment.isWooCommerce) {
+      dbSetAppData().then();
+    }
     result = AppComponent.app.data;
   }
 
