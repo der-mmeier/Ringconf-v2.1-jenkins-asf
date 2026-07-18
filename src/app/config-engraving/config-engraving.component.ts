@@ -121,6 +121,10 @@ export class ConfigEngravingComponent
     return this.exteriorTypes.some(type => this.isExteriorTypeVisible(type.id));
   }
 
+  hasAnyVisibleEngraving(): boolean {
+    return this.isInnerEngravingVisible() || this.isAnyExteriorVisible();
+  }
+
   isExteriorTypeVisible(type: ExteriorEngravingType): boolean {
     const offerId = exteriorTypeToOfferId(type);
     return offerId ? isEngravingOfferVisible(this.app.data, offerId) : false;
