@@ -107,7 +107,7 @@
         <div class="mobile-option-item stone-color-chip"
           [class.active]="ringData[ringId].stone[curStoneGroup()].stoneColor === item.id"
           (mousedown)="setValue_stoneColor(item)">
-          <span class="stone-color-swatch" [style.background]="item.hex"></span>
+          <img class="stone-color-preview" [src]="getStoneColorPreviewSrc(item)" [alt]="getStoneColorPreviewAlt(item)" width="32" height="24">
           <span class="mobile-option-label">{{item.name}}</span>
         </div>
       }
@@ -221,7 +221,7 @@
             <div class="mobile-option-item stone-color-chip"
               [class.active]="ringData[ringId].stone[curStoneGroup()].stoneColor === item.id"
               (mousedown)="setValue_stoneColor(item)">
-              <span class="stone-color-swatch" [style.background]="item.hex"></span>
+              <img class="stone-color-preview" [src]="getStoneColorPreviewSrc(item)" [alt]="getStoneColorPreviewAlt(item)" width="32" height="24">
               <span class="mobile-option-label">{{item.name}}</span>
             </div>
           }
