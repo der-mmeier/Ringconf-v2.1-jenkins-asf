@@ -31,6 +31,8 @@ import {
   getStoneTypes,
   normalizeStoneSelection
 } from "../stone-taxonomy";
+import {resolveStonePreviewAsset, stonePreviewAlt, usesFallbackStonePreview} from "../stone-preview-assets";
+import {Log} from "../logger/logger.component";
 
 @Component({
     selector: 'x-config-stone',
@@ -63,6 +65,7 @@ export class ConfigStoneComponent implements OnInit, DoCheck {
   stoneQualityVisible = false;
   stoneColorVisible = false;
   private stoneOptionsSignature = "";
+  private missingPreviewWarnings = new Set<string>();
 
   @ViewChild('stonexy') stonexy: StonexyComponent | undefined = undefined;
   @ViewChild('stoneSize_mode11') stoneSize_mode11: DropdownComponent | undefined = undefined;
@@ -406,6 +409,18 @@ export class ConfigStoneComponent implements OnInit, DoCheck {
   setValue_stoneColor(item: iStoneColor) {
     RingData.setStoneColor(this.ringData[this.ringId], cRing.curStoneGroup, item.id);
     this.refreshStoneOptions(true);
+  }
+
+  getStoneColorPreviewSrc(item: iStoneColor): string {
+    if (usesFallbackStonePreview(item) && !this.missingPreviewWarnings.has(item.id)) {
+      this.missingPreviewWarnings.add(item.id);
+      Log("error", "Keine generierte Edelstein-Vorschau fuer Steinfarbe " + item.id + " vorhanden.");
+    }
+    return `${this.env.assetFolderLocation}/${resolveStonePreviewAsset(item)}`;
+  }
+
+  getStoneColorPreviewAlt(item: iStoneColor): string {
+    return stonePreviewAlt(item);
   }
 
   // <=
