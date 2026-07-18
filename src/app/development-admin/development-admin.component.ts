@@ -20,6 +20,7 @@ import {WebglComponent} from "../webgl/webgl.component";
 import {isStoneColorHex, normalizeStoneTaxonomyAppData} from "../stone-taxonomy";
 import {layoutPresetFromParsed, ObjMarkerLayoutResult, parseObjMarkerLayout} from "../webgl/ring-layout-obj";
 import {normalizeRingViewAppData} from "../webgl/ring-view-presets";
+import {normalizeEngravingAppData} from "../exterior-engraving";
 import {ViewCalibrationComponent} from "./view-calibration/view-calibration.component";
 
 type StatusType = "idle" | "success" | "warning" | "error";
@@ -728,6 +729,7 @@ export class DevelopmentAdminComponent {
       const next = this.clone(this.working);
       const pearlingNormalized = normalizePearlingAppData(next).changed;
       normalizeStoneTaxonomyAppData(next);
+      normalizeEngravingAppData(next);
       normalizeRingViewAppData(next);
       this.applyAppDataToRuntime(next, {
         versionLabel: this.activeVersion?.version_label ?? "unsaved-preview",
@@ -1079,6 +1081,7 @@ export class DevelopmentAdminComponent {
     this.normalizeWorkingPearlingLegacy();
     if (this.working) {
       normalizeStoneTaxonomyAppData(this.working);
+      normalizeEngravingAppData(this.working);
       normalizeRingViewAppData(this.working);
     }
     this.validation = this.validate(this.working);
@@ -1826,6 +1829,7 @@ export class DevelopmentAdminComponent {
       const next = this.clone(this.working);
       normalizePearlingAppData(next);
       normalizeStoneTaxonomyAppData(next);
+      normalizeEngravingAppData(next);
       normalizeRingViewAppData(next);
       this.applyAppDataToRuntime(next);
     }
@@ -1949,6 +1953,7 @@ export class DevelopmentAdminComponent {
     if (index >= 0) layouts[index] = preset;
     else layouts.push(preset);
     this.working.layoutPresets = layouts;
+    normalizeEngravingAppData(this.working);
     normalizeRingViewAppData(this.working);
     this.markChanged(false);
     this.setStatus("Layout wurde in den aktuellen AppData-Draft übernommen.", "success");

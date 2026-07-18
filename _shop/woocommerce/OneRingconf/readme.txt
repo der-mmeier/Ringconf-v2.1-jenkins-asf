@@ -3,7 +3,7 @@ Contributors: asf
 Requires at least: 6.5
 Requires PHP: 8.1
 Requires Plugins: woocommerce
-Stable tag: 2.7.9
+Stable tag: 2.7.9.1
 License: Proprietary
 
 Lokale WordPress-/WooCommerce-Integration fuer den ASF 3D-Ringkonfigurator.

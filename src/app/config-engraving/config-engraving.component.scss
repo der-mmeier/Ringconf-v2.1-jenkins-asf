@@ -210,6 +210,15 @@ x-config-engraving {
     margin-bottom: 12px;
   }
 
+  .engraving-empty {
+    padding: 12px;
+    border: 1px solid #d5d8d8;
+    background: #f7f7f7;
+    color: #555;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
   button.secondary {
     background: #fff;
   }

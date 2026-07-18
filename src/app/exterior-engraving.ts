@@ -3,12 +3,20 @@ import {
   ExteriorEngravingType,
   iAppData,
   iEngravingOffer,
+  iEngravingSymbol,
   iExteriorEngravingConfig,
   iPresetStone
 } from "./app.interfaces";
 
 export const EXTERIOR_ENGRAVING_TYPES: ExteriorEngravingType[] = ["text", "coordinates", "waveform", "fingerprint"];
 export const EXTERIOR_ENGRAVING_PLACEMENTS: ExteriorEngravingPlacement[] = ["single-ring", "both-identical", "split-pair"];
+export const DEFAULT_ENGRAVING_OFFERS: iEngravingOffer[] = [
+  {id: "inner-text", enabled: true, price: 29, priceKey: "engravingInnerText"},
+  {id: "exterior-text", enabled: true, price: 49, priceKey: "engravingExteriorText"},
+  {id: "exterior-coordinates", enabled: true, price: 59, priceKey: "engravingExteriorCoordinates"},
+  {id: "exterior-waveform", enabled: true, price: 69, priceKey: "engravingExteriorWaveform"},
+  {id: "exterior-fingerprint", enabled: true, price: 69, priceKey: "engravingExteriorFingerprint"},
+];
 
 export const DEFAULT_EXTERIOR_ENGRAVING: iExteriorEngravingConfig = {
   enabled: false,
@@ -75,45 +83,68 @@ export function normalizeExteriorEngravingConfig(config?: Partial<iExteriorEngra
 }
 
 export function normalizeEngravingAppData(appData: iAppData): iAppData {
-  if (!appData.engraving) {
-    appData.engraving = {
-      maxLength: 30,
-      symbols: [],
-      color: "#333333",
-      alpha: 0.6,
-    };
-  }
+  const engraving: Record<string, unknown> = isRecord(appData.engraving)
+    ? appData.engraving as unknown as Record<string, unknown>
+    : {};
+  const exterior: Record<string, unknown> = isRecord(engraving["exterior"])
+    ? engraving["exterior"]
+    : {};
+  const offers = offerArray(exterior["offers"])
+    ?? offerArray(engraving["offers"])
+    ?? undefined;
+  const priceOverrides = isRecord(exterior["prices"])
+    ? exterior["prices"]
+    : (isRecord(engraving["prices"]) ? engraving["prices"] : {});
 
-  appData.engraving.exterior = {
-    maxTextLength: positiveNumber(appData.engraving.exterior?.maxTextLength, 34),
-    edgeClearance: positiveNumber(appData.engraving.exterior?.edgeClearance, 500),
-    offers: normalizeEngravingOffers(appData.engraving.exterior?.offers),
+  appData.engraving = {
+    ...engraving,
+    maxLength: positiveNumber(engraving["maxLength"], 30),
+    symbols: Array.isArray(engraving["symbols"]) ? engraving["symbols"] as iEngravingSymbol[] : [],
+    color: typeof engraving["color"] === "string" && engraving["color"].trim() !== ""
+      ? engraving["color"]
+      : "#333333",
+    alpha: Number.isFinite(Number(engraving["alpha"])) ? Number(engraving["alpha"]) : 0.6,
+    exterior: {
+      ...exterior,
+      maxTextLength: positiveNumber(exterior["maxTextLength"], 34),
+      edgeClearance: positiveNumber(exterior["edgeClearance"], 500),
+      offers: normalizeEngravingOffers(offers, priceOverrides),
+    },
   };
 
   return appData;
 }
 
-function normalizeEngravingOffers(offers: iEngravingOffer[] | undefined): iEngravingOffer[] {
-  const defaults: iEngravingOffer[] = [
-    {id: "inner-text", enabled: true, price: 29, priceKey: "engravingInnerText"},
-    {id: "exterior-text", enabled: true, price: 49, priceKey: "engravingExteriorText"},
-    {id: "exterior-coordinates", enabled: true, price: 59, priceKey: "engravingExteriorCoordinates"},
-    {id: "exterior-waveform", enabled: true, price: 69, priceKey: "engravingExteriorWaveform"},
-    {id: "exterior-fingerprint", enabled: true, price: 69, priceKey: "engravingExteriorFingerprint"},
-  ];
+function normalizeEngravingOffers(offers: iEngravingOffer[] | undefined, priceOverrides: Record<string, unknown>): iEngravingOffer[] {
+  const normalizedOverrides = new Map<iEngravingOffer["id"], iEngravingOffer>();
+  offers?.forEach(offer => {
+    if (!isRecord(offer)) return;
+    const id = normalizeOfferId(offer["id"]);
+    if (!id) return;
+    normalizedOverrides.set(id, offer as iEngravingOffer);
+  });
 
-  return defaults.map(defaultOffer => {
-    const override = offers?.find(item => item?.id === defaultOffer.id);
+  return DEFAULT_ENGRAVING_OFFERS.map(defaultOffer => {
+    const override = normalizedOverrides.get(defaultOffer.id);
+    const explicitPrice = override && Object.prototype.hasOwnProperty.call(override, "price");
+    const priceOverride = defaultOffer.priceKey && Object.prototype.hasOwnProperty.call(priceOverrides, defaultOffer.priceKey)
+      ? priceOverrides[defaultOffer.priceKey]
+      : undefined;
+    const rawPrice = explicitPrice
+      ? override?.price
+      : (priceOverride !== undefined ? priceOverride : defaultOffer.price);
     return {
       ...defaultOffer,
       ...override,
-      enabled: override?.enabled !== false,
+      id: defaultOffer.id,
+      enabled: booleanValue(override?.enabled, defaultOffer.enabled !== false),
+      price: normalizePrice(rawPrice),
     };
   });
 }
 
 export function getEngravingOffer(appData: iAppData, id: iEngravingOffer["id"]): iEngravingOffer | null {
-  return appData.engraving?.exterior?.offers?.find(offer => offer.id === id) ?? null;
+  return normalizeEngravingAppData(appData).engraving?.exterior?.offers?.find(offer => offer.id === id) ?? null;
 }
 
 export function isEngravingOfferVisible(appData: iAppData, id: iEngravingOffer["id"]): boolean {
@@ -177,4 +208,66 @@ function formatCoordinate(value: number, positive: string, negative: string): st
 function positiveNumber(value: unknown, fallback: number): number {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function normalizePrice(value: unknown): number | null {
+  if (value === null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed === "") return null;
+    const parsed = Number(trimmed.replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function booleanValue(value: unknown, fallback: boolean): boolean {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["false", "0", "no", "nein", "off"].includes(normalized)) return false;
+    if (["true", "1", "yes", "ja", "on"].includes(normalized)) return true;
+  }
+  return fallback;
+}
+
+function offerArray(value: unknown): iEngravingOffer[] | null {
+  return Array.isArray(value) ? value.filter(isRecord) as unknown as iEngravingOffer[] : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeOfferId(value: unknown): iEngravingOffer["id"] | null {
+  const id = String(value ?? "").trim();
+  switch (id) {
+    case "inner":
+    case "inside":
+    case "interior":
+    case "interior-text":
+    case "inner-text":
+      return "inner-text";
+    case "outer":
+    case "outside":
+    case "exterior":
+    case "outer-text":
+    case "outside-text":
+    case "exterior-text":
+      return "exterior-text";
+    case "coordinates":
+    case "exterior-coordinates":
+      return "exterior-coordinates";
+    case "waveform":
+    case "exterior-waveform":
+      return "exterior-waveform";
+    case "fingerprint":
+    case "exterior-fingerprint":
+      return "exterior-fingerprint";
+    default:
+      return null;
+  }
 }
