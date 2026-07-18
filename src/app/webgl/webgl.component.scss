@@ -3,15 +3,19 @@
 :host {
   display: block;
   width: 100%;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
 }
 
 .webgl {
   position: relative;
   width: 100%;
-  height: 800px;
+  height: 100%;
+  min-height: 360px;
   background-color: rgba(249, 249, 249, 1);
-  margin:10px 5px 5px 0;
+  margin: 0;
+  overflow: hidden;
 
   #webgl, #helperOverlay {
     position: absolute;
@@ -141,11 +145,11 @@
   }
 
   @media (max-width: $breakpoint-mobile) {
-    width: 100vw;
-    max-width: 100vw;
-    height: clamp(300px, 42dvh, 420px);
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
     min-height: 300px;
-    margin: 0 calc(50% - 50vw);
+    margin: 0;
     overflow: hidden;
     box-shadow: 0 0 9px -2px #000;
 
@@ -157,7 +161,7 @@
       height: 100%;
       max-width: none;
       max-height: none;
-      touch-action: none;
+      touch-action: pinch-zoom;
     }
 
     .build {
@@ -184,10 +188,31 @@
       justify-content: flex-start;
 
       button {
-        min-height: 38px;
+        min-height: 48px;
         min-width: 60px;
       }
     }
   }
+}
+
+:host-context(.configurator-shell[data-layout-mode="desktop-wide"]) .webgl {
+  min-height: 620px;
+}
+
+:host-context(.configurator-shell[data-layout-mode="desktop-compact"]) .webgl {
+  min-height: 500px;
+}
+
+:host-context(.configurator-shell[data-layout-mode="tablet-landscape"]) .webgl,
+:host-context(.configurator-shell[data-layout-mode="phone-landscape"]) .webgl {
+  min-height: 0;
+}
+
+:host-context(.configurator-shell[data-layout-mode="phone-landscape"]) .webgl .ring-view-toolbar {
+  left: auto;
+  right: max(8px, env(safe-area-inset-right));
+  top: max(8px, env(safe-area-inset-top));
+  bottom: auto;
+  max-width: min(54vw, calc(100% - 20px));
 }
 

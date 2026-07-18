@@ -22,6 +22,39 @@
   </div>
 }
 
+@if (mode=='adaptive') {
+  <nav class="menu adaptive" [attr.data-layout-mode]="layoutMode" [attr.aria-orientation]="isRailMode() ? 'vertical' : 'horizontal'" aria-label="Konfigurationsschritte">
+    @for (i of adaptiveItems; track i.hash) {
+      <button
+        type="button"
+        class="item"
+        [class.active]="i.hash === navigation.currentHash"
+        [attr.aria-current]="i.hash === navigation.currentHash ? 'step' : null"
+        [attr.aria-label]="i.title"
+        (click)="selectAdaptiveItem(i.hash)">
+        <img src="{{env.assetFolderLocation}}/assets/imgui/{{i.img}}" alt="" class="icon">
+        <span class="title">{{getAdaptiveTitle(i.title)}}</span>
+      </button>
+    }
+    @if (app.state.admin) {
+      <button type="button" class="item" [class.active]="navigation.currentHash === 'admin'" (click)="selectAdaptiveItem('admin')">
+        <span class="title">Admin</span>
+      </button>
+    }
+    @if (app.state.diamond) {
+      <button type="button" class="item" [class.active]="navigation.currentHash === 'diamond'" (click)="selectAdaptiveItem('diamond')">
+        <span class="title">Diamant</span>
+      </button>
+    }
+    <button type="button" class="step-control previous" [disabled]="isFirstNavItem()" aria-label="Vorheriger Schritt" (click)="prev()">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-backward.svg" alt="">
+    </button>
+    <button type="button" class="step-control next" [disabled]="isLastNavItem()" aria-label="Nächster Schritt" (click)="next()">
+      <img src="{{env.assetFolderLocation}}/assets/imgui/icon-forward.svg" alt="">
+    </button>
+  </nav>
+}
+
 @if (mode=='mobile') {
   <div class="menu mobile" [class.expanded]="mobileExpanded">
     @for (i of mobilePrimaryItems; track i) {

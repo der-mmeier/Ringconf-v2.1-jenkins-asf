@@ -229,6 +229,189 @@
     }
   }
 
+  &.adaptive {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    min-height: var(--config-nav-target-size, 54px);
+    background-image: linear-gradient(0deg, #d5d8d8, #fff);
+    box-shadow: 0 5px 4px -3px rgb(0 0 0 / 32%);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+
+    .item,
+    .step-control {
+      appearance: none;
+      border: 0;
+      border-right: 1px solid rgba(0, 0, 0, 0.1);
+      background: transparent;
+      color: #ab3333;
+      cursor: pointer;
+      font-family: inherit;
+      min-width: var(--config-nav-target-size, 54px);
+      min-height: var(--config-nav-target-size, 54px);
+      padding: 6px 10px;
+      touch-action: manipulation;
+
+      &:focus-visible {
+        outline: 2px solid #111111;
+        outline-offset: -2px;
+      }
+    }
+
+    .item {
+      display: flex;
+      flex: 1 0 auto;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+
+      .icon {
+        display: block;
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        opacity: 0.78;
+      }
+
+      .title {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      &:hover {
+        box-shadow: inset 0 -7px 0 -3px #ab3333;
+      }
+
+      &.active {
+        background-image: linear-gradient(0deg, #ab3333, #d14b4b);
+        color: #fff;
+
+        .icon {
+          filter: brightness(0) invert(1);
+          opacity: 0.92;
+        }
+      }
+    }
+
+    .step-control {
+      display: none;
+      flex: 0 0 var(--config-nav-target-size, 54px);
+      align-items: center;
+      justify-content: center;
+
+      img {
+        width: 26px;
+        height: 26px;
+      }
+
+      &:disabled {
+        opacity: 0.3;
+        cursor: default;
+      }
+    }
+
+    &[data-layout-mode="phone-portrait"],
+    &[data-layout-mode="tablet-portrait"] {
+      gap: 0;
+      background-image: linear-gradient(0deg, #ab3333, #d14b4b);
+      box-shadow: 0 4px 12px -10px #000;
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+
+      .item {
+        flex: 0 0 auto;
+        min-width: max(var(--config-nav-target-size, 54px), 92px);
+        color: #fff;
+        border-right: 0;
+        opacity: 0.86;
+
+        .icon {
+          filter: brightness(0) invert(1);
+          width: 20px;
+          height: 20px;
+        }
+
+        .title {
+          font-size: 12px;
+        }
+
+        &.active {
+          background: rgba(0, 0, 0, 0.18);
+          box-shadow: inset 0 3px 0 #fff;
+          opacity: 1;
+        }
+      }
+
+      .step-control {
+        display: flex;
+        background: rgba(255, 255, 255, 0.18);
+
+        img {
+          filter: brightness(0) invert(1);
+        }
+      }
+    }
+
+    &[data-layout-mode="phone-landscape"],
+    &[data-layout-mode="tablet-landscape"] {
+      flex-flow: column nowrap;
+      min-width: var(--config-rail-width, 72px);
+      width: var(--config-rail-width, 72px);
+      min-height: 0;
+      height: 100%;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      overflow-x: hidden;
+      overflow-y: auto;
+      box-shadow: 4px 0 12px -12px #000;
+
+      .item {
+        flex: 0 0 auto;
+        width: 100%;
+        min-width: 100%;
+        min-height: var(--config-nav-target-size, 54px);
+        flex-direction: column;
+        gap: 3px;
+        padding: 7px 4px;
+        border-right: 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+        .icon {
+          width: 22px;
+          height: 22px;
+        }
+
+        .title {
+          max-width: 100%;
+          font-size: 10px;
+          line-height: 1.05;
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+
+        &.active {
+          box-shadow: inset 4px 0 0 #fff;
+        }
+      }
+
+      .step-control {
+        display: flex;
+        width: 100%;
+        border-right: 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      }
+    }
+  }
+
   &.prevNext {
     background-color: #e6e6e6;
     color: #262626;

@@ -248,6 +248,10 @@ export class RingViewService {
       ? this.getAvailablePresets().find(item => item.id === this.activePresetId)
       : null;
     if (preset) this.fitCameraToPreset(preset);
+    else if (this.suspendNaturalTarget) {
+      this.requestRender(3);
+      return;
+    }
     else this.fitCameraToFocus("all", 0.16);
     this.requestRender(3);
   }

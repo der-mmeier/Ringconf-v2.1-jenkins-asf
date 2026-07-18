@@ -1,5 +1,4 @@
-import {Component, ElementRef, ChangeDetectionStrategy} from '@angular/core';
-import {IsFullscreen, ToggleFullscreen} from "../../main";
+import {Component, ElementRef, ChangeDetectionStrategy, OnDestroy} from '@angular/core';
 import {AppComponent, dbLoadPreset} from "../app.component";
 import {
   ArcRotateCamera,
@@ -31,6 +30,7 @@ import {initCamera, USE_ORTHO_CAMERA, zoomExtends} from "./camera";
 import {cRing} from "./cRing";
 import {computeRenderQuality, RenderQualitySettings} from "./render-quality";
 import {RingViewButton, RingViewService} from "./ring-view.service";
+import {isFullscreen, toggleFullscreen} from "./fullscreen";
 
 @Component({
     selector: 'x-webgl',
@@ -40,8 +40,12 @@ import {RingViewButton, RingViewService} from "./ring-view.service";
     standalone: false
 })
 
-export class WebglComponent {
+export class WebglComponent implements OnDestroy {
   static WEBGL: any = null;
+  private static nextInstanceId = 1;
+  private static nextEngineInstanceId = 1;
+  private static nextSceneInstanceId = 1;
+  readonly instanceId = WebglComponent.nextInstanceId++;
   app = AppComponent.app;
   env = environment;
   canvas: HTMLCanvasElement | any;
@@ -77,6 +81,12 @@ export class WebglComponent {
   renderQuality: RenderQualitySettings | null = null;
   resizeAnimationFrameId: number = 0;
   resizeTimeoutId: number = 0;
+  private secondResizeAnimationFrameId: number = 0;
+  private readyPollIntervalId: number = 0;
+  private resizeListener: (() => void) | null = null;
+  private orientationListener: (() => void) | null = null;
+  private engineInstanceId = 0;
+  private sceneInstanceId = 0;
   ringViewService: RingViewService | null = null;
 
   renderCount = 0;
@@ -106,13 +116,42 @@ export class WebglComponent {
     (window as any).__oneRingconfWebgl = this;
 
     let that = this;
-    let intervalId = setInterval(function () {
+    this.readyPollIntervalId = window.setInterval(function () {
 
       if (AppComponent.app.state.ready) {
-        clearInterval(intervalId);
+        clearInterval(that.readyPollIntervalId);
+        that.readyPollIntervalId = 0;
         that.InitAfterAppReady();
       }
     }, 100)
+  }
+
+  ngOnDestroy(): void {
+    if (this.readyPollIntervalId) {
+      window.clearInterval(this.readyPollIntervalId);
+      this.readyPollIntervalId = 0;
+    }
+    if (this.resizeAnimationFrameId) {
+      window.cancelAnimationFrame(this.resizeAnimationFrameId);
+      this.resizeAnimationFrameId = 0;
+    }
+    if (this.secondResizeAnimationFrameId) {
+      window.cancelAnimationFrame(this.secondResizeAnimationFrameId);
+      this.secondResizeAnimationFrameId = 0;
+    }
+    if (this.resizeTimeoutId) {
+      window.clearTimeout(this.resizeTimeoutId);
+      this.resizeTimeoutId = 0;
+    }
+    if (this.resizeListener) {
+      window.removeEventListener("resize", this.resizeListener);
+      this.resizeListener = null;
+    }
+    if (this.orientationListener) {
+      window.removeEventListener("orientationchange", this.orientationListener);
+      this.orientationListener = null;
+    }
+    this.ringViewService?.dispose();
   }
 
   getBuildString() {
@@ -261,6 +300,7 @@ export class WebglComponent {
       preserveDrawingBuffer: true,
       stencil: true
     }, true);
+    this.engineInstanceId = WebglComponent.nextEngineInstanceId++;
 
     this.engine.enableOfflineSupport = false;
     this.engine.doNotHandleContextLost = true;
@@ -298,6 +338,7 @@ export class WebglComponent {
     this.alphaCanvas.getContext("2d", {willReadFrequently: true})
 
     this.scene = new Scene(this.engine);
+    this.sceneInstanceId = WebglComponent.nextSceneInstanceId++;
     this.scene.skipPointerMovePicking = true;
     this.scene.clearColor = new Color4(0.9764705882352941, 0.9764705882352941, 0.9764705882352941, 1.0);
     this.scene.imageProcessingConfiguration.exposure = AppComponent.app.data.webglSettings.environmentPreset.scene_exposure;
@@ -326,16 +367,18 @@ export class WebglComponent {
 
     onResize();
 
-    window.addEventListener("resize", function () {
+    this.resizeListener = function () {
       that.scheduleResize();
       // that.engine.resize();
       // //    onResize();
       // that.cameraChanged = true;
       // that.renderFrame();
-    });
-    window.addEventListener("orientationchange", function () {
+    };
+    window.addEventListener("resize", this.resizeListener);
+    this.orientationListener = function () {
       that.scheduleResize();
-    });
+    };
+    window.addEventListener("orientationchange", this.orientationListener);
 
     this.cameraScreenshot = new ArcRotateCamera("cameraScreenshot", webglSettings.camera[0], webglSettings.camera[1], webglSettings.camera[2], new Vector3(0, 10, 0), this.scene);
     // @ts-ignore
@@ -814,22 +857,19 @@ export class WebglComponent {
       // dbLoadPreset(AppComponent.app.state.preset_id).then(r => {});
       dbLoadPreset("0000-0000").then(r => {
         that.ringViewService?.captureNaturalSceneState(true);
-        window.setTimeout(function () {
+        window.requestAnimationFrame(function () {
           that.scheduleResize();
-        }, 0);
-        window.setTimeout(function () {
-          that.scheduleResize();
-        }, 250);
+        });
       });
     })
   }
 
   toggleFullscreen() {
-    ToggleFullscreen();
+    toggleFullscreen(document.getElementById("webglWrapper"), () => this.resizeForLayoutChange());
   }
 
   isFullscreen() {
-    return IsFullscreen();
+    return isFullscreen();
   }
 
   resize() {
@@ -838,6 +878,32 @@ export class WebglComponent {
 
   resizeAndRender() {
     this.scheduleResize();
+  }
+
+  resizeForLayoutChange() {
+    if (this.resizeAnimationFrameId) {
+      window.cancelAnimationFrame(this.resizeAnimationFrameId);
+    }
+    if (this.secondResizeAnimationFrameId) {
+      window.cancelAnimationFrame(this.secondResizeAnimationFrameId);
+    }
+    this.resizeAnimationFrameId = window.requestAnimationFrame(() => {
+      this.resizeAnimationFrameId = 0;
+      this.secondResizeAnimationFrameId = window.requestAnimationFrame(() => {
+        this.secondResizeAnimationFrameId = 0;
+        this.resizeViewport(3);
+      });
+    });
+  }
+
+  getDiagnostics() {
+    return {
+      canvasWidth: Math.round(this.canvas?.clientWidth || 0),
+      canvasHeight: Math.round(this.canvas?.clientHeight || 0),
+      webglInstanceId: this.instanceId,
+      engineInstanceId: this.engineInstanceId,
+      sceneInstanceId: this.sceneInstanceId,
+    };
   }
 
   getRingViewButtons(): RingViewButton[] {
@@ -862,14 +928,6 @@ export class WebglComponent {
       this.resizeAnimationFrameId = 0;
       this.resizeViewport(forceFrames);
     });
-
-    if (this.resizeTimeoutId) {
-      window.clearTimeout(this.resizeTimeoutId);
-    }
-    this.resizeTimeoutId = window.setTimeout(() => {
-      this.resizeTimeoutId = 0;
-      this.resizeViewport(forceFrames);
-    }, 80);
   }
 
   resizeViewport(forceFrames: number = 2) {
@@ -887,7 +945,7 @@ export class WebglComponent {
   private applyRenderQuality() {
     if (!this.engine) return;
 
-    this.renderQuality = computeRenderQuality();
+    this.renderQuality = computeRenderQuality(AppComponent.app.state.mobile);
     this.engine.setHardwareScalingLevel(this.renderQuality.hardwareScalingLevel);
 
     if (AppComponent.app.state.debug) {

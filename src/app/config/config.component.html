@@ -1,4 +1,4 @@
-@if (isMobilePanelOpen()) {
+@if (isPanelDismissible() && isPanelOpen()) {
   <button type="button" class="mobile-panel-collapse" aria-label="Panel schliessen" (mousedown)="closePanel()">
     <span></span>
   </button>

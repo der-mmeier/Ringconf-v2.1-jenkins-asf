@@ -1,4 +1,4 @@
-﻿@use "../default" as *;
+@use "../default" as *;
 
 :host {
   position: relative;
@@ -8,143 +8,193 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   user-select: none;
+  min-width: 0;
 
   * {
     box-sizing: border-box;
   }
+}
 
-  .flex-row {
-    @include flexbox;
-    @include flex-direction(row);
-    margin: 0 10px;
+.configurator-shell {
+  --config-nav-target-size: 54px;
+  --config-rail-width: 72px;
+  --stone-option-target-size: 48px;
+  --stone-preview-size: 36px;
+  --configurator-gap: 10px;
+  --configurator-panel-width: clamp(360px, 42%, 640px);
+  display: grid;
+  grid-template-areas:
+    "nav nav"
+    "canvas panel"
+    "actions panel";
+  grid-template-columns: minmax(420px, 1fr) var(--configurator-panel-width);
+  grid-template-rows: auto minmax(520px, auto) auto;
+  gap: var(--configurator-gap);
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 10px 8px;
+}
 
-    .flex-grow {
-      @include flex-grow(1);
-      @include flex-basis(50%);
-    }
+.configurator-nav {
+  grid-area: nav;
+  min-width: 0;
+}
 
-    //.max40 {
-    //  max-width: 40%;
-    //}
+.configurator-canvas-region {
+  grid-area: canvas;
+  min-width: 0;
+  min-height: 0;
+}
 
-    &.break {
-      @media (max-width: $breakpoint-mobile) {
-        @include align-self(flex-start);
-        @include flex-direction(column);
-        position: relative;
-      }
-    }
+.configurator-panel {
+  grid-area: panel;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background-color: #e6e6e6;
+  border-left: 1px solid #d5d8d8;
+}
 
-    &.sticky {
-      @media (max-width: $breakpoint-mobile) {
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-      }
-    }
+.configurator-actions {
+  grid-area: actions;
+  min-width: 0;
+}
 
-    @media (max-width: $breakpoint-footer-split) {
-      margin: 0 10px 5px 10px;
-    }
+.configurator-shell[data-layout-mode="desktop-wide"] {
+  --configurator-panel-width: clamp(420px, 36%, 680px);
+  grid-template-rows: auto minmax(620px, auto) auto;
+}
+
+.configurator-shell[data-layout-mode="desktop-compact"] {
+  --configurator-panel-width: clamp(340px, 40%, 520px);
+  --configurator-gap: 8px;
+  grid-template-rows: auto minmax(500px, auto) auto;
+}
+
+.configurator-shell[data-layout-mode="tablet-landscape"] {
+  --config-nav-target-size: 58px;
+  --stone-option-target-size: 50px;
+  --stone-preview-size: 40px;
+  --configurator-panel-width: minmax(320px, 36vw);
+  grid-template-areas:
+    "nav canvas panel"
+    "nav actions panel";
+  grid-template-columns: var(--config-rail-width) minmax(360px, 1fr) var(--configurator-panel-width);
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: min(820px, 100svh);
+  padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+}
+
+.configurator-shell[data-layout-mode="tablet-portrait"] {
+  --config-nav-target-size: 54px;
+  --stone-option-target-size: 50px;
+  --stone-preview-size: 40px;
+  grid-template-areas:
+    "nav"
+    "canvas"
+    "panel"
+    "actions";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(430px, 52svh) minmax(250px, 1fr) auto;
+  min-height: 100svh;
+  max-width: 100vw;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+}
+
+.configurator-shell[data-layout-mode="phone-portrait"] {
+  --config-nav-target-size: 54px;
+  --stone-option-target-size: 50px;
+  --stone-preview-size: 38px;
+  --configurator-gap: 6px;
+  grid-template-areas:
+    "canvas"
+    "nav"
+    "panel"
+    "actions";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(300px, 46svh) auto minmax(220px, 1fr) auto;
+  height: 100dvh;
+  max-width: 100vw;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+
+  .configurator-panel {
+    overflow-y: auto;
   }
+}
 
-  .show-if-mobile {
-    display: none;
-  }
+.configurator-shell[data-layout-mode="phone-landscape"] {
+  --config-nav-target-size: 56px;
+  --config-rail-width: 68px;
+  --stone-option-target-size: 48px;
+  --stone-preview-size: 34px;
+  --configurator-gap: 6px;
+  grid-template-areas:
+    "nav canvas panel"
+    "nav actions panel";
+  grid-template-columns: var(--config-rail-width) minmax(0, 1fr) minmax(260px, 34vw);
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100dvh;
+  max-height: 100dvh;
+  max-width: 100vw;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
 
-  @media (max-width: $breakpoint-mobile) {
-    --mobile-bottom-nav-height: calc(56px + env(safe-area-inset-bottom));
-    --mobile-panel-height-open: 34dvh;
-    --mobile-canvas-height-open: clamp(300px, 42dvh, 420px);
-    --mobile-canvas-height-closed: clamp(480px, calc(100dvh - var(--mobile-bottom-nav-height) - 190px), 720px);
+  &.configurator-panel-closed {
+    grid-template-areas:
+      "nav canvas"
+      "nav actions";
+    grid-template-columns: var(--config-rail-width) minmax(0, 1fr);
 
-    @include flexbox();
-    @include flex-direction(column);
-    height: 100dvh;
-    min-height: 100dvh;
-    max-width: 100vw;
-    overflow: hidden;
-    overflow-x: hidden;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: var(--mobile-bottom-nav-height);
-
-    .show-if-desktop {
+    .configurator-panel {
       display: none;
-    }
-    .show-if-mobile {
-      display: block;
-      @include flex-grow(1);
-      min-height: 0;
-      min-width: 0;
-      width: 100%;
-      overflow-x: hidden;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .flex-row {
-      margin: 0 8px;
-      min-height: 0;
-
-      .flex-grow {
-        @include flex-basis(auto);
-        width: 100%;
-      }
-
-      .max40 {
-        max-width: none;
-      }
-    }
-
-    .app-main {
-      @include flex-grow(0);
-      @include flex-shrink(0);
-      width: 100%;
-    }
-
-    .viewport-column {
-      @include flexbox();
-      @include flex-direction(column);
-      @include flex-grow(0);
-      @include flex-shrink(0);
-      @include flex-basis(auto);
-      width: 100%;
-      min-height: 0;
-    }
-
-    .mobile-config-row {
-      @include flex-grow(0);
-      @include flex-shrink(0);
-      @include flex-basis(auto);
-      min-height: 0;
-      max-height: var(--mobile-panel-height-open);
-      overflow: hidden;
-      min-width: 0;
-      width: calc(100% - 16px);
-      background-color: #e6e6e6;
-      border-top: 1px solid #d5d8d8;
-    }
-
-    .auxiliary-row {
-      @include flex-grow(0);
-      @include flex-shrink(0);
     }
   }
 }
 
-//.contentWrapper {
-//  margin:5px;
-//  padding:15px;
-//  background-color: #e6e6e6;
-//  border-radius: $border-radius;
-//}
+.configurator-shell[data-layout-mode="phone-portrait"],
+.configurator-shell[data-layout-mode="phone-landscape"],
+.configurator-shell[data-layout-mode="tablet-portrait"],
+.configurator-shell[data-layout-mode="tablet-landscape"] {
+  .configurator-actions {
+    max-height: 120px;
+    overflow: auto;
+  }
+}
 
-//.tools{
-//  display:none;
-//  @media (min-width: $breakpoint-mobile) {
-//    display:block;
-//  }
-//}
+x-webgl {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
 
+x-tools {
+  display: block;
+  min-width: 0;
+}
 
+.layout-diagnostics {
+  position: fixed;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 2000;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+  color: #1e1e1e;
+  font-size: 11px;
+  line-height: 1.35;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+}
+
+@media (max-width: $breakpoint-footer-split) {
+  x-footer {
+    display: none;
+  }
+}

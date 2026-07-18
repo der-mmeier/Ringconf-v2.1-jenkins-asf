@@ -109,11 +109,11 @@ x-config-stone {
 
   .stone-color-preview {
     display: inline-block;
-    width: 32px;
-    height: 24px;
+    width: var(--stone-preview-size, 32px);
+    height: calc(var(--stone-preview-size, 32px) * 0.75);
     object-fit: contain;
     margin-right: 8px;
-    flex: 0 0 32px;
+    flex: 0 0 var(--stone-preview-size, 32px);
   }
 
   .position-wrapper {
