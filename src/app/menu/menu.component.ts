@@ -1,6 +1,11 @@
 import {Component, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {environment} from "../../environments/environment";
+import {
+  ConfiguratorLayoutMode,
+  isConfiguratorDrawerMode,
+  isConfiguratorRailMode
+} from "../layout/configurator-layout.models";
 
 @Component({
     selector: 'x-menu',
@@ -16,8 +21,10 @@ export class MenuComponent
   app = AppComponent.app;
   env = environment;
   @Input() mode: string = "Desktop";
+  @Input() layoutMode: ConfiguratorLayoutMode = "desktop-compact";
 
   navigation = navigation;
+  adaptiveItems = navigation.items;
   mobileExpanded=false;
   mobilePrimaryItems = navigation.items.filter(item => ['profil', 'masse', 'material', 'steinbesatz'].indexOf(item.hash) !== -1)
     .map(item => item.hash === 'steinbesatz' ? {...item, title: 'Steine'} : item);
@@ -37,6 +44,33 @@ export class MenuComponent
       return;
     }
     setNavigationHash(hash, true);
+  }
+
+  selectAdaptiveItem(hash: string)
+  {
+    if (isConfiguratorDrawerMode(this.layoutMode) && navigation.currentHash === hash) {
+      closeNavigationPanel();
+      return;
+    }
+    this.changeHash(hash);
+  }
+
+  getAdaptiveTitle(title: string): string
+  {
+    if (this.layoutMode === "phone-landscape") {
+      return title
+        .replace("Fugen / Stufen", "Fugen")
+        .replace("Steinbesatz", "Steine");
+    }
+    if (this.layoutMode === "tablet-landscape") {
+      return title.replace("Fugen / Stufen", "Fugen");
+    }
+    return title;
+  }
+
+  isRailMode(): boolean
+  {
+    return isConfiguratorRailMode(this.layoutMode);
   }
 
   isMobileMoreActive()
@@ -141,7 +175,7 @@ export let navigation = {
 
 window.addEventListener('hashchange', hashChanged);
 
-const MOBILE_BREAKPOINT = 768;
+let activeLayoutMode: ConfiguratorLayoutMode = "desktop-compact";
 
 const hashAliases: {[key: string]: string} = {
   profile: "profil",
@@ -195,7 +229,7 @@ export function setNavigationHash(hash: string, updateUrl: boolean = false)
 
 export function closeNavigationPanel()
 {
-  navigation.currentHash = isMobileViewport() ? "" : "profil";
+  navigation.currentHash = isCompactNavigationMode() ? "" : "profil";
   let url = new URL(window.location.href);
   url.hash = "";
   window.history.replaceState(window.history.state, "", url);
@@ -211,8 +245,8 @@ function parseNavigationHash(hash: string)
   } catch {
     cleaned = "";
   }
-  if (cleaned === "") return isMobileViewport() ? "" : "profil";
-  return hashAliases[cleaned] || (isMobileViewport() ? "" : "profil");
+  if (cleaned === "") return isCompactNavigationMode() ? "" : "profil";
+  return hashAliases[cleaned] || (isCompactNavigationMode() ? "" : "profil");
 }
 
 function hashChanged()
@@ -222,10 +256,11 @@ function hashChanged()
 
 hashChanged();
 
-const mobileMediaQuery = window.matchMedia("(max-width: " + MOBILE_BREAKPOINT + "px)");
-mobileMediaQuery.addEventListener("change", function () {
-  setNavigationHash(window.location.hash, false);
-});
+export function setNavigationLayoutMode(mode: ConfiguratorLayoutMode)
+{
+  activeLayoutMode = mode;
+  updateMobilePanelState();
+}
 
 function requestWebglResize()
 {
@@ -241,18 +276,19 @@ function requestWebglResize()
   };
 
   window.requestAnimationFrame(resize);
-  window.setTimeout(resize, 180);
-  window.setTimeout(resize, 360);
 }
 
-function isMobileViewport()
+function isCompactNavigationMode()
 {
-  return window.matchMedia("(max-width: " + MOBILE_BREAKPOINT + "px)").matches;
+  return activeLayoutMode === "phone-portrait"
+    || activeLayoutMode === "phone-landscape"
+    || activeLayoutMode === "tablet-portrait";
 }
 
 function updateMobilePanelState()
 {
-  let panelOpen = isMobileViewport() && navigation.currentHash !== "";
+  let compact = isCompactNavigationMode();
+  let panelOpen = compact && navigation.currentHash !== "";
   document.body.classList.toggle("mobile-panel-open", panelOpen);
-  document.body.classList.toggle("mobile-panel-closed", isMobileViewport() && !panelOpen);
+  document.body.classList.toggle("mobile-panel-closed", compact && !panelOpen);
 }

@@ -8,7 +8,7 @@ describe('MtsHorizontalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MtsHorizontalComponent]
+      declarations: [MtsHorizontalComponent]
     })
     .compileComponents();
 

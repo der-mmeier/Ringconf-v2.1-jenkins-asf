@@ -2,19 +2,22 @@
 
 x-config {
   position: relative;
+  display: block;
   min-height: 0;
   min-width: 0;
   width: 100%;
+  height: 100%;
+  overflow: hidden;
 
   .config-wrapper {
     margin: 10px 0 0 5px;
-
-    @media (max-width: $breakpoint-mobile) {
-      margin: 0;
-      min-height: 0;
-      min-width: 0;
-      overflow-x: hidden;
-    }
+    min-height: 0;
+    min-width: 0;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 
   }
 
@@ -26,75 +29,79 @@ x-config {
     display: none;
   }
 
-  @media (max-width: $breakpoint-mobile) {
-    &.panel-closed {
-      display: none;
-      pointer-events: none;
-    }
+  &.panel-closed {
+    pointer-events: none;
+  }
 
-    &.panel-open {
+  &.panel-open {
+    pointer-events: auto;
+  }
+
+  .mobile-panel-collapse {
+    @include flexbox();
+    @include align-items(center);
+    @include justify-content(center);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    width: 100%;
+    min-height: 48px;
+    border: 0;
+    border-bottom: 1px solid #d5d8d8;
+    background-color: #e6e6e6;
+    cursor: pointer;
+    touch-action: manipulation;
+
+    span {
       display: block;
-      pointer-events: auto;
+      width: 14px;
+      height: 14px;
+      border-right: 2px solid #ab3333;
+      border-bottom: 2px solid #ab3333;
+      transform: rotate(45deg) translateY(-3px);
     }
+  }
 
-    .mobile-panel-collapse {
-      @include flexbox();
-      @include align-items(center);
-      @include justify-content(center);
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      width: 100%;
-      min-height: 34px;
-      border: 0;
-      border-bottom: 1px solid #d5d8d8;
-      background-color: #e6e6e6;
-      cursor: pointer;
-      touch-action: manipulation;
+  .mobile-more-panel {
+    @include flexbox();
+    @include flex-direction(row);
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 0;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 
-      span {
-        display: block;
-        width: 14px;
-        height: 14px;
-        border-right: 2px solid #ab3333;
-        border-bottom: 2px solid #ab3333;
-        transform: rotate(45deg) translateY(-3px);
-      }
+  .mobile-more-option {
+    @include flexbox();
+    @include flex-direction(column);
+    @include align-items(center);
+    @include justify-content(center);
+    flex: 0 0 112px;
+    min-height: 72px;
+    border: 1px solid #d5d8d8;
+    border-radius: $border-radius;
+    background-color: #f2f2f2;
+    color: #262626;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    touch-action: manipulation;
+
+    img {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 6px;
     }
+  }
 
-    .mobile-more-panel {
-      @include flexbox();
-      @include flex-direction(row);
-      gap: 8px;
-      overflow-x: auto;
-      padding: 8px 0;
-      overscroll-behavior-x: contain;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .mobile-more-option {
-      @include flexbox();
-      @include flex-direction(column);
-      @include align-items(center);
-      @include justify-content(center);
-      flex: 0 0 112px;
-      min-height: 72px;
-      border: 1px solid #d5d8d8;
-      border-radius: $border-radius;
-      background-color: #f2f2f2;
-      color: #262626;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-align: center;
-      touch-action: manipulation;
-
-      img {
-        width: 28px;
-        height: 28px;
-        margin-bottom: 6px;
-      }
+  &.layout-phone-portrait,
+  &.layout-phone-landscape,
+  &.layout-tablet-portrait {
+    .config-wrapper {
+      margin: 0;
     }
   }
 }

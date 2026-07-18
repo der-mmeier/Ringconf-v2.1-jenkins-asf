@@ -1,4 +1,13 @@
-import {ChangeDetectionStrategy, Component, ElementRef, OnInit} from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {lastValueFrom} from 'rxjs';
 import packageInfo from '../../package.json';
@@ -13,6 +22,14 @@ import {getStoneCuts, normalizeStoneTaxonomyAppData} from './stone-taxonomy';
 import {formatCoordinates, normalizeEngravingAppData} from './exterior-engraving';
 import {normalizeRingViewAppData} from "./webgl/ring-view-presets";
 import {applyRuntimeEnvironment, getRuntimeNonce, resolveRingconfRuntime} from "./runtime-config";
+import {ConfiguratorLayoutService} from "./layout/configurator-layout.service";
+import {
+  ConfiguratorLayoutState,
+  DEFAULT_CONFIGURATOR_LAYOUT_STATE,
+  isConfiguratorDrawerMode,
+  isConfiguratorPanelPersistent
+} from "./layout/configurator-layout.models";
+import {navigation, setNavigationHash, setNavigationLayoutMode} from "./menu/menu.component";
 
 @Component({
   selector: 'x-app-root',
@@ -23,7 +40,7 @@ import {applyRuntimeEnvironment, getRuntimeNonce, resolveRingconfRuntime} from "
   standalone: false
 })
 
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   static app: AppComponent;
 
   state = {
@@ -2329,9 +2346,23 @@ export class AppComponent implements OnInit {
   dataSafeJson: string = "";
 
   env = environment;
+  layout: ConfiguratorLayoutState = DEFAULT_CONFIGURATOR_LAYOUT_STATE;
+  webglDiagnostics = {
+    canvasWidth: 0,
+    canvasHeight: 0,
+    webglInstanceId: 0,
+    engineInstanceId: 0,
+    sceneInstanceId: 0,
+  };
+  @ViewChild('configuratorHost') configuratorHost?: ElementRef<HTMLElement>;
   private runtimeAvailable = true;
 
-  constructor(public http: HttpClient, private hostElement: ElementRef<HTMLElement>) {
+  constructor(
+    public http: HttpClient,
+    private hostElement: ElementRef<HTMLElement>,
+    private layoutService: ConfiguratorLayoutService,
+    private changeDetector: ChangeDetectorRef
+  ) {
     const runtime = applyRuntimeEnvironment(this.hostElement.nativeElement);
     if (environment.isWooCommerce && !runtime) {
       this.runtimeAvailable = false;
@@ -2350,12 +2381,6 @@ export class AppComponent implements OnInit {
     this.dataSafeJson = JSON.stringify(this.data);
 
     AppComponent.app = this;
-
-    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(navigator.userAgent)) {
-      this.state.mobile = true;
-    } else if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera material(obi|ini)/.test(navigator.userAgent)) {
-      this.state.mobile = true;
-    }
 
     if (document.location.toString().indexOf('?') !== -1) {
       let query = document.location
@@ -2385,6 +2410,32 @@ export class AppComponent implements OnInit {
 
     new RingData();
     new RingData();
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.runtimeAvailable || !this.configuratorHost) {
+      return;
+    }
+    this.layoutService.observe(this.configuratorHost.nativeElement, (state, previous) => {
+      this.layout = state;
+      this.state.mobile = state.mode === "phone-portrait"
+        || state.mode === "phone-landscape"
+        || state.mode === "tablet-portrait";
+      setNavigationLayoutMode(state.mode);
+      if (isConfiguratorPanelPersistent(state.mode) && navigation.currentHash === "") {
+        setNavigationHash("profil", false);
+      }
+      if (isConfiguratorDrawerMode(state.mode) && previous?.mode !== state.mode && !window.location.hash) {
+        setNavigationHash("", false);
+      }
+      this.requestAdaptiveWebglResize();
+      this.refreshWebglDiagnostics();
+      this.changeDetector.detectChanges();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.layoutService.dispose();
   }
 
   ngOnInit() {
@@ -2417,6 +2468,41 @@ export class AppComponent implements OnInit {
     }
 
     this.state.configMode = mode;
+  }
+
+  isConfiguratorPanelOpen(): boolean {
+    return !this.isConfiguratorPanelHidden();
+  }
+
+  isConfiguratorPanelHidden(): boolean {
+    return isConfiguratorDrawerMode(this.layout.mode) && navigation.currentHash === "";
+  }
+
+  isLayoutDiagnosticsVisible(): boolean {
+    return this.state.debug && !environment.isWooCommerce && getRuntimeChannel() === "development";
+  }
+
+  formatLayoutAspect(): string {
+    return this.layout.aspectRatio.toFixed(3);
+  }
+
+  private requestAdaptiveWebglResize(): void {
+    window.requestAnimationFrame(() => {
+      const webgl = (window as any).__oneRingconfWebgl;
+      if (webgl && typeof webgl.resizeForLayoutChange === "function") {
+        webgl.resizeForLayoutChange();
+      } else if (webgl && typeof webgl.resizeAndRender === "function") {
+        webgl.resizeAndRender();
+      }
+      this.refreshWebglDiagnostics();
+    });
+  }
+
+  private refreshWebglDiagnostics(): void {
+    const webgl = (window as any).__oneRingconfWebgl;
+    if (webgl && typeof webgl.getDiagnostics === "function") {
+      this.webglDiagnostics = webgl.getDiagnostics();
+    }
   }
 
   getDetails(): iDetails[] | null {

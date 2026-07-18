@@ -6,29 +6,43 @@
 <!--  <div data-sm-id="8e9843aa5d7c497f81b170888014051a" data-sm-desc="Super Express - 1 - 4 Arbeitstage (+120€)"></div>-->
 <!--</div>-->
 
-<x-menu class="app-header" mode="desktop"></x-menu>
+<div
+  #configuratorHost
+  class="configurator-shell"
+  [attr.data-layout-mode]="layout.mode"
+  [attr.data-orientation]="layout.orientation"
+  [attr.data-pointer]="layout.pointer"
+  [class.configurator-panel-open]="isConfiguratorPanelOpen()"
+  [class.configurator-panel-closed]="!isConfiguratorPanelOpen()">
+  <x-menu class="configurator-nav" mode="adaptive" [layoutMode]="layout.mode"></x-menu>
 
-<div class="flex-row break app-main">
-  <div class="flex-grow max40 viewport-column">
+  <main class="configurator-canvas-region" aria-label="3D-Vorschau">
     <x-webgl></x-webgl>
-    <x-menu mode="mobile"></x-menu>
-  </div>
-  <div class="flex-grow">
-    <x-config class="show-if-desktop"></x-config>
-  </div>
-</div>
-<div class="flex-row mobile-config-row">
-  <x-config class="show-if-mobile"></x-config>
-</div>
-<div class="flex-row break auxiliary-row">
-  <div class="flex-grow">
+  </main>
+
+  <aside class="configurator-panel" [attr.aria-hidden]="isConfiguratorPanelHidden()">
+    <x-config [layoutMode]="layout.mode"></x-config>
+  </aside>
+
+  <section class="configurator-actions" aria-label="Konfigurator-Aktionen">
     <x-tools mode="normal"></x-tools>
-  </div>
-  <div class="flex-grow">
-    <x-menu mode="prevNext"></x-menu>
-  </div>
+  </section>
 </div>
 <x-footer></x-footer>
+
+@if (isLayoutDiagnosticsVisible()) {
+  <div class="layout-diagnostics" aria-live="polite">
+    <div>Layout mode: {{layout.mode}}</div>
+    <div>Host: {{layout.width}} x {{layout.height}}</div>
+    <div>Aspect: {{formatLayoutAspect()}}</div>
+    <div>Pointer: {{layout.pointer}}</div>
+    <div>Canvas: {{webglDiagnostics.canvasWidth}} x {{webglDiagnostics.canvasHeight}}</div>
+    <div>WebGL instance: #{{webglDiagnostics.webglInstanceId}}</div>
+    <div>Engine instance: #{{webglDiagnostics.engineInstanceId}}</div>
+    <div>Scene instance: #{{webglDiagnostics.sceneInstanceId}}</div>
+    <div>Reflows: {{layout.reflowCount}}</div>
+  </div>
+}
 
 @if (state.debug) {
   <x-debug></x-debug>
