@@ -22,6 +22,7 @@ import {layoutPresetFromParsed, ObjMarkerLayoutResult, parseObjMarkerLayout} fro
 import {normalizeRingViewAppData} from "../webgl/ring-view-presets";
 import {normalizeEngravingAppData} from "../exterior-engraving";
 import {ViewCalibrationComponent} from "./view-calibration/view-calibration.component";
+import {CalibrationStudioComponent} from "./calibration-studio/calibration-studio.component";
 
 type StatusType = "idle" | "success" | "warning" | "error";
 type AdminAction = "importCurrentBaseline" | "saveVersion" | "setCompatibility" | "approveVersion" | "retireVersion" | "assignTarget" | "rollbackTarget";
@@ -149,7 +150,7 @@ interface MilgrainOption {
 @Component({
   selector: "x-development-admin",
   standalone: true,
-  imports: [CommonModule, FormsModule, ViewCalibrationComponent],
+  imports: [CommonModule, FormsModule, ViewCalibrationComponent, CalibrationStudioComponent],
   templateUrl: "./development-admin.component.html",
   styleUrls: ["./development-admin.component.scss"],
 })

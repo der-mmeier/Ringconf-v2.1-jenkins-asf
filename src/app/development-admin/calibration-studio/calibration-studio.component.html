@@ -1,0 +1,181 @@
+<button class="calibration-open" type="button" (click)="toggle()">Calibration Studio 2.0</button>
+
+@if (open) {
+  <section
+    class="calibration-modal"
+    [class.minimized]="modal.minimized"
+    [style.left.px]="modal.left"
+    [style.top.px]="modal.top"
+    [style.width.px]="modal.width"
+    [style.height.px]="modal.height"
+    aria-label="Calibration Studio 2.0">
+    <header class="calibration-titlebar" (pointerdown)="beginPointer($event, 'drag')">
+      <div>
+        <h3>Calibration Studio 2.0</h3>
+        <small>{{status}}</small>
+      </div>
+      <div class="titlebar-actions">
+        <button type="button" (click)="captureSession()">Snapshot</button>
+        <button type="button" (click)="minimize()">{{modal.minimized ? 'Oeffnen' : 'Minimieren'}}</button>
+        <button type="button" (click)="close()">x</button>
+      </div>
+    </header>
+
+    @if (!modal.minimized && state) {
+      <nav class="calibration-tabs" aria-label="Calibration Studio Bereiche">
+        <button type="button" [class.active]="activeTab === 'status'" (click)="activeTab = 'status'">Status</button>
+        <button type="button" [class.active]="activeTab === 'rings'" (click)="activeTab = 'rings'">Ringe</button>
+        <button type="button" [class.active]="activeTab === 'camera'" (click)="activeTab = 'camera'">Kamera</button>
+        <button type="button" [class.active]="activeTab === 'sequence'" (click)="activeTab = 'sequence'">Fahrt</button>
+        <button type="button" [class.active]="activeTab === 'views'" (click)="activeTab = 'views'">Views</button>
+        <button type="button" [class.active]="activeTab === 'export'" (click)="activeTab = 'export'">Export</button>
+        <button type="button" [class.active]="activeTab === 'debug'" (click)="activeTab = 'debug'">Debug</button>
+      </nav>
+
+      <div class="calibration-body">
+        @if (activeTab === 'status') {
+          <section class="studio-grid">
+            <article>
+              <strong>Komposition</strong>
+              <span>{{activeCompositionLabel}}</span>
+            </article>
+            <article>
+              <strong>Aktive Slots</strong>
+              <span>{{state.rings.length}}</span>
+            </article>
+            <article>
+              <strong>Dirty</strong>
+              <span>{{state.dirty ? 'ja' : 'nein'}}</span>
+            </article>
+            <article>
+              <strong>Version</strong>
+              <span>{{state.projectVersion}}</span>
+            </article>
+            <article>
+              <strong>WebGL</strong>
+              <span>{{engineSceneLabel}}</span>
+            </article>
+          </section>
+          <footer class="studio-actions">
+            <button type="button" (click)="applyLive()">Aenderung live anwenden</button>
+            <button type="button" (click)="discard()">Aenderungen verwerfen</button>
+            <button type="button" (click)="resetNatural()">Natural State</button>
+          </footer>
+        }
+
+        @if (activeTab === 'rings') {
+          @for (ring of state.rings; track ring.slot) {
+            <section class="ring-editor">
+              <h4>{{ring.role}} / Slot {{ring.slot}}</h4>
+              <label>
+                <span>Position X <button type="button" [title]="getHelp('ring.position')">?</button></span>
+                <input type="number" step="0.01" [ngModel]="ring.position[0]" (ngModelChange)="updateRingPosition(ring, 0, $event)">
+              </label>
+              <label>
+                <span>Position Y <button type="button" [title]="getHelp('ring.position')">?</button></span>
+                <input type="number" step="0.01" [ngModel]="ring.position[1]" (ngModelChange)="updateRingPosition(ring, 1, $event)">
+              </label>
+              <label>
+                <span>Position Z <button type="button" [title]="getHelp('ring.position')">?</button></span>
+                <input type="number" step="0.01" [ngModel]="ring.position[2]" (ngModelChange)="updateRingPosition(ring, 2, $event)">
+              </label>
+              @for (axis of [0, 1, 2, 3]; track axis) {
+                <label>
+                  <span>Quaternion {{axis}} <button type="button" [title]="getHelp('ring.rotationQuaternion')">?</button></span>
+                  <input type="number" step="0.0001" [ngModel]="ring.rotationQuaternion[axis]" (ngModelChange)="updateRingQuaternion(ring, $any(axis), $event)">
+                </label>
+              }
+              <label class="check-row">
+                <input type="checkbox" [(ngModel)]="ring.visible" (ngModelChange)="applyLive()">
+                <span>Sichtbar <button type="button" [title]="getHelp('ring.visible')">?</button></span>
+              </label>
+            </section>
+          }
+        }
+
+        @if (activeTab === 'camera') {
+          <section class="camera-columns">
+            <article>
+              <h4>Startup Start</h4>
+              <ng-container *ngTemplateOutlet="cameraEditor; context: {$implicit: state.startup.start}"></ng-container>
+              <button type="button" (click)="captureStartFromCamera()">Aus Kamera uebernehmen</button>
+              <button type="button" (click)="applyStart()">Start anwenden</button>
+            </article>
+            <article>
+              <h4>Startup Ende</h4>
+              <ng-container *ngTemplateOutlet="cameraEditor; context: {$implicit: state.startup.end}"></ng-container>
+              <button type="button" (click)="captureEndFromCamera()">Aus Kamera uebernehmen</button>
+              <button type="button" (click)="applyEnd()">Ende anwenden</button>
+            </article>
+          </section>
+        }
+
+        @if (activeTab === 'sequence') {
+          <section class="sequence-editor">
+            <label class="check-row"><input type="checkbox" [(ngModel)]="state.startup.enabled"><span>Aktiv</span></label>
+            <label><span>Verzoegerung ms <button type="button" [title]="getHelp('startup.delayMs')">?</button></span><input type="number" [ngModel]="state.startup.delayMs" (ngModelChange)="updateSequenceNumber('delayMs', $event)"></label>
+            <label><span>Dauer ms <button type="button" [title]="getHelp('startup.durationMs')">?</button></span><input type="number" [ngModel]="state.startup.durationMs" (ngModelChange)="updateSequenceNumber('durationMs', $event)"></label>
+            <label>
+              <span>Easing <button type="button" [title]="getHelp('startup.easing')">?</button></span>
+              <select [(ngModel)]="state.startup.easing">
+                @for (option of easingOptions; track option) {
+                  <option [value]="option">{{option}}</option>
+                }
+              </select>
+            </label>
+            <label class="check-row"><input type="checkbox" [(ngModel)]="state.startup.interruptOnUserInput"><span>Bei Benutzerinteraktion abbrechen</span></label>
+            <div class="studio-actions">
+              <button type="button" (click)="playIntro()">Fahrt abspielen</button>
+              <button type="button" (click)="pauseIntro()">Pause</button>
+              <button type="button" (click)="stopIntro()">Stop</button>
+              <button type="button" (click)="jumpToEnd()">Zum Ende</button>
+              <button type="button" (click)="applyLegacyIntro()">Legacy-Shopware-Kamerafahrt uebernehmen</button>
+            </div>
+          </section>
+        }
+
+        @if (activeTab === 'views') {
+          <section>
+            <h4>Ansichten und Framing</h4>
+            <p>View-Presets bleiben ueber RingViewService aktiv. Das Studio verwendet dieselben Presentation-Roots und getrennte Kameraposen.</p>
+            <ul>
+              <li>fitMode, Ortho-Hoehe, Safety Padding und Shadow Envelope sind exportierbare Felder.</li>
+              <li>Engagement- und Memoire-Fokus werden als ring2/ring3 normalisiert.</li>
+            </ul>
+          </section>
+        }
+
+        @if (activeTab === 'export') {
+          <section>
+            <h4>Exportfelder</h4>
+            @for (field of exportableFields; track field.key) {
+              <div class="field-row">
+                <strong>{{field.label}}</strong>
+                <code>{{field.key}}</code>
+                <span>{{field.help}}</span>
+              </div>
+            }
+          </section>
+        }
+
+        @if (activeTab === 'debug') {
+          <pre>{{state | json}}</pre>
+        }
+      </div>
+    }
+
+    <span class="resize-handle" (pointerdown)="beginPointer($event, 'resize')" aria-label="Calibration Studio Groesse aendern"></span>
+  </section>
+}
+
+<ng-template #cameraEditor let-pose>
+  <label><span>Alpha <button type="button" [title]="getHelp('camera.alpha')">?</button></span><input type="number" step="0.001" [ngModel]="pose.alpha" (ngModelChange)="updateCameraNumber(pose, 'alpha', $event)"></label>
+  <label><span>Beta <button type="button" [title]="getHelp('camera.beta')">?</button></span><input type="number" step="0.001" [ngModel]="pose.beta" (ngModelChange)="updateCameraNumber(pose, 'beta', $event)"></label>
+  @for (axis of [0, 1, 2]; track axis) {
+    <label><span>Target {{axis}} <button type="button" [title]="getHelp('camera.target')">?</button></span><input type="number" step="0.01" [ngModel]="pose.target[axis]" (ngModelChange)="updateCameraTarget(pose, $any(axis), $event)"></label>
+  }
+  <label><span>Ortho-Hoehe <button type="button" [title]="getHelp('camera.orthoHeight')">?</button></span><input type="number" step="0.1" [ngModel]="pose.projection.orthoHeight" (ngModelChange)="updateCameraNumber(pose, 'orthoHeight', $event)"></label>
+  <label><span>Radius <button type="button" [title]="getHelp('camera.radius')">?</button></span><input type="number" step="0.1" [ngModel]="pose.projection.radius" (ngModelChange)="updateCameraNumber(pose, 'radius', $event)"></label>
+  <label><span>Screen Offset X <button type="button" [title]="getHelp('camera.screenOffsetX')">?</button></span><input type="number" step="0.01" [ngModel]="pose.projection.screenOffsetX" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetX', $event)"></label>
+  <label><span>Screen Offset Y <button type="button" [title]="getHelp('camera.screenOffsetY')">?</button></span><input type="number" step="0.01" [ngModel]="pose.projection.screenOffsetY" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetY', $event)"></label>
+</ng-template>
