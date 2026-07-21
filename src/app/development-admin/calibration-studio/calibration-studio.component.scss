@@ -117,6 +117,25 @@ button:focus-visible {
   display: block;
 }
 
+.step-mode {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #172033;
+}
+
+.step-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+
 .ring-editor,
 .sequence-editor,
 .camera-columns article {
@@ -142,6 +161,25 @@ label span {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.numeric-control {
+  grid-template-columns: minmax(120px, 1fr) minmax(96px, 140px) minmax(140px, 2fr);
+  align-items: center;
+  column-gap: 8px;
+}
+
+.numeric-control > span {
+  min-width: 0;
+}
+
+.numeric-control input[type="number"],
+.numeric-control input[type="range"] {
+  width: 100%;
+}
+
+.numeric-control input[type="range"] {
+  min-width: 120px;
 }
 
 input,

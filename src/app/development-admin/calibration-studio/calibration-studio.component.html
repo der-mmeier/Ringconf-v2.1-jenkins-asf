@@ -56,6 +56,17 @@
               <span>{{engineSceneLabel}}</span>
             </article>
           </section>
+          <section class="step-mode" aria-label="Kalibrierungsschrittweite">
+            <strong>Schrittweite</strong>
+            <label>
+              <input type="radio" name="calibration-step-mode" value="coarse" [(ngModel)]="stepMode">
+              <span>Grob 1.0</span>
+            </label>
+            <label>
+              <input type="radio" name="calibration-step-mode" value="fine" [(ngModel)]="stepMode">
+              <span>Fein 0.5</span>
+            </label>
+          </section>
           <footer class="studio-actions">
             <button type="button" (click)="applyLive()">Aenderung live anwenden</button>
             <button type="button" (click)="discard()">Aenderungen verwerfen</button>
@@ -67,22 +78,26 @@
           @for (ring of state.rings; track ring.slot) {
             <section class="ring-editor">
               <h4>{{ring.role}} / Slot {{ring.slot}}</h4>
-              <label>
+              <label class="numeric-control">
                 <span>Position X <button type="button" [title]="getHelp('ring.position')">?</button></span>
-                <input type="number" step="0.01" [ngModel]="ring.position[0]" (ngModelChange)="updateRingPosition(ring, 0, $event)">
+                <input type="number" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[0]" (ngModelChange)="updateRingPosition(ring, 0, $event)">
+                <input type="range" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[0]" (ngModelChange)="updateRingPosition(ring, 0, $event)">
               </label>
-              <label>
+              <label class="numeric-control">
                 <span>Position Y <button type="button" [title]="getHelp('ring.position')">?</button></span>
-                <input type="number" step="0.01" [ngModel]="ring.position[1]" (ngModelChange)="updateRingPosition(ring, 1, $event)">
+                <input type="number" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[1]" (ngModelChange)="updateRingPosition(ring, 1, $event)">
+                <input type="range" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[1]" (ngModelChange)="updateRingPosition(ring, 1, $event)">
               </label>
-              <label>
+              <label class="numeric-control">
                 <span>Position Z <button type="button" [title]="getHelp('ring.position')">?</button></span>
-                <input type="number" step="0.01" [ngModel]="ring.position[2]" (ngModelChange)="updateRingPosition(ring, 2, $event)">
+                <input type="number" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[2]" (ngModelChange)="updateRingPosition(ring, 2, $event)">
+                <input type="range" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[2]" (ngModelChange)="updateRingPosition(ring, 2, $event)">
               </label>
               @for (axis of [0, 1, 2, 3]; track axis) {
-                <label>
+                <label class="numeric-control">
                   <span>Quaternion {{axis}} <button type="button" [title]="getHelp('ring.rotationQuaternion')">?</button></span>
-                  <input type="number" step="0.0001" [ngModel]="ring.rotationQuaternion[axis]" (ngModelChange)="updateRingQuaternion(ring, $any(axis), $event)">
+                  <input type="number" [step]="calibrationStep" min="-1" max="1" [ngModel]="ring.rotationQuaternion[axis]" (ngModelChange)="updateRingQuaternion(ring, $any(axis), $event)">
+                  <input type="range" [step]="calibrationStep" min="-1" max="1" [ngModel]="ring.rotationQuaternion[axis]" (ngModelChange)="updateRingQuaternion(ring, $any(axis), $event)">
                 </label>
               }
               <label class="check-row">
@@ -113,8 +128,8 @@
         @if (activeTab === 'sequence') {
           <section class="sequence-editor">
             <label class="check-row"><input type="checkbox" [(ngModel)]="state.startup.enabled"><span>Aktiv</span></label>
-            <label><span>Verzoegerung ms <button type="button" [title]="getHelp('startup.delayMs')">?</button></span><input type="number" [ngModel]="state.startup.delayMs" (ngModelChange)="updateSequenceNumber('delayMs', $event)"></label>
-            <label><span>Dauer ms <button type="button" [title]="getHelp('startup.durationMs')">?</button></span><input type="number" [ngModel]="state.startup.durationMs" (ngModelChange)="updateSequenceNumber('durationMs', $event)"></label>
+            <label class="numeric-control"><span>Verzoegerung ms <button type="button" [title]="getHelp('startup.delayMs')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('startup.delayMs')" [max]="numericMax('startup.delayMs')" [ngModel]="state.startup.delayMs" (ngModelChange)="updateSequenceNumber('delayMs', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('startup.delayMs')" [max]="numericMax('startup.delayMs')" [ngModel]="state.startup.delayMs" (ngModelChange)="updateSequenceNumber('delayMs', $event)"></label>
+            <label class="numeric-control"><span>Dauer ms <button type="button" [title]="getHelp('startup.durationMs')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('startup.durationMs')" [max]="numericMax('startup.durationMs')" [ngModel]="state.startup.durationMs" (ngModelChange)="updateSequenceNumber('durationMs', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('startup.durationMs')" [max]="numericMax('startup.durationMs')" [ngModel]="state.startup.durationMs" (ngModelChange)="updateSequenceNumber('durationMs', $event)"></label>
             <label>
               <span>Easing <button type="button" [title]="getHelp('startup.easing')">?</button></span>
               <select [(ngModel)]="state.startup.easing">
@@ -209,7 +224,7 @@
                 <div class="profile-rule-grid">
                   <label><span>Name</span><input [(ngModel)]="viewDraft.name"></label>
                   <label><span>View-Key</span><input [(ngModel)]="viewDraft.viewKey" [disabled]="!!viewDraft.id"></label>
-                  <label><span>Sortierung</span><input type="number" [(ngModel)]="viewDraft.sortOrder"></label>
+                  <label class="numeric-control"><span>Sortierung</span><input type="number" [step]="calibrationStep" [(ngModel)]="viewDraft.sortOrder"><input type="range" [step]="calibrationStep" min="-100" max="1000" [(ngModel)]="viewDraft.sortOrder"></label>
                   <label class="check-row"><input type="checkbox" [(ngModel)]="viewDraft.enabled"><span>Aktiv</span></label>
                   <label class="check-row"><input type="checkbox" [(ngModel)]="viewDraft.isDefault"><span>Standard</span></label>
                 </div>
@@ -255,13 +270,13 @@
 }
 
 <ng-template #cameraEditor let-pose>
-  <label><span>Alpha <button type="button" [title]="getHelp('camera.alpha')">?</button></span><input type="number" step="0.001" [ngModel]="pose.alpha" (ngModelChange)="updateCameraNumber(pose, 'alpha', $event)"></label>
-  <label><span>Beta <button type="button" [title]="getHelp('camera.beta')">?</button></span><input type="number" step="0.001" [ngModel]="pose.beta" (ngModelChange)="updateCameraNumber(pose, 'beta', $event)"></label>
+  <label class="numeric-control"><span>Alpha <button type="button" [title]="getHelp('camera.alpha')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.alpha')" [max]="numericMax('camera.alpha')" [ngModel]="pose.alpha" (ngModelChange)="updateCameraNumber(pose, 'alpha', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.alpha')" [max]="numericMax('camera.alpha')" [ngModel]="pose.alpha" (ngModelChange)="updateCameraNumber(pose, 'alpha', $event)"></label>
+  <label class="numeric-control"><span>Beta <button type="button" [title]="getHelp('camera.beta')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.beta')" [max]="numericMax('camera.beta')" [ngModel]="pose.beta" (ngModelChange)="updateCameraNumber(pose, 'beta', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.beta')" [max]="numericMax('camera.beta')" [ngModel]="pose.beta" (ngModelChange)="updateCameraNumber(pose, 'beta', $event)"></label>
   @for (axis of [0, 1, 2]; track axis) {
-    <label><span>Target {{axis}} <button type="button" [title]="getHelp('camera.target')">?</button></span><input type="number" step="0.01" [ngModel]="pose.target[axis]" (ngModelChange)="updateCameraTarget(pose, $any(axis), $event)"></label>
+    <label class="numeric-control"><span>Target {{axis}} <button type="button" [title]="getHelp('camera.target')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.target')" [max]="numericMax('camera.target')" [ngModel]="pose.target[axis]" (ngModelChange)="updateCameraTarget(pose, $any(axis), $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.target')" [max]="numericMax('camera.target')" [ngModel]="pose.target[axis]" (ngModelChange)="updateCameraTarget(pose, $any(axis), $event)"></label>
   }
-  <label><span>Ortho-Hoehe <button type="button" [title]="getHelp('camera.orthoHeight')">?</button></span><input type="number" step="0.1" [ngModel]="pose.projection.orthoHeight" (ngModelChange)="updateCameraNumber(pose, 'orthoHeight', $event)"></label>
-  <label><span>Radius <button type="button" [title]="getHelp('camera.radius')">?</button></span><input type="number" step="0.1" [ngModel]="pose.projection.radius" (ngModelChange)="updateCameraNumber(pose, 'radius', $event)"></label>
-  <label><span>Screen Offset X <button type="button" [title]="getHelp('camera.screenOffsetX')">?</button></span><input type="number" step="0.01" [ngModel]="pose.projection.screenOffsetX" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetX', $event)"></label>
-  <label><span>Screen Offset Y <button type="button" [title]="getHelp('camera.screenOffsetY')">?</button></span><input type="number" step="0.01" [ngModel]="pose.projection.screenOffsetY" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetY', $event)"></label>
+  <label class="numeric-control"><span>Ortho-Hoehe <button type="button" [title]="getHelp('camera.orthoHeight')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.orthoHeight')" [max]="numericMax('camera.orthoHeight')" [ngModel]="pose.projection.orthoHeight" (ngModelChange)="updateCameraNumber(pose, 'orthoHeight', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.orthoHeight')" [max]="numericMax('camera.orthoHeight')" [ngModel]="pose.projection.orthoHeight" (ngModelChange)="updateCameraNumber(pose, 'orthoHeight', $event)"></label>
+  <label class="numeric-control"><span>Radius <button type="button" [title]="getHelp('camera.radius')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.radius')" [max]="numericMax('camera.radius')" [ngModel]="pose.projection.radius" (ngModelChange)="updateCameraNumber(pose, 'radius', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.radius')" [max]="numericMax('camera.radius')" [ngModel]="pose.projection.radius" (ngModelChange)="updateCameraNumber(pose, 'radius', $event)"></label>
+  <label class="numeric-control"><span>Screen Offset X <button type="button" [title]="getHelp('camera.screenOffsetX')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.screenOffsetX')" [max]="numericMax('camera.screenOffsetX')" [ngModel]="pose.projection.screenOffsetX" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetX', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.screenOffsetX')" [max]="numericMax('camera.screenOffsetX')" [ngModel]="pose.projection.screenOffsetX" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetX', $event)"></label>
+  <label class="numeric-control"><span>Screen Offset Y <button type="button" [title]="getHelp('camera.screenOffsetY')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.screenOffsetY')" [max]="numericMax('camera.screenOffsetY')" [ngModel]="pose.projection.screenOffsetY" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetY', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.screenOffsetY')" [max]="numericMax('camera.screenOffsetY')" [ngModel]="pose.projection.screenOffsetY" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetY', $event)"></label>
 </ng-template>

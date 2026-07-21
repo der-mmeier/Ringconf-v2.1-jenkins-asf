@@ -177,6 +177,14 @@ export class CalibrationStudioComponent {
     return this.stepMode === "fine" ? 0.5 : 1.0;
   }
 
+  numericMin(key: string): number {
+    return getCalibrationFieldDefinition(key).safeRange?.min ?? -100;
+  }
+
+  numericMax(key: string): number {
+    return getCalibrationFieldDefinition(key).safeRange?.max ?? 100;
+  }
+
   createNewView(): void {
     const composition = this.selectedComposition;
     if (!composition) return;
@@ -445,20 +453,21 @@ export class CalibrationStudioComponent {
   }
 
   updateRingPosition(ring: RingPresentationCalibration, axis: 0 | 1 | 2, value: unknown): void {
-    const n = this.finite(value, ring.position[axis]);
+    const n = this.clampCalibrationValue("ring.position", value, ring.position[axis]);
     ring.position[axis] = n;
     this.applyLive();
   }
 
   updateRingQuaternion(ring: RingPresentationCalibration, axis: 0 | 1 | 2 | 3, value: unknown): void {
     const next = [...ring.rotationQuaternion] as [number, number, number, number];
-    next[axis] = this.finite(value, next[axis]);
+    next[axis] = Math.max(-1, Math.min(1, this.finite(value, next[axis])));
     ring.rotationQuaternion = normalizeQuaternion(next);
     this.applyLive();
   }
 
   updateCameraNumber(pose: CameraPose, path: string, value: unknown): void {
-    const n = this.finite(value, 0);
+    const key = cameraFieldKey(path);
+    const n = this.clampCalibrationValue(key, value, 0);
     if (path === "alpha" || path === "beta") pose[path] = n;
     else if (path === "radius") pose.projection.radius = n;
     else if (path === "orthoHeight") pose.projection.orthoHeight = n;
@@ -468,13 +477,13 @@ export class CalibrationStudioComponent {
   }
 
   updateCameraTarget(pose: CameraPose, axis: 0 | 1 | 2, value: unknown): void {
-    pose.target[axis] = this.finite(value, pose.target[axis]);
+    pose.target[axis] = this.clampCalibrationValue("camera.target", value, pose.target[axis]);
     this.state!.dirty = true;
   }
 
   updateSequenceNumber(path: "delayMs" | "durationMs", value: unknown): void {
     if (!this.state) return;
-    this.state.startup[path] = Math.max(0, this.finite(value, this.state.startup[path]));
+    this.state.startup[path] = this.clampCalibrationValue(`startup.${path}`, value, this.state.startup[path]);
     this.state.dirty = true;
   }
 
@@ -721,6 +730,13 @@ export class CalibrationStudioComponent {
     return Number.isFinite(n) ? n : fallback;
   }
 
+  private clampCalibrationValue(key: string, value: unknown, fallback: number): number {
+    const n = this.finite(value, fallback);
+    const range = getCalibrationFieldDefinition(key).safeRange;
+    if (!range) return n;
+    return Math.max(range.min ?? -Infinity, Math.min(range.max ?? Infinity, n));
+  }
+
   private loadModalGeometry(): CalibrationModalGeometry {
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "");
@@ -809,6 +825,25 @@ function cloneRingCalibration(ring: RingPresentationCalibration): RingPresentati
     rotationQuaternion: [...ring.rotationQuaternion],
     visible: ring.visible,
   };
+}
+
+function cameraFieldKey(path: string): string {
+  switch (path) {
+    case "alpha":
+      return "camera.alpha";
+    case "beta":
+      return "camera.beta";
+    case "radius":
+      return "camera.radius";
+    case "orthoHeight":
+      return "camera.orthoHeight";
+    case "screenOffsetX":
+      return "camera.screenOffsetX";
+    case "screenOffsetY":
+      return "camera.screenOffsetY";
+    default:
+      return "camera.radius";
+  }
 }
 
 function clone<T>(value: T): T {
