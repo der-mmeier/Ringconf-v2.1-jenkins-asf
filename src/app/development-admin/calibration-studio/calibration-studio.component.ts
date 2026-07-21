@@ -21,10 +21,12 @@ import {
   StartupCameraSequence,
 } from "./calibration-studio.models";
 
+type ResizeEdge = "n" | "e" | "s" | "w" | "ne" | "nw" | "se" | "sw";
 type PointerAction = "drag" | "resize";
 
 interface PointerSession {
   action: PointerAction;
+  edge?: ResizeEdge;
   pointerId: number;
   startX: number;
   startY: number;
@@ -480,11 +482,12 @@ export class CalibrationStudioComponent {
     return getCalibrationFieldDefinition(key).help;
   }
 
-  beginPointer(event: PointerEvent, action: PointerAction): void {
+  beginPointer(event: PointerEvent, action: PointerAction, edge?: ResizeEdge): void {
     event.preventDefault();
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     this.pointerSession = {
       action,
+      edge,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
@@ -501,8 +504,7 @@ export class CalibrationStudioComponent {
       this.modal.left = this.pointerSession.start.left + dx;
       this.modal.top = this.pointerSession.start.top + dy;
     } else {
-      this.modal.width = this.pointerSession.start.width + dx;
-      this.modal.height = this.pointerSession.start.height + dy;
+      this.applyResizePointer(dx, dy, this.pointerSession.edge || "se", this.pointerSession.start);
     }
     this.clampModalGeometry();
   }
@@ -535,6 +537,32 @@ export class CalibrationStudioComponent {
     } else {
       this.animationFrame = 0;
       this.status = "Kamerafahrt beendet.";
+    }
+  }
+
+  private applyResizePointer(dx: number, dy: number, edge: ResizeEdge, start: CalibrationModalGeometry): void {
+    const minWidth = 420;
+    const minHeight = 260;
+    const movesWest = edge.includes("w");
+    const movesEast = edge.includes("e");
+    const movesNorth = edge.includes("n");
+    const movesSouth = edge.includes("s");
+
+    if (movesEast) {
+      this.modal.width = start.width + dx;
+    }
+    if (movesSouth) {
+      this.modal.height = start.height + dy;
+    }
+    if (movesWest) {
+      const width = Math.max(minWidth, start.width - dx);
+      this.modal.left = start.left + start.width - width;
+      this.modal.width = width;
+    }
+    if (movesNorth) {
+      const height = Math.max(minHeight, start.height - dy);
+      this.modal.top = start.top + start.height - height;
+      this.modal.height = height;
     }
   }
 

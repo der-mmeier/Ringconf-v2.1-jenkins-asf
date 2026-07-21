@@ -225,10 +225,71 @@ pre {
 
 .resize-handle {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  z-index: 2;
+  background: transparent;
+}
+
+.resize-n,
+.resize-s {
+  left: 16px;
+  right: 16px;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.resize-e,
+.resize-w {
+  top: 16px;
+  bottom: 16px;
+  width: 10px;
+  cursor: ew-resize;
+}
+
+.resize-n {
+  top: -5px;
+}
+
+.resize-s {
+  bottom: -5px;
+}
+
+.resize-e {
+  right: -5px;
+}
+
+.resize-w {
+  left: -5px;
+}
+
+.resize-ne,
+.resize-nw,
+.resize-se,
+.resize-sw {
   width: 18px;
   height: 18px;
+}
+
+.resize-ne {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+
+.resize-nw {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+
+.resize-se {
+  right: -5px;
+  bottom: -5px;
   cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 50%, #64748b 50%);
+}
+
+.resize-sw {
+  left: -5px;
+  bottom: -5px;
+  cursor: nesw-resize;
 }

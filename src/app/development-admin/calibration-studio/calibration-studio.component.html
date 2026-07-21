@@ -14,10 +14,10 @@
         <h3>Calibration Studio 2.0</h3>
         <small>{{status}}</small>
       </div>
-      <div class="titlebar-actions">
+      <div class="titlebar-actions" (pointerdown)="$event.stopPropagation()">
         <button type="button" (click)="captureSession()">Snapshot</button>
-        <button type="button" (click)="minimize()">{{modal.minimized ? 'Oeffnen' : 'Minimieren'}}</button>
-        <button type="button" (click)="close()">x</button>
+        <button type="button" (click)="minimize()" [attr.aria-label]="modal.minimized ? 'Calibration Studio oeffnen' : 'Calibration Studio minimieren'">{{modal.minimized ? '+' : '-'}}</button>
+        <button type="button" (click)="close()" aria-label="Calibration Studio schliessen">x</button>
       </div>
     </header>
 
@@ -243,7 +243,14 @@
       </div>
     }
 
-    <span class="resize-handle" (pointerdown)="beginPointer($event, 'resize')" aria-label="Calibration Studio Groesse aendern"></span>
+    <span class="resize-handle resize-n" (pointerdown)="beginPointer($event, 'resize', 'n')" aria-label="Calibration Studio oben skalieren"></span>
+    <span class="resize-handle resize-e" (pointerdown)="beginPointer($event, 'resize', 'e')" aria-label="Calibration Studio rechts skalieren"></span>
+    <span class="resize-handle resize-s" (pointerdown)="beginPointer($event, 'resize', 's')" aria-label="Calibration Studio unten skalieren"></span>
+    <span class="resize-handle resize-w" (pointerdown)="beginPointer($event, 'resize', 'w')" aria-label="Calibration Studio links skalieren"></span>
+    <span class="resize-handle resize-ne" (pointerdown)="beginPointer($event, 'resize', 'ne')" aria-label="Calibration Studio oben rechts skalieren"></span>
+    <span class="resize-handle resize-nw" (pointerdown)="beginPointer($event, 'resize', 'nw')" aria-label="Calibration Studio oben links skalieren"></span>
+    <span class="resize-handle resize-se" (pointerdown)="beginPointer($event, 'resize', 'se')" aria-label="Calibration Studio unten rechts skalieren"></span>
+    <span class="resize-handle resize-sw" (pointerdown)="beginPointer($event, 'resize', 'sw')" aria-label="Calibration Studio unten links skalieren"></span>
   </section>
 }
 
