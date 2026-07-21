@@ -21,6 +21,8 @@ import {
   shortestAngleDelta
 } from "./ring-view-fit";
 import {createFallbackViewPresets, normalizeLayoutPresets, normalizeViewPresets} from "./ring-view-presets";
+import {focusToPresetSlot, RingPresentationRegistry} from "./ring-presentation";
+import {ALL_PRESET_SLOTS, RingPresetSlot} from "../preset-slots";
 
 interface CameraSnapshot {
   alpha: number;
@@ -72,6 +74,10 @@ export class RingViewService {
   suspendNaturalTarget = false;
 
   constructor(private readonly webgl: any) {}
+
+  getPresentationRegistry(): RingPresentationRegistry {
+    return new RingPresentationRegistry(cRing.list, RingData.list);
+  }
 
   getButtons(): RingViewButton[] {
     return this.getAvailablePresets().map(preset => ({
@@ -150,10 +156,8 @@ export class RingViewService {
     if (!camera) return;
     this.naturalCamera = this.captureCamera(camera);
     this.naturalPivots = {};
-    cRing.list.forEach(ring => {
-      if (ring?.pivot) {
-        this.naturalPivots[ring.ringData.index] = this.capturePivot(ring.pivot);
-      }
+    this.getPresentationRegistry().getAvailableHandles().forEach(handle => {
+      this.naturalPivots[handle.slot] = this.capturePivot(handle.root);
     });
     this.naturalCaptured = true;
   }
@@ -281,7 +285,10 @@ export class RingViewService {
       .map(preset => this.applyDevelopmentOverride(preset))
       .filter(preset => preset.enabled !== false)
       .filter(preset => preset.availability === "all" || (preset.availability === "pair" ? activeCount > 1 : activeCount === 1))
-      .filter(preset => preset.focus === "all" || this.isRingActive(preset.focus === "ring0" ? 0 : 1))
+      .filter(preset => {
+        const focusSlot = focusToPresetSlot(preset.focus);
+        return focusSlot === null || this.isRingActive(focusSlot);
+      })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
   }
 
@@ -459,10 +466,10 @@ export class RingViewService {
 
   private buildLayoutPivots(layout: iRingLayoutPreset, base: RingSnapshotMap): RingSnapshotMap {
     const next: RingSnapshotMap = {...base};
-    ([0, 1] as const).forEach(index => {
-      const transform = index === 0 ? layout.ringTransforms.ring0 : layout.ringTransforms.ring1;
+    ALL_PRESET_SLOTS.forEach(index => {
+      const transform = layout.ringTransforms[`ring${index}` as keyof iRingLayoutPreset["ringTransforms"]];
       if (!transform || !base[index]) return;
-      next[index] = this.snapshotFromTransform(transform, base[index].enabled);
+      next[index] = this.snapshotFromTransform(transform, transform.visible ?? base[index].enabled);
     });
     return next;
   }
@@ -555,7 +562,10 @@ export class RingViewService {
   }
 
   private meshesForFocus(focus: RingViewFocus, includeShadow = false): AbstractMesh[] {
-    const indices = focus === "ring0" ? [0] : focus === "ring1" ? [1] : [0, 1];
+    const focusSlot = focusToPresetSlot(focus);
+    const indices = focusSlot === null
+      ? this.getPresentationRegistry().getActiveHandles().map(handle => handle.slot)
+      : [focusSlot];
     const meshes: AbstractMesh[] = [];
     const seen = new Set<AbstractMesh>();
     indices.forEach(index => {
@@ -595,10 +605,8 @@ export class RingViewService {
   }
 
   private ringMeshes(ring: cRing): AbstractMesh[] {
-    const meshes: AbstractMesh[] = [];
-    if (ring.pivot) meshes.push(...ring.pivot.getChildMeshes(false));
-    if (Array.isArray(ring.mesh)) meshes.push(...ring.mesh);
-    return meshes;
+    const handle = this.getPresentationRegistry().getHandle(ring.ringData.index as RingPresetSlot);
+    return handle ? handle.getVisualMeshes() : [];
   }
 
   private isRingShadow(mesh: AbstractMesh): boolean {
