@@ -572,6 +572,8 @@ export interface iRingViewPreset {
   targetMode?: RingViewTargetMode;
   camera: RingViewCameraPreset;
   layoutId?: string | null;
+  compositionKey?: string;
+  ringLayout?: iRingLayoutPreset["ringTransforms"];
 }
 
 export interface RingViewCameraPreset {

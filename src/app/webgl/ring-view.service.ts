@@ -23,6 +23,7 @@ import {
 import {createFallbackViewPresets, normalizeLayoutPresets, normalizeViewPresets} from "./ring-view-presets";
 import {focusToPresetSlot, RingPresentationRegistry} from "./ring-presentation";
 import {ALL_PRESET_SLOTS, RingPresetSlot} from "../preset-slots";
+import {createRuntimeViewPresets} from "../calibration/calibration-runtime";
 
 interface CameraSnapshot {
   alpha: number;
@@ -171,7 +172,16 @@ export class RingViewService {
     this.activePresetId = preset.id;
     this.selectedPresetId = preset.id;
 
-    const layout = preset.layoutId ? this.getLayouts().find(item => item.id === preset.layoutId && item.enabled !== false) : null;
+    const inlineLayout: iRingLayoutPreset | null = preset.ringLayout
+      ? {
+        id: `${preset.id}__inline`,
+        label: preset.label,
+        enabled: true,
+        source: "manual",
+        ringTransforms: preset.ringLayout,
+      }
+      : null;
+    const layout = inlineLayout || (preset.layoutId ? this.getLayouts().find(item => item.id === preset.layoutId && item.enabled !== false) : null);
     if (preset.layoutId && !layout) {
       console.warn(`[RingView] View-Preset ${preset.id} referenziert ein nicht vorhandenes Layout ${preset.layoutId}.`);
     }
@@ -279,7 +289,9 @@ export class RingViewService {
 
   private getAvailablePresets(): iRingViewPreset[] {
     const activeCount = RingData.list.filter(ring => ring.cartActive).length;
-    const configured = normalizeViewPresets(AppComponent.app.data.viewPresets);
+    const composition = this.getPresentationRegistry().getCompositionProfile();
+    const runtimePresets = createRuntimeViewPresets(AppComponent.app.state.calibrationProfile, composition.id);
+    const configured = runtimePresets.length ? runtimePresets : normalizeViewPresets(AppComponent.app.data.viewPresets);
     const presets = configured.length ? configured : createFallbackViewPresets(activeCount > 1);
     return presets
       .map(preset => this.applyDevelopmentOverride(preset))

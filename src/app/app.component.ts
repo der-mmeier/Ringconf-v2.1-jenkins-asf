@@ -36,6 +36,8 @@ import {
   OPTIONAL_PRESET_SLOTS,
   serializeOptionalPresetSlots
 } from "./preset-slots";
+import {CalibrationRuntimeProfile} from "./calibration/calibration-runtime.models";
+import {validateCalibrationRuntimeProfile} from "./calibration/calibration-runtime";
 
 interface ReleaseMetadata {
   version: string;
@@ -78,6 +80,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     freeStones: false,
     preset_id: "",
     browsertab_id: "",
+    calibrationProfile: null as CalibrationRuntimeProfile | null,
   };
 
   log = [] as string[];
@@ -2461,9 +2464,13 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     this.loadReleaseMetadata();
 
-    dbGetAppData().then(function (data: any) {
+    Promise.all([dbGetAppData(), dbGetCalibrationProfile()]).then(function ([data, calibration]) {
       if (data == null) Log("error", "Keine App Daten vorhanden!");
       else AppComponent.app.data = normalizeRingViewAppData(normalizeEngravingAppData(normalizeStoneTaxonomyAppData(data)));
+      AppComponent.app.state.calibrationProfile = calibration;
+      if (!calibration) {
+        Log("error", "Keine aktive Kalibrierung aus der Datenbank geladen. Ansichten bleiben leer, bis ein aktives Profil verfuegbar ist.");
+      }
 
       if (AppComponent.app.state.urlParams["id"] !== undefined && AppComponent.app.state.urlParams["id"].match(/\w{4}-\w{4}/g)) {
         if (AppComponent.app.state.debug) console.log("use url-id: ", AppComponent.app.state.urlParams["id"]);
@@ -3193,6 +3200,30 @@ async function dbGetAppData(): Promise<any> {
   }
 
   return result;
+}
+
+async function dbGetCalibrationProfile(): Promise<CalibrationRuntimeProfile | null> {
+  let url = getDistRootUrl();
+  let headers = makeHttpHeaders();
+  let params = makeHttpParams("dbGetCalibrationProfile", []);
+
+  try {
+    let response = AppComponent.app.http.post(url, params, {headers});
+    const data: any = await lastValueFrom(response);
+    if (data?.ok === false) {
+      Log("error", data.error?.message ?? "Kalibrierung konnte nicht geladen werden.");
+      return null;
+    }
+    const profile = validateCalibrationRuntimeProfile(data?.data ?? data);
+    if (!profile) {
+      Log("error", "Kalibrierungsprofil aus der Datenbank ist ungueltig.");
+      return null;
+    }
+    return profile;
+  } catch (error) {
+    Log("error", "Kalibrierungsprofil konnte nicht vom Backend geladen werden.");
+    return null;
+  }
 }
 
 export async function dbSetAppData() {
