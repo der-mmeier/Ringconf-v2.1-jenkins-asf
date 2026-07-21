@@ -167,6 +167,12 @@ new class {
     }
   }
 
+  public function dbGetCalibrationProfile()
+  {
+    $db = $this->getDB();
+    echo json_encode($db->getActiveCalibrationProfile(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  }
+
   private function resolveVersionedAppData(PDO $db, string $targetKey, string $buildKey): ?array
   {
     if (!$this->tableExists($db, TABLE_APPDATA_TARGET)

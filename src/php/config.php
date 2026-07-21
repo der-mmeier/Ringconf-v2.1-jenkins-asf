@@ -28,3 +28,12 @@ if (!defined('TABLE_DATA')) {
 if (!defined('TABLE_PRESET')) {
     define('TABLE_PRESET', envValue('ONERINGCONF_TABLE_PRESET', 'ringcfg_2v1_preset'));
 }
+if (!defined('TABLE_CALIBRATION_PROFILE')) {
+    define('TABLE_CALIBRATION_PROFILE', envValue('ONERINGCONF_TABLE_CALIBRATION_PROFILE', 'ringcfg_calibration_profiles'));
+}
+if (!defined('TABLE_CALIBRATION_COMPOSITION')) {
+    define('TABLE_CALIBRATION_COMPOSITION', envValue('ONERINGCONF_TABLE_CALIBRATION_COMPOSITION', 'ringcfg_calibration_compositions'));
+}
+if (!defined('TABLE_CALIBRATION_VIEW')) {
+    define('TABLE_CALIBRATION_VIEW', envValue('ONERINGCONF_TABLE_CALIBRATION_VIEW', 'ringcfg_calibration_views'));
+}

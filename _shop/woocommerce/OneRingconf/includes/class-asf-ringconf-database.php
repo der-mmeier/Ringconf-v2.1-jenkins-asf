@@ -20,6 +20,9 @@ final class ASF_Ringconf_Database {
 		$charset_collate = $wpdb->get_charset_collate();
 		$data_table      = self::data_table();
 		$preset_table    = self::preset_table();
+		$profile_table   = self::calibration_profile_table();
+		$composition_table = self::calibration_composition_table();
+		$view_table      = self::calibration_view_table();
 
 		dbDelta(
 			"CREATE TABLE {$data_table} (
@@ -45,6 +48,72 @@ final class ASF_Ringconf_Database {
 				KEY updated_at (updated_at)
 			) {$charset_collate};"
 		);
+
+		dbDelta(
+			"CREATE TABLE {$profile_table} (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				profile_key varchar(80) NOT NULL,
+				name varchar(160) NOT NULL,
+				schema_version int unsigned NOT NULL DEFAULT 1,
+				status varchar(20) NOT NULL DEFAULT 'draft',
+				revision int unsigned NOT NULL DEFAULT 1,
+				is_active tinyint(1) NOT NULL DEFAULT 0,
+				created_by varchar(120) NULL,
+				updated_by varchar(120) NULL,
+				created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				activated_at datetime NULL,
+				PRIMARY KEY  (id),
+				UNIQUE KEY profile_key (profile_key),
+				KEY active_status (is_active, status)
+			) {$charset_collate};"
+		);
+
+		dbDelta(
+			"CREATE TABLE {$composition_table} (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				profile_id bigint(20) unsigned NOT NULL,
+				composition_key varchar(80) NOT NULL,
+				label varchar(160) NOT NULL,
+				active_slots_json longtext NOT NULL,
+				startup_sequence_json longtext NOT NULL,
+				natural_ring_layout_json longtext NOT NULL,
+				default_framing_json longtext NOT NULL,
+				enabled tinyint(1) NOT NULL DEFAULT 1,
+				sort_order int NOT NULL DEFAULT 0,
+				revision int unsigned NOT NULL DEFAULT 1,
+				created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY  (id),
+				UNIQUE KEY profile_composition (profile_id, composition_key),
+				KEY profile_enabled_sort (profile_id, enabled, sort_order)
+			) {$charset_collate};"
+		);
+
+		dbDelta(
+			"CREATE TABLE {$view_table} (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				composition_id bigint(20) unsigned NOT NULL,
+				view_key varchar(80) NOT NULL,
+				name varchar(160) NOT NULL,
+				enabled tinyint(1) NOT NULL DEFAULT 1,
+				is_default tinyint(1) NOT NULL DEFAULT 0,
+				sort_order int NOT NULL DEFAULT 0,
+				camera_json longtext NOT NULL,
+				ring_layout_json longtext NOT NULL,
+				framing_json longtext NOT NULL,
+				revision int unsigned NOT NULL DEFAULT 1,
+				created_by varchar(120) NULL,
+				updated_by varchar(120) NULL,
+				created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY  (id),
+				UNIQUE KEY composition_view (composition_id, view_key),
+				KEY composition_enabled_sort (composition_id, enabled, sort_order)
+			) {$charset_collate};"
+		);
+
+		self::seed_default_calibration_profile();
 	}
 
 	public static function data_table(): string {
@@ -55,6 +124,21 @@ final class ASF_Ringconf_Database {
 	public static function preset_table(): string {
 		global $wpdb;
 		return $wpdb->prefix . 'asf_ringconf_preset';
+	}
+
+	public static function calibration_profile_table(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'asf_ringconf_calibration_profiles';
+	}
+
+	public static function calibration_composition_table(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'asf_ringconf_calibration_compositions';
+	}
+
+	public static function calibration_view_table(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'asf_ringconf_calibration_views';
 	}
 
 	public function rpc_db_get_id(): array {
@@ -285,6 +369,29 @@ final class ASF_Ringconf_Database {
 		);
 	}
 
+	public function rpc_db_get_calibration_profile(): array {
+		global $wpdb;
+
+		$profile = $wpdb->get_row(
+			'SELECT * FROM ' . self::calibration_profile_table() . " WHERE is_active = 1 AND status = 'active' ORDER BY activated_at DESC, id DESC LIMIT 1",
+			ARRAY_A
+		);
+		if ( ! is_array( $profile ) ) {
+			return array(
+				'ok'    => false,
+				'error' => array(
+					'code'    => 'CALIBRATION_NOT_FOUND',
+					'message' => 'No active calibration profile exists.',
+				),
+			);
+		}
+
+		return array(
+			'ok'   => true,
+			'data' => $this->hydrate_calibration_profile( $profile ),
+		);
+	}
+
 	private function update_preset( string $id, string $preset_0, string $preset_1, ?string $preset_2, ?string $preset_3, string $img ): void {
 		global $wpdb;
 
@@ -374,5 +481,197 @@ final class ASF_Ringconf_Database {
 	private function calculate_price( $preset ): float {
 		$price = (float) apply_filters( 'asf_ringconf_calculated_price', 9999.99, $preset );
 		return max( 0.0, $price );
+	}
+
+	private static function seed_default_calibration_profile(): void {
+		global $wpdb;
+
+		$count = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::calibration_profile_table() );
+		if ( $count > 0 ) {
+			return;
+		}
+
+		$wpdb->insert(
+			self::calibration_profile_table(),
+			array(
+				'profile_key'    => 'default-2-7-10',
+				'name'           => 'Default calibration migrated from 2.7.10',
+				'schema_version' => 1,
+				'status'         => 'active',
+				'revision'       => 1,
+				'is_active'      => 1,
+				'created_by'     => 'migration-2.7.10.1',
+				'updated_by'     => 'migration-2.7.10.1',
+				'activated_at'   => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%d', '%s', '%d', '%d', '%s', '%s', '%s' )
+		);
+		$profile_id = (int) $wpdb->insert_id;
+
+		foreach ( self::default_calibration_compositions() as $composition ) {
+			$wpdb->insert(
+				self::calibration_composition_table(),
+				array(
+					'profile_id'                 => $profile_id,
+					'composition_key'            => $composition['composition_key'],
+					'label'                      => $composition['label'],
+					'active_slots_json'          => wp_json_encode( $composition['active_slots'] ),
+					'startup_sequence_json'      => wp_json_encode( $composition['startup_sequence'] ),
+					'natural_ring_layout_json'   => wp_json_encode( $composition['natural_ring_layout'] ),
+					'default_framing_json'       => wp_json_encode( $composition['default_framing'] ),
+					'enabled'                    => 1,
+					'sort_order'                 => $composition['sort_order'],
+					'revision'                   => 1,
+				),
+				array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d' )
+			);
+			$composition_id = (int) $wpdb->insert_id;
+			foreach ( $composition['views'] as $view ) {
+				$wpdb->insert(
+					self::calibration_view_table(),
+					array(
+						'composition_id'   => $composition_id,
+						'view_key'         => $view['view_key'],
+						'name'             => $view['name'],
+						'enabled'          => 1,
+						'is_default'       => $view['is_default'] ? 1 : 0,
+						'sort_order'       => $view['sort_order'],
+						'camera_json'      => wp_json_encode( $view['camera'] ),
+						'ring_layout_json' => wp_json_encode( $view['ring_layout'] ),
+						'framing_json'     => wp_json_encode( $view['framing'] ),
+						'revision'         => 1,
+						'created_by'       => 'migration-2.7.10.1',
+						'updated_by'       => 'migration-2.7.10.1',
+					),
+					array( '%d', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s' )
+				);
+			}
+		}
+	}
+
+	private function hydrate_calibration_profile( array $profile ): array {
+		global $wpdb;
+
+		$composition_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM ' . self::calibration_composition_table() . ' WHERE profile_id = %d AND enabled = 1 ORDER BY sort_order ASC, composition_key ASC',
+				(int) $profile['id']
+			),
+			ARRAY_A
+		);
+
+		$compositions = array();
+		foreach ( is_array( $composition_rows ) ? $composition_rows : array() as $composition ) {
+			$compositions[] = $this->hydrate_calibration_composition( $composition );
+		}
+
+		return array(
+			'schemaVersion' => (int) $profile['schema_version'],
+			'profileKey'    => $profile['profile_key'],
+			'name'          => $profile['name'],
+			'status'        => $profile['status'],
+			'revision'      => (int) $profile['revision'],
+			'compositions'  => $compositions,
+		);
+	}
+
+	private function hydrate_calibration_composition( array $composition ): array {
+		global $wpdb;
+
+		$view_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM ' . self::calibration_view_table() . ' WHERE composition_id = %d AND enabled = 1 ORDER BY sort_order ASC, name ASC',
+				(int) $composition['id']
+			),
+			ARRAY_A
+		);
+		$views = array();
+		foreach ( is_array( $view_rows ) ? $view_rows : array() as $view ) {
+			$views[] = array(
+				'id'         => (int) $view['id'],
+				'viewKey'    => $view['view_key'],
+				'name'       => $view['name'],
+				'enabled'    => (bool) $view['enabled'],
+				'isDefault'  => (bool) $view['is_default'],
+				'sortOrder'  => (int) $view['sort_order'],
+				'revision'   => (int) $view['revision'],
+				'camera'     => json_decode( (string) $view['camera_json'], true ),
+				'ringLayout' => json_decode( (string) $view['ring_layout_json'], true ),
+				'framing'    => json_decode( (string) $view['framing_json'], true ),
+				'updatedAt'  => $view['updated_at'],
+			);
+		}
+
+		return array(
+			'id'                => (int) $composition['id'],
+			'compositionKey'    => $composition['composition_key'],
+			'label'             => $composition['label'],
+			'activeSlots'       => json_decode( (string) $composition['active_slots_json'], true ),
+			'startupSequence'   => json_decode( (string) $composition['startup_sequence_json'], true ),
+			'naturalRingLayout' => json_decode( (string) $composition['natural_ring_layout_json'], true ),
+			'defaultFraming'    => json_decode( (string) $composition['default_framing_json'], true ),
+			'enabled'           => (bool) $composition['enabled'],
+			'sortOrder'         => (int) $composition['sort_order'],
+			'revision'          => (int) $composition['revision'],
+			'views'             => $views,
+		);
+	}
+
+	private static function default_calibration_compositions(): array {
+		$pair_views = array(
+			self::default_calibration_view( 'pair', 'Paar', 'all', 0, -M_PI / 2, M_PI / 2.6, 23.5, true ),
+			self::default_calibration_view( 'ring0-outside', 'D außen', 'ring0', 10, -M_PI / 2, M_PI / 2.6, 15.5 ),
+			self::default_calibration_view( 'ring0-inside', 'D innen', 'ring0', 20, M_PI / 2, M_PI / 2.2, 15.5 ),
+			self::default_calibration_view( 'ring1-outside', 'H außen', 'ring1', 30, -M_PI / 2, M_PI / 2.6, 15.5 ),
+			self::default_calibration_view( 'ring1-inside', 'H innen', 'ring1', 40, M_PI / 2, M_PI / 2.2, 15.5 ),
+		);
+
+		return array(
+			self::default_calibration_composition( 'wedding-pair', 'Trauringpaar', array( 0, 1 ), 0, $pair_views ),
+			self::default_calibration_composition( 'wedding-plus-engagement', 'Trauringpaar mit Verlobungsring', array( 0, 1, 2 ), 10, $pair_views ),
+			self::default_calibration_composition( 'wedding-plus-memoire', 'Trauringpaar mit Memoirering', array( 0, 1, 3 ), 20, $pair_views ),
+			self::default_calibration_composition( 'wedding-plus-both', 'Trauringpaar mit Verlobungsring und Memoirering', array( 0, 1, 2, 3 ), 30, $pair_views ),
+			self::default_calibration_composition( 'engagement-only', 'Verlobungsring', array( 2 ), 40, array(
+				self::default_calibration_view( 'engagement-outside', 'Verlobungsring außen', 'ring2', 0, -M_PI / 2, M_PI / 2.6, 15.5, true ),
+				self::default_calibration_view( 'engagement-inside', 'Verlobungsring innen', 'ring2', 10, M_PI / 2, M_PI / 2.2, 15.5 ),
+			) ),
+			self::default_calibration_composition( 'memoire-only', 'Memoirering', array( 3 ), 50, array(
+				self::default_calibration_view( 'memoire-outside', 'Memoirering außen', 'ring3', 0, -M_PI / 2, M_PI / 2.6, 15.5, true ),
+				self::default_calibration_view( 'memoire-inside', 'Memoirering innen', 'ring3', 10, M_PI / 2, M_PI / 2.2, 15.5 ),
+			) ),
+		);
+	}
+
+	private static function default_calibration_composition( string $key, string $label, array $slots, int $sort_order, array $views ): array {
+		return array(
+			'composition_key'      => $key,
+			'label'                => $label,
+			'active_slots'         => $slots,
+			'startup_sequence'     => array( 'enabled' => false, 'delayMs' => 0, 'durationMs' => 1200, 'easing' => 'ease-in-out', 'interruptOnUserInput' => true ),
+			'natural_ring_layout'  => array( 'rings' => array() ),
+			'default_framing'      => array( 'fitMode' => 'zoom-out-only', 'includeShadowEnvelope' => true ),
+			'sort_order'           => $sort_order,
+			'views'                => $views,
+		);
+	}
+
+	private static function default_calibration_view( string $key, string $name, string $focus, int $sort_order, float $alpha, float $beta, float $ortho_height, bool $default = false ): array {
+		return array(
+			'view_key'    => $key,
+			'name'        => $name,
+			'is_default'  => $default,
+			'sort_order'  => $sort_order,
+			'camera'      => array(
+				'alpha'      => $alpha,
+				'beta'       => $beta,
+				'target'     => array( 0, 10, 0 ),
+				'projection' => array( 'mode' => 'orthographic', 'orthoHeight' => $ortho_height, 'radius' => 60, 'screenOffsetX' => 0, 'screenOffsetY' => 0 ),
+				'safety'     => array( 'fitMode' => 'zoom-out-only', 'paddingTop' => 0.08, 'paddingRight' => 0.1, 'paddingBottom' => 'all' === $focus ? 0.18 : 0.24, 'paddingLeft' => 0.1, 'includeShadowEnvelope' => true, 'shadowExtraBottom' => 0.18, 'shadowExtraLeft' => 0.05, 'shadowExtraRight' => 0.05 ),
+				'focus'      => $focus,
+				'targetMode' => 'selection-center',
+			),
+			'ring_layout' => array( 'rings' => array() ),
+			'framing'     => array( 'fitMode' => 'zoom-out-only', 'includeShadowEnvelope' => true ),
+		);
 	}
 }

@@ -80,6 +80,8 @@ final class ASF_Ringconf_Rest {
 				return rest_ensure_response( $this->database->rpc_db_check_id_exist( (string) ( $rpp[0] ?? '' ) ) );
 			case 'dbGetAPPDATA':
 				return rest_ensure_response( $this->database->rpc_db_get_appdata( $rpp[0] ?? null, $rpp[1] ?? null ) );
+			case 'dbGetCalibrationProfile':
+				return rest_ensure_response( $this->database->rpc_db_get_calibration_profile() );
 			case 'dbSavePreset':
 				return rest_ensure_response(
 					$this->database->rpc_db_save_preset(
