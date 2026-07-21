@@ -35,6 +35,7 @@ interface StudioSnapshot {
 }
 
 const STORAGE_KEY = "ringconf.calibrationStudio.v2.modal";
+const LEGACY_VIEW_CALIBRATION_STORAGE_KEY = "ringconf.dev.view-calibration.v1";
 
 @Component({
   selector: "x-calibration-studio",
@@ -56,6 +57,14 @@ export class CalibrationStudioComponent {
   private animationFrame = 0;
   private animationStart = 0;
   private animationDelayTimer = 0;
+
+  constructor() {
+    try {
+      localStorage.removeItem(LEGACY_VIEW_CALIBRATION_STORAGE_KEY);
+    } catch {
+      // Development-only cleanup must never block the studio.
+    }
+  }
 
   get activeCompositionLabel(): string {
     return this.service()?.getPresentationRegistry().getCompositionProfile().label || "Keine Szene";

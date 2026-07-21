@@ -4,6 +4,13 @@
 
 .calibration-open {
   min-height: 36px;
+  color: #fff;
+}
+
+.calibration-open:hover,
+.calibration-open:focus-visible,
+.calibration-open:active {
+  color: #fff;
 }
 
 .calibration-modal {
