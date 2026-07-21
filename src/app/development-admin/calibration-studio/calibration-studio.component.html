@@ -10,7 +10,7 @@
     [style.height.px]="modal.height"
     aria-label="Calibration Studio 2.0">
     <header class="calibration-titlebar" (pointerdown)="beginPointer($event, 'drag')">
-      <div>
+      <div class="titlebar-copy">
         <h3>Calibration Studio 2.0</h3>
         <small>{{status}}</small>
       </div>
@@ -21,241 +21,320 @@
       </div>
     </header>
 
-    @if (!modal.minimized && state) {
-      <nav class="calibration-tabs" aria-label="Calibration Studio Bereiche">
-        <button type="button" [class.active]="activeTab === 'status'" (click)="activeTab = 'status'">Status</button>
-        <button type="button" [class.active]="activeTab === 'rings'" (click)="activeTab = 'rings'">Ringe</button>
-        <button type="button" [class.active]="activeTab === 'camera'" (click)="activeTab = 'camera'">Kamera</button>
-        <button type="button" [class.active]="activeTab === 'sequence'" (click)="activeTab = 'sequence'">Fahrt</button>
-        <button type="button" [class.active]="activeTab === 'views'" (click)="activeTab = 'views'">Views</button>
-        <button type="button" [class.active]="activeTab === 'export'" (click)="activeTab = 'export'">Export</button>
-        <button type="button" [class.active]="activeTab === 'debug'" (click)="activeTab = 'debug'">Debug</button>
-      </nav>
+    @if (!modal.minimized) {
+      @if (calibrationLoadState === 'error' && calibrationError) {
+        <section class="calibration-alert" role="alert">
+          <div>
+            <strong>Kalibrierungsdaten konnten nicht geladen werden.</strong>
+            <span>{{calibrationError.message}}</span>
+          </div>
+          <div class="alert-actions">
+            <button type="button" (click)="loadCalibrationProfile()">Erneut versuchen</button>
+            <button type="button" (click)="showCalibrationErrorDetails = !showCalibrationErrorDetails">{{showCalibrationErrorDetails ? 'Details ausblenden' : 'Details'}}</button>
+          </div>
+          @if (showCalibrationErrorDetails) {
+            <dl class="error-details">
+              <div>
+                <dt>Code</dt>
+                <dd>{{calibrationError.code}}</dd>
+              </div>
+              <div>
+                <dt>Request-ID</dt>
+                <dd>{{calibrationError.requestId || '-'}}</dd>
+              </div>
+              <div>
+                <dt>Endpoint</dt>
+                <dd>{{calibrationError.endpoint}}</dd>
+              </div>
+            </dl>
+            @if (calibrationError.details) {
+              <pre class="error-payload">{{calibrationError.details | json}}</pre>
+            }
+          }
+        </section>
+      }
 
-      <div class="calibration-body">
-        @if (activeTab === 'status') {
-          <section class="studio-grid">
-            <article>
-              <strong>Komposition</strong>
-              <span>{{activeCompositionLabel}}</span>
-            </article>
-            <article>
-              <strong>Aktive Slots</strong>
-              <span>{{state.rings.length}}</span>
-            </article>
-            <article>
-              <strong>Dirty</strong>
-              <span>{{state.dirty ? 'ja' : 'nein'}}</span>
-            </article>
-            <article>
-              <strong>Version</strong>
-              <span>{{state.projectVersion}}</span>
-            </article>
-            <article>
-              <strong>WebGL</strong>
-              <span>{{engineSceneLabel}}</span>
-            </article>
-          </section>
-          <section class="step-mode" aria-label="Kalibrierungsschrittweite">
-            <strong>Schrittweite</strong>
-            <label>
-              <input type="radio" name="calibration-step-mode" value="coarse" [(ngModel)]="stepMode">
-              <span>Grob 1.0</span>
-            </label>
-            <label>
-              <input type="radio" name="calibration-step-mode" value="fine" [(ngModel)]="stepMode">
-              <span>Fein 0.5</span>
-            </label>
-          </section>
-          <footer class="studio-actions">
-            <button type="button" (click)="applyLive()">Aenderung live anwenden</button>
-            <button type="button" (click)="discard()">Aenderungen verwerfen</button>
-            <button type="button" (click)="resetNatural()">Natural State</button>
-          </footer>
-        }
+      @if (calibrationLoadState === 'loading') {
+        <section class="calibration-loading" aria-live="polite">Kalibrierungsdaten werden geladen ...</section>
+      }
 
-        @if (activeTab === 'rings') {
-          @for (ring of state.rings; track ring.slot) {
-            <section class="ring-editor">
-              <h4>{{ring.role}} / Slot {{ring.slot}}</h4>
-              <label class="numeric-control">
-                <span>Position X <button type="button" [title]="getHelp('ring.position')">?</button></span>
-                <input type="number" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[0]" (ngModelChange)="updateRingPosition(ring, 0, $event)">
-                <input type="range" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[0]" (ngModelChange)="updateRingPosition(ring, 0, $event)">
-              </label>
-              <label class="numeric-control">
-                <span>Position Y <button type="button" [title]="getHelp('ring.position')">?</button></span>
-                <input type="number" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[1]" (ngModelChange)="updateRingPosition(ring, 1, $event)">
-                <input type="range" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[1]" (ngModelChange)="updateRingPosition(ring, 1, $event)">
-              </label>
-              <label class="numeric-control">
-                <span>Position Z <button type="button" [title]="getHelp('ring.position')">?</button></span>
-                <input type="number" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[2]" (ngModelChange)="updateRingPosition(ring, 2, $event)">
-                <input type="range" [step]="calibrationStep" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [ngModel]="ring.position[2]" (ngModelChange)="updateRingPosition(ring, 2, $event)">
-              </label>
-              @for (axis of [0, 1, 2, 3]; track axis) {
-                <label class="numeric-control">
-                  <span>Quaternion {{axis}} <button type="button" [title]="getHelp('ring.rotationQuaternion')">?</button></span>
-                  <input type="number" [step]="calibrationStep" min="-1" max="1" [ngModel]="ring.rotationQuaternion[axis]" (ngModelChange)="updateRingQuaternion(ring, $any(axis), $event)">
-                  <input type="range" [step]="calibrationStep" min="-1" max="1" [ngModel]="ring.rotationQuaternion[axis]" (ngModelChange)="updateRingQuaternion(ring, $any(axis), $event)">
-                </label>
+      @if (state) {
+        <nav class="calibration-tabs" aria-label="Calibration Studio Bereiche">
+          <button type="button" [class.active]="activeTab === 'status'" (click)="activeTab = 'status'">Status</button>
+          <button type="button" [class.active]="activeTab === 'rings'" (click)="activeTab = 'rings'">Ringe</button>
+          <button type="button" [class.active]="activeTab === 'camera'" (click)="activeTab = 'camera'">Kamera</button>
+          <button type="button" [class.active]="activeTab === 'sequence'" (click)="activeTab = 'sequence'">Fahrt</button>
+          <button type="button" [class.active]="activeTab === 'views'" (click)="activeTab = 'views'">Views</button>
+          <button type="button" [class.active]="activeTab === 'export'" (click)="activeTab = 'export'">Export</button>
+          <button type="button" [class.active]="activeTab === 'debug'" (click)="activeTab = 'debug'">Debug</button>
+        </nav>
+
+        <section class="step-mode" aria-label="Kalibrierungsschrittweite">
+          <strong>Schrittweite</strong>
+          <label>
+            <input type="radio" name="calibration-step-mode" value="coarse" [(ngModel)]="stepMode">
+            <span>Grob 1.0</span>
+          </label>
+          <label>
+            <input type="radio" name="calibration-step-mode" value="fine" [(ngModel)]="stepMode">
+            <span>Fein 0.5</span>
+          </label>
+        </section>
+
+        <div class="calibration-body">
+          @if (activeTab === 'status') {
+            <section class="studio-grid">
+              <article>
+                <strong>Komposition</strong>
+                <span>{{activeCompositionLabel}}</span>
+              </article>
+              <article>
+                <strong>Aktive Slots</strong>
+                <span>{{state.rings.length}}</span>
+              </article>
+              <article>
+                <strong>Dirty</strong>
+                <span>{{state.dirty ? 'ja' : 'nein'}}</span>
+              </article>
+              <article>
+                <strong>Version</strong>
+                <span>{{state.projectVersion}}</span>
+              </article>
+              <article>
+                <strong>WebGL</strong>
+                <span>{{engineSceneLabel}}</span>
+              </article>
+            </section>
+            <footer class="studio-actions">
+              <button type="button" (click)="applyLive()">Aenderung live anwenden</button>
+              <button type="button" (click)="discard()">Aenderungen verwerfen</button>
+              <button type="button" (click)="resetNatural()">Natural State</button>
+            </footer>
+          }
+
+          @if (activeTab === 'rings') {
+            <div class="ring-list">
+              @for (ring of state.rings; track ring.slot) {
+                <section class="ring-editor">
+                  <header class="ring-editor-header">
+                    <div>
+                      <h4>{{ring.role}} / Slot {{ring.slot}}</h4>
+                      <small>Position, Rotation und Darstellung getrennt kalibrieren.</small>
+                    </div>
+                  </header>
+
+                  <section class="ring-section" aria-label="Ringposition">
+                    <h5>Position</h5>
+                    <div class="control-grid">
+                      <x-calibration-number-control label="Position X" [help]="getHelp('ring.position')" [unit]="fieldUnit('ring.position')" [value]="ring.position[0]" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [step]="calibrationStep" (valueChange)="updateRingPosition(ring, 0, $event)"></x-calibration-number-control>
+                      <x-calibration-number-control label="Position Y" [help]="getHelp('ring.position')" [unit]="fieldUnit('ring.position')" [value]="ring.position[1]" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [step]="calibrationStep" (valueChange)="updateRingPosition(ring, 1, $event)"></x-calibration-number-control>
+                      <x-calibration-number-control label="Position Z" [help]="getHelp('ring.position')" [unit]="fieldUnit('ring.position')" [value]="ring.position[2]" [min]="numericMin('ring.position')" [max]="numericMax('ring.position')" [step]="calibrationStep" (valueChange)="updateRingPosition(ring, 2, $event)"></x-calibration-number-control>
+                    </div>
+                  </section>
+
+                  <section class="ring-section" aria-label="Sichtbare Rotation">
+                    <h5>Rotation</h5>
+                    <div class="control-grid">
+                      <x-calibration-number-control label="Rotation X" help="Euler-X-Vorschau fuer lesbare Ringrotation. Gespeichert wird weiterhin die normalisierte Quaternion." [value]="ringEuler(ring, 0)" [min]="-3.1416" [max]="3.1416" [step]="calibrationStep" (valueChange)="updateRingEuler(ring, 0, $event)"></x-calibration-number-control>
+                      <x-calibration-number-control label="Rotation Y" help="Euler-Y-Vorschau fuer lesbare Ringrotation. Gespeichert wird weiterhin die normalisierte Quaternion." [value]="ringEuler(ring, 1)" [min]="-3.1416" [max]="3.1416" [step]="calibrationStep" (valueChange)="updateRingEuler(ring, 1, $event)"></x-calibration-number-control>
+                      <x-calibration-number-control label="Rotation Z" help="Euler-Z-Vorschau fuer lesbare Ringrotation. Gespeichert wird weiterhin die normalisierte Quaternion." [value]="ringEuler(ring, 2)" [min]="-3.1416" [max]="3.1416" [step]="calibrationStep" (valueChange)="updateRingEuler(ring, 2, $event)"></x-calibration-number-control>
+                    </div>
+                  </section>
+
+                  <details class="ring-section quaternion-section">
+                    <summary>Erweitert: Quaternion</summary>
+                    <div class="control-grid">
+                      @for (axis of [0, 1, 2, 3]; track axis) {
+                        <x-calibration-number-control [label]="'Quaternion ' + axis" [help]="getHelp('ring.rotationQuaternion')" [value]="ring.rotationQuaternion[axis]" [min]="-1" [max]="1" [step]="calibrationStep" (valueChange)="updateRingQuaternion(ring, $any(axis), $event)"></x-calibration-number-control>
+                      }
+                    </div>
+                  </details>
+
+                  <section class="ring-section presentation-section" aria-label="Ringdarstellung">
+                    <h5>Darstellung</h5>
+                    <label class="check-row">
+                      <input type="checkbox" [(ngModel)]="ring.visible" (ngModelChange)="applyLive()">
+                      <span>Sichtbar <button type="button" [title]="getHelp('ring.visible')">?</button></span>
+                    </label>
+                    <div class="studio-actions">
+                      <button type="button" (click)="resetNatural()">Natural State</button>
+                      <button type="button" (click)="applyLive()">Ringaufstellung anwenden</button>
+                    </div>
+                  </section>
+                </section>
               }
-              <label class="check-row">
-                <input type="checkbox" [(ngModel)]="ring.visible" (ngModelChange)="applyLive()">
-                <span>Sichtbar <button type="button" [title]="getHelp('ring.visible')">?</button></span>
-              </label>
+            </div>
+          }
+
+          @if (activeTab === 'camera') {
+            <section class="camera-columns">
+              <article>
+                <h4>Startup Start</h4>
+                <div class="control-grid">
+                  <ng-container *ngTemplateOutlet="cameraEditor; context: {$implicit: state.startup.start}"></ng-container>
+                </div>
+                <div class="studio-actions">
+                  <button type="button" (click)="captureStartFromCamera()">Aus Kamera uebernehmen</button>
+                  <button type="button" (click)="applyStart()">Start anwenden</button>
+                </div>
+              </article>
+              <article>
+                <h4>Startup Ende</h4>
+                <div class="control-grid">
+                  <ng-container *ngTemplateOutlet="cameraEditor; context: {$implicit: state.startup.end}"></ng-container>
+                </div>
+                <div class="studio-actions">
+                  <button type="button" (click)="captureEndFromCamera()">Aus Kamera uebernehmen</button>
+                  <button type="button" (click)="applyEnd()">Ende anwenden</button>
+                </div>
+              </article>
             </section>
           }
-        }
 
-        @if (activeTab === 'camera') {
-          <section class="camera-columns">
-            <article>
-              <h4>Startup Start</h4>
-              <ng-container *ngTemplateOutlet="cameraEditor; context: {$implicit: state.startup.start}"></ng-container>
-              <button type="button" (click)="captureStartFromCamera()">Aus Kamera uebernehmen</button>
-              <button type="button" (click)="applyStart()">Start anwenden</button>
-            </article>
-            <article>
-              <h4>Startup Ende</h4>
-              <ng-container *ngTemplateOutlet="cameraEditor; context: {$implicit: state.startup.end}"></ng-container>
-              <button type="button" (click)="captureEndFromCamera()">Aus Kamera uebernehmen</button>
-              <button type="button" (click)="applyEnd()">Ende anwenden</button>
-            </article>
-          </section>
-        }
-
-        @if (activeTab === 'sequence') {
-          <section class="sequence-editor">
-            <label class="check-row"><input type="checkbox" [(ngModel)]="state.startup.enabled"><span>Aktiv</span></label>
-            <label class="numeric-control"><span>Verzoegerung ms <button type="button" [title]="getHelp('startup.delayMs')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('startup.delayMs')" [max]="numericMax('startup.delayMs')" [ngModel]="state.startup.delayMs" (ngModelChange)="updateSequenceNumber('delayMs', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('startup.delayMs')" [max]="numericMax('startup.delayMs')" [ngModel]="state.startup.delayMs" (ngModelChange)="updateSequenceNumber('delayMs', $event)"></label>
-            <label class="numeric-control"><span>Dauer ms <button type="button" [title]="getHelp('startup.durationMs')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('startup.durationMs')" [max]="numericMax('startup.durationMs')" [ngModel]="state.startup.durationMs" (ngModelChange)="updateSequenceNumber('durationMs', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('startup.durationMs')" [max]="numericMax('startup.durationMs')" [ngModel]="state.startup.durationMs" (ngModelChange)="updateSequenceNumber('durationMs', $event)"></label>
-            <label>
-              <span>Easing <button type="button" [title]="getHelp('startup.easing')">?</button></span>
-              <select [(ngModel)]="state.startup.easing">
-                @for (option of easingOptions; track option) {
-                  <option [value]="option">{{option}}</option>
-                }
-              </select>
-            </label>
-            <label class="check-row"><input type="checkbox" [(ngModel)]="state.startup.interruptOnUserInput"><span>Bei Benutzerinteraktion abbrechen</span></label>
-            <div class="studio-actions">
-              <button type="button" (click)="playIntro()">Fahrt abspielen</button>
-              <button type="button" (click)="pauseIntro()">Pause</button>
-              <button type="button" (click)="stopIntro()">Stop</button>
-              <button type="button" (click)="jumpToEnd()">Zum Ende</button>
-              <button type="button" (click)="applyLegacyIntro()">Legacy-Shopware-Kamerafahrt uebernehmen</button>
-            </div>
-          </section>
-        }
-
-        @if (activeTab === 'views') {
-          <section class="view-workflow">
-            <div class="studio-actions">
-              <label>
-                <span>Komposition</span>
-                <select [(ngModel)]="selectedCompositionKey" (ngModelChange)="viewDraft = null">
-                  @for (composition of calibrationProfile?.compositions || []; track composition.compositionKey) {
-                    <option [value]="composition.compositionKey">{{composition.label}}</option>
+          @if (activeTab === 'sequence') {
+            <section class="sequence-editor">
+              <label class="check-row"><input type="checkbox" [(ngModel)]="state.startup.enabled"><span>Aktiv</span></label>
+              <div class="control-grid">
+                <x-calibration-number-control label="Verzoegerung" [help]="getHelp('startup.delayMs')" [unit]="fieldUnit('startup.delayMs')" [value]="state.startup.delayMs" [min]="numericMin('startup.delayMs')" [max]="numericMax('startup.delayMs')" [step]="calibrationStep" (valueChange)="updateSequenceNumber('delayMs', $event)"></x-calibration-number-control>
+                <x-calibration-number-control label="Dauer" [help]="getHelp('startup.durationMs')" [unit]="fieldUnit('startup.durationMs')" [value]="state.startup.durationMs" [min]="numericMin('startup.durationMs')" [max]="numericMax('startup.durationMs')" [step]="calibrationStep" (valueChange)="updateSequenceNumber('durationMs', $event)"></x-calibration-number-control>
+              </div>
+              <label class="select-row">
+                <span>Easing <button type="button" [title]="getHelp('startup.easing')">?</button></span>
+                <select [(ngModel)]="state.startup.easing">
+                  @for (option of easingOptions; track option) {
+                    <option [value]="option">{{option}}</option>
                   }
                 </select>
               </label>
-              <button type="button" (click)="loadCalibrationProfile()">Neu laden</button>
-              <button type="button" (click)="createNewView()" [disabled]="!selectedComposition">+ Neue Ansicht</button>
-            </div>
+              <label class="check-row"><input type="checkbox" [(ngModel)]="state.startup.interruptOnUserInput"><span>Bei Benutzerinteraktion abbrechen</span></label>
+              <div class="studio-actions">
+                <button type="button" (click)="playIntro()">Fahrt abspielen</button>
+                <button type="button" (click)="pauseIntro()">Pause</button>
+                <button type="button" (click)="stopIntro()">Stop</button>
+                <button type="button" (click)="jumpToEnd()">Zum Ende</button>
+                <button type="button" (click)="applyLegacyIntro()">Legacy-Shopware-Kamerafahrt uebernehmen</button>
+              </div>
+            </section>
+          }
 
-            <div class="auth-grid">
-              <label><span>Interner Login</span><input [(ngModel)]="auth.username" autocomplete="off"></label>
-              <label><span>Mitarbeiter-PIN</span><input type="password" [(ngModel)]="auth.pin" autocomplete="off"></label>
-              <label><span>Grund</span><input [(ngModel)]="auth.reason"></label>
-            </div>
-
-            @if (selectedComposition; as composition) {
-              <div class="view-table">
-                <div class="view-table-header">
-                  <span>Aktiv</span>
-                  <span>Standard</span>
-                  <span>Sortierung</span>
-                  <span>Name</span>
-                  <span>View-Key</span>
+          @if (activeTab === 'views') {
+            <section class="view-workflow">
+              <div class="studio-actions">
+                <label class="select-row">
                   <span>Komposition</span>
-                  <span>Ringanzahl</span>
-                  <span>Kamera</span>
-                  <span>Aufstellung</span>
-                  <span>Geaendert</span>
-                  <span>Aktionen</span>
-                </div>
-                @for (view of selectedViews; track view.id || view.viewKey) {
-                  <div class="view-table-row">
-                    <input type="checkbox" [checked]="view.enabled" (change)="setViewEnabled(view, $any($event.target).checked)">
-                    <input type="radio" name="calibration-default-view" [checked]="view.isDefault" (change)="setDefaultView(view)">
-                    <span>{{view.sortOrder}}</span>
-                    <strong>{{view.name}}</strong>
-                    <code>{{view.viewKey}}</code>
-                    <span>{{composition.label}}</span>
-                    <span>{{view.ringLayout.rings?.length || 0}}</span>
-                    <span>{{view.camera ? 'ja' : 'nein'}}</span>
-                    <span>{{view.ringLayout.rings?.length ? 'ja' : 'nein'}}</span>
-                    <span>{{view.updatedAt || '-'}}</span>
-                    <div class="row-actions">
-                      <button type="button" (click)="editView(view)">Bearbeiten</button>
-                      <button type="button" (click)="previewView(view)">Vorschau</button>
-                      <button type="button" (click)="duplicateView(view)">Duplizieren</button>
-                      <button type="button" (click)="deleteView(view)">Loeschen</button>
-                      <button type="button" (click)="moveView(view, -1)">Nach oben</button>
-                      <button type="button" (click)="moveView(view, 1)">Nach unten</button>
+                  <select [(ngModel)]="selectedCompositionKey" (ngModelChange)="viewDraft = null">
+                    @for (composition of calibrationProfile?.compositions || []; track composition.compositionKey) {
+                      <option [value]="composition.compositionKey">{{composition.label}}</option>
+                    }
+                  </select>
+                </label>
+                <button type="button" (click)="loadCalibrationProfile()">Neu laden</button>
+                <button type="button" (click)="createNewView()" [disabled]="!selectedComposition">+ Neue Ansicht</button>
+              </div>
+
+              <div class="auth-grid">
+                <label><span>Interner Login</span><input [(ngModel)]="auth.username" autocomplete="off"></label>
+                <label><span>Mitarbeiter-PIN</span><input type="password" [(ngModel)]="auth.pin" autocomplete="off"></label>
+                <label><span>Grund</span><input [(ngModel)]="auth.reason"></label>
+              </div>
+
+              @if (selectedComposition; as composition) {
+                <div class="view-table-scroll">
+                  <div class="view-table">
+                    <div class="view-table-header">
+                      <span>Aktiv</span>
+                      <span>Standard</span>
+                      <span>Sortierung</span>
+                      <span>Name</span>
+                      <span>View-Key</span>
+                      <span>Komposition</span>
+                      <span>Ringanzahl</span>
+                      <span>Kamera</span>
+                      <span>Aufstellung</span>
+                      <span>Geaendert</span>
+                      <span>Aktionen</span>
                     </div>
+                    @for (view of selectedViews; track view.id || view.viewKey) {
+                      <div class="view-table-row">
+                        <input type="checkbox" [checked]="view.enabled" (change)="setViewEnabled(view, $any($event.target).checked)">
+                        <input type="radio" name="calibration-default-view" [checked]="view.isDefault" (change)="setDefaultView(view)">
+                        <span>{{view.sortOrder}}</span>
+                        <strong>{{view.name}}</strong>
+                        <code>{{view.viewKey}}</code>
+                        <span>{{composition.label}}</span>
+                        <span>{{view.ringLayout.rings?.length || 0}}</span>
+                        <span>{{view.camera ? 'ja' : 'nein'}}</span>
+                        <span>{{view.ringLayout.rings?.length ? 'ja' : 'nein'}}</span>
+                        <span>{{view.updatedAt || '-'}}</span>
+                        <div class="row-actions">
+                          <button type="button" (click)="editView(view)">Bearbeiten</button>
+                          <button type="button" (click)="previewView(view)">Vorschau</button>
+                          <button type="button" (click)="duplicateView(view)">Duplizieren</button>
+                          <button type="button" (click)="deleteView(view)">Loeschen</button>
+                          <button type="button" (click)="moveView(view, -1)">Nach oben</button>
+                          <button type="button" (click)="moveView(view, 1)">Nach unten</button>
+                        </div>
+                      </div>
+                    }
                   </div>
-                }
-              </div>
-            }
-
-            @if (viewDraft) {
-              <section class="draft-editor">
-                <h4>Ansicht bearbeiten</h4>
-                <div class="studio-actions">
-                  <button type="button" (click)="captureDraftCamera()">Aus Kamera uebernehmen</button>
-                  <button type="button" (click)="captureDraftRings()">Ringaufstellung uebernehmen</button>
-                  <button type="button" (click)="captureDraftCameraAndRings()">Kamera + Aufstellung uebernehmen</button>
-                  <button type="button" (click)="previewDraft()">Vorschau</button>
-                  <button type="button" (click)="saveDraft()">Speichern</button>
-                  <button type="button" (click)="discardDraft()">Verwerfen</button>
                 </div>
-                <div class="profile-rule-grid">
-                  <label><span>Name</span><input [(ngModel)]="viewDraft.name"></label>
-                  <label><span>View-Key</span><input [(ngModel)]="viewDraft.viewKey" [disabled]="!!viewDraft.id"></label>
-                  <label class="numeric-control"><span>Sortierung</span><input type="number" [step]="calibrationStep" [(ngModel)]="viewDraft.sortOrder"><input type="range" [step]="calibrationStep" min="-100" max="1000" [(ngModel)]="viewDraft.sortOrder"></label>
-                  <label class="check-row"><input type="checkbox" [(ngModel)]="viewDraft.enabled"><span>Aktiv</span></label>
-                  <label class="check-row"><input type="checkbox" [(ngModel)]="viewDraft.isDefault"><span>Standard</span></label>
-                </div>
-                <pre>{{viewDraft | json}}</pre>
-              </section>
-            }
-          </section>
-        }
+              }
 
-        @if (activeTab === 'export') {
-          <section>
-            <div class="studio-actions">
-              <button type="button" (click)="copyJson()">JSON kopieren</button>
-              <button type="button" (click)="downloadJson()">JSON herunterladen</button>
-              <button type="button" (click)="copyTypeScript()">TypeScript kopieren</button>
-            </div>
-            <h4>Exportfelder</h4>
-            @for (field of exportableFields; track field.key) {
-              <div class="field-row">
-                <strong>{{field.label}}</strong>
-                <code>{{field.key}}</code>
-                <span>{{field.help}}</span>
+              @if (viewDraft) {
+                <section class="draft-editor">
+                  <h4>Ansicht bearbeiten</h4>
+                  <div class="studio-actions">
+                    <button type="button" (click)="captureDraftCamera()">Aus Kamera uebernehmen</button>
+                    <button type="button" (click)="captureDraftRings()">Ringaufstellung uebernehmen</button>
+                    <button type="button" (click)="captureDraftCameraAndRings()">Kamera + Aufstellung uebernehmen</button>
+                    <button type="button" (click)="previewDraft()">Vorschau</button>
+                    <button type="button" (click)="saveDraft()">Speichern</button>
+                    <button type="button" (click)="discardDraft()">Verwerfen</button>
+                  </div>
+                  <div class="profile-rule-grid">
+                    <label><span>Name</span><input [(ngModel)]="viewDraft.name"></label>
+                    <label><span>View-Key</span><input [(ngModel)]="viewDraft.viewKey" [disabled]="!!viewDraft.id"></label>
+                    <x-calibration-number-control label="Sortierung" [value]="viewDraft.sortOrder" [min]="-100" [max]="1000" [step]="calibrationStep" (valueChange)="viewDraft.sortOrder = $event"></x-calibration-number-control>
+                    <label class="check-row"><input type="checkbox" [(ngModel)]="viewDraft.enabled"><span>Aktiv</span></label>
+                    <label class="check-row"><input type="checkbox" [(ngModel)]="viewDraft.isDefault"><span>Standard</span></label>
+                  </div>
+                  <pre>{{viewDraft | json}}</pre>
+                </section>
+              }
+            </section>
+          }
+
+          @if (activeTab === 'export') {
+            <section>
+              <div class="studio-actions">
+                <button type="button" (click)="copyJson()">JSON kopieren</button>
+                <button type="button" (click)="downloadJson()">JSON herunterladen</button>
+                <button type="button" (click)="copyTypeScript()">TypeScript kopieren</button>
               </div>
-            }
-          </section>
-        }
+              <h4>Exportfelder</h4>
+              @for (field of exportableFields; track field.key) {
+                <div class="field-row">
+                  <strong>{{field.label}}</strong>
+                  <code>{{field.key}}</code>
+                  <span>{{field.help}}</span>
+                </div>
+              }
+            </section>
+          }
 
-        @if (activeTab === 'debug') {
-          <pre>{{state | json}}</pre>
-        }
-      </div>
+          @if (activeTab === 'debug') {
+            <pre>{{state | json}}</pre>
+          }
+        </div>
+      } @else {
+        <section class="calibration-empty">
+          @if (calibrationLoadState === 'error') {
+            Kalibrierung konnte nicht initialisiert werden. Details stehen oben.
+          } @else {
+            Noch kein WebGL-Snapshot vorhanden. Snapshot neu aufnehmen.
+          }
+        </section>
+      }
     }
 
     <span class="resize-handle resize-n" (pointerdown)="beginPointer($event, 'resize', 'n')" aria-label="Calibration Studio oben skalieren"></span>
@@ -270,13 +349,13 @@
 }
 
 <ng-template #cameraEditor let-pose>
-  <label class="numeric-control"><span>Alpha <button type="button" [title]="getHelp('camera.alpha')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.alpha')" [max]="numericMax('camera.alpha')" [ngModel]="pose.alpha" (ngModelChange)="updateCameraNumber(pose, 'alpha', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.alpha')" [max]="numericMax('camera.alpha')" [ngModel]="pose.alpha" (ngModelChange)="updateCameraNumber(pose, 'alpha', $event)"></label>
-  <label class="numeric-control"><span>Beta <button type="button" [title]="getHelp('camera.beta')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.beta')" [max]="numericMax('camera.beta')" [ngModel]="pose.beta" (ngModelChange)="updateCameraNumber(pose, 'beta', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.beta')" [max]="numericMax('camera.beta')" [ngModel]="pose.beta" (ngModelChange)="updateCameraNumber(pose, 'beta', $event)"></label>
+  <x-calibration-number-control label="Alpha" [help]="getHelp('camera.alpha')" [unit]="fieldUnit('camera.alpha')" [value]="pose.alpha" [min]="numericMin('camera.alpha')" [max]="numericMax('camera.alpha')" [step]="calibrationStep" (valueChange)="updateCameraNumber(pose, 'alpha', $event)"></x-calibration-number-control>
+  <x-calibration-number-control label="Beta" [help]="getHelp('camera.beta')" [unit]="fieldUnit('camera.beta')" [value]="pose.beta" [min]="numericMin('camera.beta')" [max]="numericMax('camera.beta')" [step]="calibrationStep" (valueChange)="updateCameraNumber(pose, 'beta', $event)"></x-calibration-number-control>
   @for (axis of [0, 1, 2]; track axis) {
-    <label class="numeric-control"><span>Target {{axis}} <button type="button" [title]="getHelp('camera.target')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.target')" [max]="numericMax('camera.target')" [ngModel]="pose.target[axis]" (ngModelChange)="updateCameraTarget(pose, $any(axis), $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.target')" [max]="numericMax('camera.target')" [ngModel]="pose.target[axis]" (ngModelChange)="updateCameraTarget(pose, $any(axis), $event)"></label>
+    <x-calibration-number-control [label]="'Target ' + axis" [help]="getHelp('camera.target')" [unit]="fieldUnit('camera.target')" [value]="pose.target[axis]" [min]="numericMin('camera.target')" [max]="numericMax('camera.target')" [step]="calibrationStep" (valueChange)="updateCameraTarget(pose, $any(axis), $event)"></x-calibration-number-control>
   }
-  <label class="numeric-control"><span>Ortho-Hoehe <button type="button" [title]="getHelp('camera.orthoHeight')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.orthoHeight')" [max]="numericMax('camera.orthoHeight')" [ngModel]="pose.projection.orthoHeight" (ngModelChange)="updateCameraNumber(pose, 'orthoHeight', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.orthoHeight')" [max]="numericMax('camera.orthoHeight')" [ngModel]="pose.projection.orthoHeight" (ngModelChange)="updateCameraNumber(pose, 'orthoHeight', $event)"></label>
-  <label class="numeric-control"><span>Radius <button type="button" [title]="getHelp('camera.radius')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.radius')" [max]="numericMax('camera.radius')" [ngModel]="pose.projection.radius" (ngModelChange)="updateCameraNumber(pose, 'radius', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.radius')" [max]="numericMax('camera.radius')" [ngModel]="pose.projection.radius" (ngModelChange)="updateCameraNumber(pose, 'radius', $event)"></label>
-  <label class="numeric-control"><span>Screen Offset X <button type="button" [title]="getHelp('camera.screenOffsetX')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.screenOffsetX')" [max]="numericMax('camera.screenOffsetX')" [ngModel]="pose.projection.screenOffsetX" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetX', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.screenOffsetX')" [max]="numericMax('camera.screenOffsetX')" [ngModel]="pose.projection.screenOffsetX" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetX', $event)"></label>
-  <label class="numeric-control"><span>Screen Offset Y <button type="button" [title]="getHelp('camera.screenOffsetY')">?</button></span><input type="number" [step]="calibrationStep" [min]="numericMin('camera.screenOffsetY')" [max]="numericMax('camera.screenOffsetY')" [ngModel]="pose.projection.screenOffsetY" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetY', $event)"><input type="range" [step]="calibrationStep" [min]="numericMin('camera.screenOffsetY')" [max]="numericMax('camera.screenOffsetY')" [ngModel]="pose.projection.screenOffsetY" (ngModelChange)="updateCameraNumber(pose, 'screenOffsetY', $event)"></label>
+  <x-calibration-number-control label="Ortho-Hoehe" [help]="getHelp('camera.orthoHeight')" [unit]="fieldUnit('camera.orthoHeight')" [value]="pose.projection.orthoHeight" [min]="numericMin('camera.orthoHeight')" [max]="numericMax('camera.orthoHeight')" [step]="calibrationStep" (valueChange)="updateCameraNumber(pose, 'orthoHeight', $event)"></x-calibration-number-control>
+  <x-calibration-number-control label="Radius" [help]="getHelp('camera.radius')" [unit]="fieldUnit('camera.radius')" [value]="pose.projection.radius" [min]="numericMin('camera.radius')" [max]="numericMax('camera.radius')" [step]="calibrationStep" (valueChange)="updateCameraNumber(pose, 'radius', $event)"></x-calibration-number-control>
+  <x-calibration-number-control label="Screen Offset X" [help]="getHelp('camera.screenOffsetX')" [unit]="fieldUnit('camera.screenOffsetX')" [value]="pose.projection.screenOffsetX" [min]="numericMin('camera.screenOffsetX')" [max]="numericMax('camera.screenOffsetX')" [step]="calibrationStep" (valueChange)="updateCameraNumber(pose, 'screenOffsetX', $event)"></x-calibration-number-control>
+  <x-calibration-number-control label="Screen Offset Y" [help]="getHelp('camera.screenOffsetY')" [unit]="fieldUnit('camera.screenOffsetY')" [value]="pose.projection.screenOffsetY" [min]="numericMin('camera.screenOffsetY')" [max]="numericMax('camera.screenOffsetY')" [step]="calibrationStep" (valueChange)="updateCameraNumber(pose, 'screenOffsetY', $event)"></x-calibration-number-control>
 </ng-template>

@@ -9,7 +9,8 @@ import {frustumFromOrthoHeight, shortestAngleDelta} from "../../webgl/ring-view-
 import {RingPresentationHandle} from "../../webgl/ring-presentation";
 import {CALIBRATION_FIELD_DEFINITIONS, getCalibrationFieldDefinition} from "./calibration-field-definitions";
 import {createCalibrationJson, createCalibrationTypeScript} from "./calibration-export";
-import {AppDataAdminService} from "../appdata-admin.service";
+import {AppDataAdminService, type AppDataAdminAction} from "../appdata-admin.service";
+import {CalibrationNumberControlComponent} from "./calibration-number-control.component";
 import {CalibrationRuntimeComposition, CalibrationRuntimeProfile, CalibrationRuntimeRingTransform, CalibrationRuntimeView} from "../../calibration/calibration-runtime.models";
 import {
   CalibrationEasing,
@@ -23,6 +24,8 @@ import {
 
 type ResizeEdge = "n" | "e" | "s" | "w" | "ne" | "nw" | "se" | "sw";
 type PointerAction = "drag" | "resize";
+type Axis3 = 0 | 1 | 2;
+type Axis4 = 0 | 1 | 2 | 3;
 
 interface PointerSession {
   action: PointerAction;
@@ -43,13 +46,21 @@ interface CalibrationViewDraft extends CalibrationRuntimeView {
   compositionId: number;
 }
 
+interface CalibrationAdminErrorState {
+  code: string;
+  message: string;
+  requestId: string;
+  endpoint: string;
+  details?: unknown;
+}
+
 const STORAGE_KEY = "ringconf.calibrationStudio.v2.modal";
 const LEGACY_VIEW_CALIBRATION_STORAGE_KEY = "ringconf.dev.view-calibration.v1";
 
 @Component({
   selector: "x-calibration-studio",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CalibrationNumberControlComponent],
   templateUrl: "./calibration-studio.component.html",
   styleUrls: ["./calibration-studio.component.scss"],
 })
@@ -62,6 +73,9 @@ export class CalibrationStudioComponent {
   fields = CALIBRATION_FIELD_DEFINITIONS;
   easingOptions: CalibrationEasing[] = ["linear", "ease-in", "ease-out", "ease-in-out", "legacy-exponential"];
   calibrationProfile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean} | null = null;
+  calibrationLoadState: "idle" | "loading" | "ready" | "empty" | "error" = "idle";
+  calibrationError: CalibrationAdminErrorState | null = null;
+  showCalibrationErrorDetails = false;
   selectedCompositionKey = "wedding-pair";
   selectedViewId = 0;
   viewDraft: CalibrationViewDraft | null = null;
@@ -100,6 +114,8 @@ export class CalibrationStudioComponent {
       return;
     }
     this.open = true;
+    this.clampModalGeometry();
+    this.persistModalGeometry();
     this.captureSession();
     void this.loadCalibrationProfile();
   }
@@ -155,14 +171,27 @@ export class CalibrationStudioComponent {
   }
 
   async loadCalibrationProfile(): Promise<void> {
+    this.calibrationLoadState = "loading";
+    this.calibrationError = null;
+    this.showCalibrationErrorDetails = false;
     const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationBootstrap");
     if (!response.ok || !response.data?.profile) {
-      this.status = response.error?.message ?? "Kalibrierungsprofil konnte nicht geladen werden.";
+      this.calibrationProfile = null;
+      this.calibrationLoadState = "error";
+      this.calibrationError = {
+        code: response.error?.code ?? "CALIBRATION_PROFILE_LOAD_FAILED",
+        message: response.error?.message ?? "Kalibrierungsprofil konnte nicht geladen werden.",
+        requestId: response.requestId || this.adminApi.lastDebugInfo?.requestId || "",
+        endpoint: this.adminApi.lastDebugInfo?.endpoint || this.adminApi.getEndpointForDebug("calibrationBootstrap"),
+        details: response.error?.details,
+      };
+      this.status = "Kalibrierungsdaten konnten nicht geladen werden.";
       return;
     }
     this.calibrationProfile = response.data.profile;
     this.selectedCompositionKey = this.selectedComposition?.compositionKey || this.calibrationProfile.compositions[0]?.compositionKey || this.selectedCompositionKey;
-    this.status = "Kalibrierungsprofil geladen.";
+    this.calibrationLoadState = this.calibrationProfile.compositions.length ? "ready" : "empty";
+    this.status = this.calibrationLoadState === "ready" ? "Kalibrierungsprofil geladen." : "Keine Kalibrierungskompositionen vorhanden.";
   }
 
   get selectedComposition(): CalibrationRuntimeComposition | null {
@@ -183,6 +212,24 @@ export class CalibrationStudioComponent {
 
   numericMax(key: string): number {
     return getCalibrationFieldDefinition(key).safeRange?.max ?? 100;
+  }
+
+  fieldUnit(key: string): string {
+    return getCalibrationFieldDefinition(key).unit || "";
+  }
+
+  ringEuler(ring: RingPresentationCalibration, axis: Axis3): number {
+    const euler = Quaternion.FromArray(ring.rotationQuaternion).toEulerAngles();
+    return axis === 0 ? euler.x : axis === 1 ? euler.y : euler.z;
+  }
+
+  updateRingEuler(ring: RingPresentationCalibration, axis: Axis3, value: unknown): void {
+    const euler = Quaternion.FromArray(ring.rotationQuaternion).toEulerAngles();
+    const next = [euler.x, euler.y, euler.z] as [number, number, number];
+    next[axis] = this.clampCalibrationValue("camera.alpha", value, next[axis]);
+    const quaternion = Quaternion.FromEulerAngles(next[0], next[1], next[2]).normalize();
+    ring.rotationQuaternion = normalizeQuaternion([quaternion.x, quaternion.y, quaternion.z, quaternion.w]);
+    this.applyLive();
   }
 
   createNewView(): void {
@@ -452,13 +499,13 @@ export class CalibrationStudioComponent {
     this.status = "Legacy-Shopware-Kamerafahrt uebernommen.";
   }
 
-  updateRingPosition(ring: RingPresentationCalibration, axis: 0 | 1 | 2, value: unknown): void {
+  updateRingPosition(ring: RingPresentationCalibration, axis: Axis3, value: unknown): void {
     const n = this.clampCalibrationValue("ring.position", value, ring.position[axis]);
     ring.position[axis] = n;
     this.applyLive();
   }
 
-  updateRingQuaternion(ring: RingPresentationCalibration, axis: 0 | 1 | 2 | 3, value: unknown): void {
+  updateRingQuaternion(ring: RingPresentationCalibration, axis: Axis4, value: unknown): void {
     const next = [...ring.rotationQuaternion] as [number, number, number, number];
     next[axis] = Math.max(-1, Math.min(1, this.finite(value, next[axis])));
     ring.rotationQuaternion = normalizeQuaternion(next);
@@ -476,7 +523,7 @@ export class CalibrationStudioComponent {
     this.state!.dirty = true;
   }
 
-  updateCameraTarget(pose: CameraPose, axis: 0 | 1 | 2, value: unknown): void {
+  updateCameraTarget(pose: CameraPose, axis: Axis3, value: unknown): void {
     pose.target[axis] = this.clampCalibrationValue("camera.target", value, pose.target[axis]);
     this.state!.dirty = true;
   }
@@ -658,12 +705,22 @@ export class CalibrationStudioComponent {
     }
   }
 
-  private applyCalibrationResponse(response: {ok: boolean; data?: {profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}; error?: {message: string}}): void {
+  private applyCalibrationResponse(response: {ok: boolean; action: AppDataAdminAction; requestId?: string; data?: {profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}; error?: {code?: string; message: string; details?: unknown}}): void {
     if (!response.ok || !response.data?.profile) {
+      this.calibrationLoadState = "error";
+      this.calibrationError = {
+        code: response.error?.code ?? "CALIBRATION_SAVE_FAILED",
+        message: response.error?.message ?? "Kalibrierungsdaten konnten nicht gespeichert werden.",
+        requestId: response.requestId || this.adminApi.lastDebugInfo?.requestId || "",
+        endpoint: this.adminApi.lastDebugInfo?.endpoint || this.adminApi.getEndpointForDebug(response.action),
+        details: response.error?.details,
+      };
       this.status = response.error?.message ?? "Kalibrierungsdaten konnten nicht gespeichert werden.";
       return;
     }
     this.calibrationProfile = response.data.profile;
+    this.calibrationLoadState = "ready";
+    this.calibrationError = null;
     this.viewDraft = null;
     this.status = "Kalibrierungsdaten gespeichert.";
   }
@@ -738,21 +795,22 @@ export class CalibrationStudioComponent {
   }
 
   private loadModalGeometry(): CalibrationModalGeometry {
+    const fallback = this.defaultModalGeometry();
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "");
       if (parsed && typeof parsed === "object") {
-        return {
-          left: this.finite(parsed.left, 80),
-          top: this.finite(parsed.top, 80),
-          width: this.finite(parsed.width, 620),
-          height: this.finite(parsed.height, 560),
+        return this.clampedModalGeometry({
+          left: this.finite(parsed.left, fallback.left),
+          top: this.finite(parsed.top, fallback.top),
+          width: this.finite(parsed.width, fallback.width),
+          height: this.finite(parsed.height, fallback.height),
           minimized: parsed.minimized === true,
-        };
+        });
       }
     } catch {
       // Ignore invalid development-only geometry.
     }
-    return {left: 80, top: 80, width: 620, height: 560, minimized: false};
+    return fallback;
   }
 
   private persistModalGeometry(): void {
@@ -760,10 +818,43 @@ export class CalibrationStudioComponent {
   }
 
   private clampModalGeometry(): void {
-    this.modal.width = Math.min(Math.max(this.modal.width, 420), Math.max(420, window.innerWidth - 24));
-    this.modal.height = Math.min(Math.max(this.modal.height, 260), Math.max(260, window.innerHeight - 24));
-    this.modal.left = Math.min(Math.max(this.modal.left, 0), Math.max(0, window.innerWidth - this.modal.width));
-    this.modal.top = Math.min(Math.max(this.modal.top, 0), Math.max(0, window.innerHeight - 48));
+    this.modal = this.clampedModalGeometry(this.modal);
+  }
+
+  private clampedModalGeometry(geometry: CalibrationModalGeometry): CalibrationModalGeometry {
+    const minWidth = this.modalMinWidth();
+    const minHeight = this.modalMinHeight();
+    const maxWidth = Math.max(minWidth, window.innerWidth - 16);
+    const maxHeight = Math.max(minHeight, window.innerHeight - 16);
+    const width = Math.min(Math.max(geometry.width, minWidth), maxWidth);
+    const height = Math.min(Math.max(geometry.height, minHeight), maxHeight);
+    return {
+      ...geometry,
+      width,
+      height,
+      left: Math.min(Math.max(geometry.left, 0), Math.max(0, window.innerWidth - width)),
+      top: Math.min(Math.max(geometry.top, 0), Math.max(0, window.innerHeight - 48)),
+    };
+  }
+
+  private defaultModalGeometry(): CalibrationModalGeometry {
+    const width = Math.min(1100, Math.max(this.modalMinWidth(), window.innerWidth - 48));
+    const height = Math.min(820, Math.max(this.modalMinHeight(), window.innerHeight - 48));
+    return {
+      left: Math.max(8, Math.round((window.innerWidth - width) / 2)),
+      top: Math.max(8, Math.round((window.innerHeight - height) / 2)),
+      width,
+      height,
+      minimized: false,
+    };
+  }
+
+  private modalMinWidth(): number {
+    return Math.min(560, Math.max(320, window.innerWidth - 16));
+  }
+
+  private modalMinHeight(): number {
+    return Math.min(420, Math.max(260, window.innerHeight - 16));
   }
 }
 
