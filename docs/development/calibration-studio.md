@@ -4,7 +4,58 @@ The Calibration Studio is a development-only tool under the AppData/WebGL admin.
 
 ## Open And Move
 
-The studio opens as a floating modal. The title bar drags the modal and the resize handle changes its size. Geometry is clamped to the viewport and stored locally for the development browser session.
+The studio opens as a floating modal independent from the AppData/WebGL admin panel. Closing the admin panel does not destroy an open Studio session. The title bar drags the modal and the edge/corner handles resize it. Geometry is clamped to the viewport and stored locally for the development browser session.
+
+## Database-Backed Views
+
+As of 2.7.10.1, productive camera/view configuration is runtime data loaded through the backend API. Angular builds never read the database, and `src/app/webgl/ring-view-default-presets.ts` is no longer a runtime source.
+
+The local standalone API and WooCommerce REST bridge expose the public RPC:
+
+```text
+dbGetCalibrationProfile
+```
+
+The development admin endpoint exposes editor-protected actions for authoring:
+
+```text
+calibrationBootstrap
+calibrationCreateView
+calibrationUpdateView
+calibrationDuplicateView
+calibrationDeleteView
+calibrationSortViews
+calibrationSetDefaultView
+calibrationSetViewEnabled
+calibrationActivateProfile
+```
+
+Writes require the existing internal employee verification payload and a change reason. The API uses revision checks; saving stale rows returns a conflict instead of overwriting newer calibration work.
+
+## Data Model
+
+Calibration data is split into three tables configured in `src/php/config.php`:
+
+- `TABLE_CALIBRATION_PROFILE`
+- `TABLE_CALIBRATION_COMPOSITION`
+- `TABLE_CALIBRATION_VIEW`
+
+A profile owns compositions. A composition describes an active ring-slot setup, startup sequence, natural ring layout, and default framing. A view always belongs to exactly one composition and stores camera pose, zoom/framing and ring presentation layout atomically.
+
+The first migration seeds an active `default-2-7-10` profile from the 2.7.10 defaults. After that migration, the database profile is the runtime source. Existing AppData and preset contracts are not changed.
+
+## Authoring Workflow
+
+1. Open the development build and wait until WebGL is ready.
+2. Open Calibration Studio.
+3. Use the `Views` tab and select the target composition.
+4. Create or edit a view.
+5. Use `Aus Kamera uebernehmen`, `Ringaufstellung uebernehmen`, or `Kamera + Aufstellung uebernehmen`.
+6. Preview the view live.
+7. Enter employee credentials and a concise change reason.
+8. Save. If another editor changed the row first, reload and reapply intentionally.
+
+The view table can enable/disable views, set one default view per composition, duplicate views and reorder views. The productive view navbar is built from active database views for the current composition.
 
 ## Categories
 
@@ -35,7 +86,17 @@ The studio captures separate start and end camera poses. Both can be applied liv
 
 The Legacy Shopware Intro action creates a compatibility-style start pose by offsetting the current end camera alpha and uses the `legacy-exponential` easing mode.
 
+## Numeric Controls
+
+Every numeric calibration field has a number input and a linked slider. There are exactly two step modes:
+
+- `Grob 1.0`, the default.
+- `Fein 0.5`.
+
+Safe ranges are read from the centralized field definitions. Ring presentation roots, camera pose, framing and sequence duration are clamped at edit time before live preview is applied.
+
 ## Runtime Behavior
 
 Applying a value updates existing Babylon objects and forces render frames. It does not reload meshes, textures, the engine, the scene, or RingData. Startup animation can be stopped, paused, or jumped to its end pose.
 
+Calibration state is not written into RingData. Camera pose and ring presentation roots stay separate until saved together as one view row.
