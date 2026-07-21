@@ -30,6 +30,14 @@ import {
   isConfiguratorPanelPersistent
 } from "./layout/configurator-layout.models";
 import {navigation, setNavigationHash, setNavigationLayoutMode} from "./menu/menu.component";
+import {
+  cloneLoadedPresetSlots,
+  createPresetSaveCacheItem,
+  OPTIONAL_PRESET_SLOTS,
+  serializeOptionalPresetSlots
+} from "./preset-slots";
+import {CalibrationRuntimeProfile} from "./calibration/calibration-runtime.models";
+import {validateCalibrationRuntimeProfile} from "./calibration/calibration-runtime";
 
 interface ReleaseMetadata {
   version: string;
@@ -72,6 +80,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     freeStones: false,
     preset_id: "",
     browsertab_id: "",
+    calibrationProfile: null as CalibrationRuntimeProfile | null,
   };
 
   log = [] as string[];
@@ -2455,9 +2464,13 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     this.loadReleaseMetadata();
 
-    dbGetAppData().then(function (data: any) {
+    Promise.all([dbGetAppData(), dbGetCalibrationProfile()]).then(function ([data, calibration]) {
       if (data == null) Log("error", "Keine App Daten vorhanden!");
       else AppComponent.app.data = normalizeRingViewAppData(normalizeEngravingAppData(normalizeStoneTaxonomyAppData(data)));
+      AppComponent.app.state.calibrationProfile = calibration;
+      if (!calibration) {
+        Log("error", "Keine aktive Kalibrierung aus der Datenbank geladen. Ansichten bleiben leer, bis ein aktives Profil verfuegbar ist.");
+      }
 
       if (AppComponent.app.state.urlParams["id"] !== undefined && AppComponent.app.state.urlParams["id"].match(/\w{4}-\w{4}/g)) {
         if (AppComponent.app.state.debug) console.log("use url-id: ", AppComponent.app.state.urlParams["id"]);
@@ -3189,6 +3202,30 @@ async function dbGetAppData(): Promise<any> {
   return result;
 }
 
+async function dbGetCalibrationProfile(): Promise<CalibrationRuntimeProfile | null> {
+  let url = getDistRootUrl();
+  let headers = makeHttpHeaders();
+  let params = makeHttpParams("dbGetCalibrationProfile", []);
+
+  try {
+    let response = AppComponent.app.http.post(url, params, {headers});
+    const data: any = await lastValueFrom(response);
+    if (data?.ok === false) {
+      Log("error", data.error?.message ?? "Kalibrierung konnte nicht geladen werden.");
+      return null;
+    }
+    const profile = validateCalibrationRuntimeProfile(data?.data ?? data);
+    if (!profile) {
+      Log("error", "Kalibrierungsprofil aus der Datenbank ist ungueltig.");
+      return null;
+    }
+    return profile;
+  } catch (error) {
+    Log("error", "Kalibrierungsprofil konnte nicht vom Backend geladen werden.");
+    return null;
+  }
+}
+
 export async function dbSetAppData() {
   let url = getDistRootUrl();
   let headers = makeHttpHeaders();
@@ -3217,7 +3254,19 @@ export async function dbSavePreset(addToCart: boolean = false) {
   let headers = makeHttpHeaders();
   RingData.list[0].stone[0].odm = undefined;
   RingData.list[1].stone[0].odm = undefined;
-  let params = makeHttpParams("dbSavePreset", [AppComponent.app.state.preset_id, RingData.list[0], RingData.list[1], imgData, false]);
+  for (const slot of OPTIONAL_PRESET_SLOTS) {
+    if (RingData.list[slot]?.stone?.[0]) {
+      RingData.list[slot].stone[0].odm = undefined;
+    }
+  }
+  let params = makeHttpParams("dbSavePreset", [
+    AppComponent.app.state.preset_id,
+    RingData.list[0],
+    RingData.list[1],
+    imgData,
+    false,
+    serializeOptionalPresetSlots(RingData.list),
+  ]);
   let response = AppComponent.app.http.post(url, params, {headers});
   await lastValueFrom(response).then(function (data: any) {
     if (data)
@@ -3230,14 +3279,7 @@ export async function dbSavePreset(addToCart: boolean = false) {
     })
 
     if (!dbSaveItem) {
-      let item = {
-        id: data.id,
-        preset_0: JSON.stringify(RingData.list[0]),
-        preset_1: JSON.stringify(RingData.list[1]),
-        img: imgData
-      };
-
-      AppComponent.app.state.dbSaveItems.push(item)
+      AppComponent.app.state.dbSaveItems.push(createPresetSaveCacheItem(data.id, RingData.list, imgData))
     }
   });
 }
@@ -3256,8 +3298,7 @@ export async function dbLoadPreset(id: string): Promise<iDBSaveItem | undefined>
 
   if (item && item.id && item.preset_0 && item.preset_1) {
     AppComponent.app.state.preset_id = item.id;
-    RingData.list[0].clone(JSON.parse(item.preset_0));
-    RingData.list[1].clone(JSON.parse(item.preset_1));
+    cloneLoadedPresetSlots(RingData.list, item);
     return item;
   }
 
@@ -3265,18 +3306,19 @@ export async function dbLoadPreset(id: string): Promise<iDBSaveItem | undefined>
   let headers = makeHttpHeaders();
   let params = makeHttpParams("dbLoadPreset", [id]);
   let response = AppComponent.app.http.post(url, params, {headers});
-  let newItem = undefined;
+  let newItem: iDBSaveItem | undefined = undefined;
   await lastValueFrom(response).then(function (data: any) {
     if (data.errorCode == 0) {
       newItem = {
         id: id,
         preset_0: data.preset_0,
         preset_1: data.preset_1,
+        preset_2: data.preset_2 ?? null,
+        preset_3: data.preset_3 ?? null,
         img: JSON.parse(data.img)
       };
 
-      RingData.list[0].clone(JSON.parse(data.preset_0));
-      RingData.list[1].clone(JSON.parse(data.preset_1));
+      cloneLoadedPresetSlots(RingData.list, newItem);
 
       if (id !== "0000-0000") {
         AppComponent.app.state.preset_id = id;
@@ -3297,6 +3339,8 @@ export async function dbLoadPreset(id: string): Promise<iDBSaveItem | undefined>
                 id: e.id,
                 preset_0: data.preset_0,
                 preset_1: data.preset_1,
+                preset_2: data.preset_2 ?? null,
+                preset_3: data.preset_3 ?? null,
                 img: JSON.parse(data.img)
               });
             })
@@ -3328,8 +3372,12 @@ export async function dbLoadPreset(id: string): Promise<iDBSaveItem | undefined>
           break;
         case -2: // "Preset nicht gefunden! Es wurde das Standardpreset geladen.";
           Log("info", data.info);
-          RingData.list[0].clone(JSON.parse(data.preset_0));
-          RingData.list[1].clone(JSON.parse(data.preset_1));
+          cloneLoadedPresetSlots(RingData.list, {
+            preset_0: data.preset_0,
+            preset_1: data.preset_1,
+            preset_2: data.preset_2 ?? null,
+            preset_3: data.preset_3 ?? null,
+          });
           RingData.list[0].isDirty = true;
           RingData.list[1].isDirty = true;
           id = data.id;
@@ -3364,7 +3412,14 @@ export async function dbSaveStdPreset() {
   RingData.list[1].stone[0].odm = undefined;
   let url = getDistRootUrl();
   let headers = makeHttpHeaders();
-  let params = makeHttpParams("dbSavePreset", ["0000-0000", RingData.list[0], RingData.list[1], "", true]);
+  let params = makeHttpParams("dbSavePreset", [
+    "0000-0000",
+    RingData.list[0],
+    RingData.list[1],
+    "",
+    true,
+    serializeOptionalPresetSlots(RingData.list),
+  ]);
   let response = AppComponent.app.http.post(url, params, {headers});
   await lastValueFrom(response).then(function (data: any) {
     if (data.errorCode === 0)
@@ -3382,7 +3437,14 @@ async function dbResetStdPreset() {
 
   let url = getDistRootUrl();
   let headers = makeHttpHeaders();
-  let params = makeHttpParams("dbSavePreset", ["0000-0000", RingData.list[0], RingData.list[1], "", true]);
+  let params = makeHttpParams("dbSavePreset", [
+    "0000-0000",
+    RingData.list[0],
+    RingData.list[1],
+    "",
+    true,
+    serializeOptionalPresetSlots(RingData.list),
+  ]);
   let response = AppComponent.app.http.post(url, params, {headers});
   await lastValueFrom(response).then(function (data: any) {
     if (data.errorCode == 0) {

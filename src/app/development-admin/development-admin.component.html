@@ -2,6 +2,8 @@
   &#9881;
 </button>
 
+<x-calibration-studio></x-calibration-studio>
+
 @if (open) {
   <aside class="admin-panel" [class.open]="open">
     <header class="admin-header">
@@ -262,7 +264,6 @@
   <section class="admin-body">
     <h3>OBJ-Validator und Canvas-Vorschau</h3>
     <p>Nur Vorschau: OBJ-Dateinamen und AppData-Referenzen werden lokal validiert; Uploads oder Assetaenderungen erfolgen hier nicht.</p>
-    <x-view-calibration></x-view-calibration>
     <div class="admin-tool-panel">
       <h4>Kameraansichten / Ringaufstellungen</h4>
       <p>Marker-OBJ lokal analysieren. Gespeichert werden nur Position und Quaternion pro Ring, nicht die OBJ-Geometrie.</p>

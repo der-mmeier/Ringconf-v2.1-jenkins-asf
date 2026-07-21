@@ -15,7 +15,17 @@ export type AppDataAdminAction =
   | "retireVersion"
   | "listTargets"
   | "assignTarget"
-  | "rollbackTarget";
+  | "rollbackTarget"
+  | "calibrationBootstrap"
+  | "calibrationUpdateComposition"
+  | "calibrationCreateView"
+  | "calibrationUpdateView"
+  | "calibrationDuplicateView"
+  | "calibrationDeleteView"
+  | "calibrationSortViews"
+  | "calibrationSetDefaultView"
+  | "calibrationSetViewEnabled"
+  | "calibrationActivateProfile";
 
 export interface AppDataAdminResponse<T = unknown> {
   ok: boolean;

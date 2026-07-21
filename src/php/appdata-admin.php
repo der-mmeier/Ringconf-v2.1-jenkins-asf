@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/calibration-admin.php';
 
 const MAX_REQUEST_BYTES = 5242880;
 const ADMIN_TABLE_BUILD = 'ringcfg_appdata_build';
@@ -45,6 +46,16 @@ try {
     'listTargets' => 'handleListTargets',
     'assignTarget' => 'handleAssignTarget',
     'rollbackTarget' => 'handleRollbackTarget',
+    'calibrationBootstrap' => 'handleCalibrationBootstrap',
+    'calibrationUpdateComposition' => 'handleCalibrationUpdateComposition',
+    'calibrationCreateView' => 'handleCalibrationCreateView',
+    'calibrationUpdateView' => 'handleCalibrationUpdateView',
+    'calibrationDuplicateView' => 'handleCalibrationDuplicateView',
+    'calibrationDeleteView' => 'handleCalibrationDeleteView',
+    'calibrationSortViews' => 'handleCalibrationSortViews',
+    'calibrationSetDefaultView' => 'handleCalibrationSetDefaultView',
+    'calibrationSetViewEnabled' => 'handleCalibrationSetViewEnabled',
+    'calibrationActivateProfile' => 'handleCalibrationActivateProfile',
   ];
 
   if (!isset($handlers[$action])) {

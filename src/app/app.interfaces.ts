@@ -551,7 +551,7 @@ export interface iWebGLSettings {
 }
 
 export type RingViewAvailability = "all" | "single" | "pair";
-export type RingViewFocus = "all" | "ring0" | "ring1";
+export type RingViewFocus = "all" | "ring0" | "ring1" | "ring2" | "ring3";
 export type RingViewTargetMode = "selection-center" | "fixed";
 export type RingViewFitMode = "auto" | "fixed" | "zoom-out-only";
 export type RingViewProjectionMode = "orthographic" | "perspective";
@@ -559,6 +559,7 @@ export type RingViewProjectionMode = "orthographic" | "perspective";
 export interface iRingPresentationTransform {
   position: [number, number, number];
   rotationQuaternion: [number, number, number, number];
+  visible?: boolean;
 }
 
 export interface iRingViewPreset {
@@ -571,6 +572,8 @@ export interface iRingViewPreset {
   targetMode?: RingViewTargetMode;
   camera: RingViewCameraPreset;
   layoutId?: string | null;
+  compositionKey?: string;
+  ringLayout?: iRingLayoutPreset["ringTransforms"];
 }
 
 export interface RingViewCameraPreset {
@@ -605,6 +608,8 @@ export interface iRingLayoutPreset {
   ringTransforms: {
     ring0?: iRingPresentationTransform;
     ring1?: iRingPresentationTransform;
+    ring2?: iRingPresentationTransform;
+    ring3?: iRingPresentationTransform;
   };
 }
 
@@ -654,6 +659,8 @@ export interface iDBSaveItem {
   id: string;
   preset_0: string;
   preset_1: string;
+  preset_2?: string | null;
+  preset_3?: string | null;
   img: string;
   error?: string;
 }

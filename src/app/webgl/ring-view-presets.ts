@@ -1,5 +1,4 @@
 import {iAppData, iRingLayoutPreset, iRingViewPreset, RingViewCameraPreset, RingViewFocus} from "../app.interfaces";
-import {createDefaultRingViewPresets} from "./ring-view-default-presets";
 
 export function normalizeRingViewAppData(appData: iAppData): iAppData {
   if (appData.viewPresets !== undefined) {
@@ -36,7 +35,7 @@ export function normalizeLayoutPresets(source: unknown): iRingLayoutPreset[] {
 }
 
 export function createFallbackViewPresets(pairActive: boolean): iRingViewPreset[] {
-  return createDefaultRingViewPresets(pairActive);
+  return [];
 }
 
 export function normalizeCameraPreset(source: unknown, focus: RingViewFocus = "all"): RingViewCameraPreset {
@@ -82,7 +81,12 @@ function normalizeViewPreset(source: unknown, index: number): iRingViewPreset | 
   if (!source || typeof source !== "object" || Array.isArray(source)) return null;
   const record = source as Record<string, unknown>;
   const id = sanitizeId(record["id"], `view-${index + 1}`);
-  const focus: RingViewFocus = record["focus"] === "ring0" || record["focus"] === "ring1" ? record["focus"] : "all";
+  const focus: RingViewFocus = record["focus"] === "ring0"
+    || record["focus"] === "ring1"
+    || record["focus"] === "ring2"
+    || record["focus"] === "ring3"
+    ? record["focus"]
+    : "all";
   const cameraRecord = record["camera"] && typeof record["camera"] === "object" && !Array.isArray(record["camera"])
     ? record["camera"] as Record<string, unknown>
     : {};
@@ -96,7 +100,20 @@ function normalizeViewPreset(source: unknown, index: number): iRingViewPreset | 
     targetMode: record["targetMode"] === "fixed" || cameraRecord["targetMode"] === "fixed" ? "fixed" : "selection-center",
     camera: normalizeCameraPreset(cameraRecord, focus),
     layoutId: typeof record["layoutId"] === "string" && record["layoutId"].trim() ? record["layoutId"].trim() : null,
+    compositionKey: typeof record["compositionKey"] === "string" && record["compositionKey"].trim() ? record["compositionKey"].trim() : undefined,
+    ringLayout: normalizeInlineRingLayout(record["ringLayout"]),
   };
+}
+
+function normalizeInlineRingLayout(source: unknown): iRingLayoutPreset["ringTransforms"] | undefined {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return undefined;
+  const record = source as Record<string, unknown>;
+  const ring0 = normalizeTransform(record["ring0"]);
+  const ring1 = normalizeTransform(record["ring1"]);
+  const ring2 = normalizeTransform(record["ring2"]);
+  const ring3 = normalizeTransform(record["ring3"]);
+  if (!ring0 && !ring1 && !ring2 && !ring3) return undefined;
+  return {ring0, ring1, ring2, ring3};
 }
 
 function normalizeLayoutPreset(source: unknown): iRingLayoutPreset | null {
@@ -109,13 +126,15 @@ function normalizeLayoutPreset(source: unknown): iRingLayoutPreset | null {
     : {};
   const ring0 = normalizeTransform(transforms["ring0"]);
   const ring1 = normalizeTransform(transforms["ring1"]);
-  if (!ring0 && !ring1) return null;
+  const ring2 = normalizeTransform(transforms["ring2"]);
+  const ring3 = normalizeTransform(transforms["ring3"]);
+  if (!ring0 && !ring1 && !ring2 && !ring3) return null;
   return {
     id,
     label: stringOr(record["label"], id),
     enabled: record["enabled"] !== false,
     source: record["source"] === "manual" ? "manual" : "obj-markers",
-    ringTransforms: {ring0, ring1},
+    ringTransforms: {ring0, ring1, ring2, ring3},
   };
 }
 
@@ -125,7 +144,11 @@ function normalizeTransform(source: unknown) {
   const position = normalizeVector3(record["position"]);
   const quat = normalizeQuaternion(record["rotationQuaternion"]);
   if (!position || !quat) return undefined;
-  return {position, rotationQuaternion: quat};
+  return {
+    position,
+    rotationQuaternion: quat,
+    visible: typeof record["visible"] === "boolean" ? record["visible"] : undefined,
+  };
 }
 
 function sanitizeId(value: unknown, fallback: string): string {
