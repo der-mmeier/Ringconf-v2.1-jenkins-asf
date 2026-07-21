@@ -391,12 +391,14 @@ new class {
     return $id;
   }
 
-  public function dbSavePreset($id, $preset_0, $preset_1, $imgData, $overwrite = false)
+  public function dbSavePreset($id, $preset_0, $preset_1, $imgData, $overwrite = false, $presetSlots = null)
   {
     $db = $this->getDB();
 
     $preset_0 = json_encode($preset_0, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $preset_1 = json_encode($preset_1, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $preset_2 = $this->optionalPresetSlotJson($presetSlots, "preset_2");
+    $preset_3 = $this->optionalPresetSlotJson($presetSlots, "preset_3");
     $imgData = json_encode($imgData);
     $incrase_id = false;
 
@@ -404,11 +406,27 @@ new class {
 
     if ($stm !== false) {
       if ($stm->rowCount() === 0) {
-        $db->query("INSERT INTO " . TABLE_PRESET . " (id, preset_0, preset_1, img) VALUES('$id', '$preset_0', '$preset_1', '$imgData')");
+        $db->query(
+          "INSERT INTO " . TABLE_PRESET . " (id, preset_0, preset_1, preset_2, preset_3, img) VALUES(" .
+          $db->quote($id) . ", " .
+          $db->quote($preset_0) . ", " .
+          $db->quote($preset_1) . ", " .
+          $this->sqlValueOrNull($db, $preset_2) . ", " .
+          $this->sqlValueOrNull($db, $preset_3) . ", " .
+          $db->quote($imgData) . ")"
+        );
       } else {
         $data = $stm->fetch(PDO::FETCH_NUM);
         if ($data[1] == null || $data[2] == null || $overwrite)
-          $db->query("UPDATE " . TABLE_PRESET . " SET preset_0='$preset_0', preset_1='$preset_1', img='$imgData' WHERE id='$id'");
+          $db->query(
+            "UPDATE " . TABLE_PRESET . " SET " .
+            "preset_0=" . $db->quote($preset_0) .
+            ", preset_1=" . $db->quote($preset_1) .
+            $this->optionalPresetUpdateSql($db, "preset_2", $preset_2) .
+            $this->optionalPresetUpdateSql($db, "preset_3", $preset_3) .
+            ", img=" . $db->quote($imgData) .
+            " WHERE id=" . $db->quote($id)
+          );
         else
           $incrase_id = true;
       }
@@ -433,7 +451,15 @@ new class {
         }
       }
 
-      $db->query("INSERT INTO " . TABLE_PRESET . " (id, preset_0, preset_1, img) VALUES('$id', '$preset_0', '$preset_1', '$imgData')");
+      $db->query(
+        "INSERT INTO " . TABLE_PRESET . " (id, preset_0, preset_1, preset_2, preset_3, img) VALUES(" .
+        $db->quote($id) . ", " .
+        $db->quote($preset_0) . ", " .
+        $db->quote($preset_1) . ", " .
+        $this->sqlValueOrNull($db, $preset_2) . ", " .
+        $this->sqlValueOrNull($db, $preset_3) . ", " .
+        $db->quote($imgData) . ")"
+      );
     }
 
     $R = new stdClass();
@@ -467,6 +493,8 @@ new class {
       $data = $stm->fetch(PDO::FETCH_ASSOC);
       $R->preset_0 = $data["preset_0"];
       $R->preset_1 = $data["preset_1"];
+      $R->preset_2 = $data["preset_2"] ?? null;
+      $R->preset_3 = $data["preset_3"] ?? null;
       $R->img = $data["img"];
     };
 
@@ -481,6 +509,8 @@ new class {
       } else {
         $R->preset_0 = $data["preset_0"];
         $R->preset_1 = $data["preset_1"];
+        $R->preset_2 = $data["preset_2"] ?? null;
+        $R->preset_3 = $data["preset_3"] ?? null;
         $R->img = $data["img"];
 
         $id = substr($id, 0, 9);
@@ -495,6 +525,47 @@ new class {
     }
 
     echo json_encode($R);
+  }
+
+  private function optionalPresetSlotJson($presetSlots, string $key)
+  {
+    if (!is_object($presetSlots) && !is_array($presetSlots)) {
+      return null;
+    }
+
+    if (is_array($presetSlots)) {
+      if (!array_key_exists($key, $presetSlots)) {
+        return null;
+      }
+      $value = $presetSlots[$key];
+    } else {
+      if (!property_exists($presetSlots, $key)) {
+        return null;
+      }
+      $value = $presetSlots->{$key};
+    }
+
+    if ($value === null || $value === "") {
+      return null;
+    }
+    if (is_string($value)) {
+      json_decode($value);
+      if (json_last_error() === JSON_ERROR_NONE) {
+        return $value;
+      }
+    }
+
+    return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  }
+
+  private function sqlValueOrNull(PDO $db, $value): string
+  {
+    return $value === null ? "NULL" : $db->quote($value);
+  }
+
+  private function optionalPresetUpdateSql(PDO $db, string $column, $value): string
+  {
+    return $value === null ? "" : ", " . $column . "=" . $db->quote($value);
   }
 
   public function calcPrice($preset)

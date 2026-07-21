@@ -87,7 +87,8 @@ final class ASF_Ringconf_Rest {
 						$rpp[1] ?? null,
 						$rpp[2] ?? null,
 						(string) ( $rpp[3] ?? '' ),
-						(bool) ( $rpp[4] ?? false )
+						(bool) ( $rpp[4] ?? false ),
+						$rpp[5] ?? null
 					)
 				);
 			case 'dbLoadPreset':

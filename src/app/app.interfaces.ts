@@ -654,6 +654,8 @@ export interface iDBSaveItem {
   id: string;
   preset_0: string;
   preset_1: string;
+  preset_2?: string | null;
+  preset_3?: string | null;
   img: string;
   error?: string;
 }

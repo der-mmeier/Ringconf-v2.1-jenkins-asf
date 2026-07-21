@@ -37,10 +37,14 @@ class Database extends PDO
                     id       varchar(15)                   not null primary key,
                     preset_0 text                             null,
                     preset_1 text                             null,
+                    preset_2 text                             null,
+                    preset_3 text                             null,
                     img      longtext                         null,
                     date     timestamp default CURRENT_TIMESTAMP not null
                 );");
             }
+            $this->ensureColumn(TABLE_PRESET, 'preset_2', 'text null', 'preset_1');
+            $this->ensureColumn(TABLE_PRESET, 'preset_3', 'text null', 'preset_2');
 
         } catch (PDOException $e) {
             print "Error!: " . $e->getMessage() . "<br/>";
@@ -56,6 +60,30 @@ class Database extends PDO
         }
 
         return false;
+    }
+
+    public function columnExists($table, $column): bool
+    {
+        $stmt = $this->prepare("
+            SELECT COUNT(*)
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :table_name
+              AND COLUMN_NAME = :column_name
+        ");
+        $stmt->execute([
+            'table_name' => $table,
+            'column_name' => $column,
+        ]);
+
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function ensureColumn($table, $column, $definition, $after): void
+    {
+        if (!$this->columnExists($table, $column)) {
+            $this->exec("ALTER TABLE " . $table . " ADD COLUMN " . $column . " " . $definition . " AFTER " . $after);
+        }
     }
 
 /*    public function importSql($filename)

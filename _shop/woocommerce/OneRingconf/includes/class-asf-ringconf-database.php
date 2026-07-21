@@ -35,6 +35,8 @@ final class ASF_Ringconf_Database {
 				id varchar(24) NOT NULL,
 				preset_0 longtext NULL,
 				preset_1 longtext NULL,
+				preset_2 longtext NULL,
+				preset_3 longtext NULL,
 				img longtext NULL,
 				price decimal(12,2) NULL,
 				created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -123,7 +125,7 @@ final class ASF_Ringconf_Database {
 		);
 	}
 
-	public function rpc_db_save_preset( string $id, $preset_0, $preset_1, string $img_data, bool $overwrite = false ): array {
+	public function rpc_db_save_preset( string $id, $preset_0, $preset_1, string $img_data, bool $overwrite = false, $preset_slots = null ): array {
 		global $wpdb;
 
 		$id = strtoupper( trim( $id ) );
@@ -133,6 +135,8 @@ final class ASF_Ringconf_Database {
 
 		$preset_0_json = $this->encode_limited_json( $preset_0 );
 		$preset_1_json = $this->encode_limited_json( $preset_1 );
+		$preset_2_json = $this->optional_preset_slot_json( $preset_slots, 'preset_2' );
+		$preset_3_json = $this->optional_preset_slot_json( $preset_slots, 'preset_3' );
 		$img_json      = $this->encode_limited_image( $img_data );
 
 		if ( null === $preset_0_json || null === $preset_1_json || null === $img_json ) {
@@ -145,12 +149,12 @@ final class ASF_Ringconf_Database {
 
 		$row = $this->get_preset_row( $id );
 		if ( null === $row ) {
-			$this->insert_preset( $id, $preset_0_json, $preset_1_json, $img_json );
+			$this->insert_preset( $id, $preset_0_json, $preset_1_json, $preset_2_json, $preset_3_json, $img_json );
 		} elseif ( $overwrite || empty( $row['preset_0'] ) || empty( $row['preset_1'] ) ) {
-			$this->update_preset( $id, $preset_0_json, $preset_1_json, $img_json );
+			$this->update_preset( $id, $preset_0_json, $preset_1_json, $preset_2_json, $preset_3_json, $img_json );
 		} else {
 			$id = $this->next_suffix_id( $id );
-			$this->insert_preset( $id, $preset_0_json, $preset_1_json, $img_json );
+			$this->insert_preset( $id, $preset_0_json, $preset_1_json, $preset_2_json, $preset_3_json, $img_json );
 		}
 
 		return array(
@@ -189,6 +193,8 @@ final class ASF_Ringconf_Database {
 				'id'        => $this->create_id(),
 				'preset_0'  => $default['preset_0'],
 				'preset_1'  => $default['preset_1'],
+				'preset_2'  => $default['preset_2'] ?? null,
+				'preset_3'  => $default['preset_3'] ?? null,
 				'img'       => $default['img'],
 			);
 		}
@@ -205,6 +211,8 @@ final class ASF_Ringconf_Database {
 			'id'        => $id,
 			'preset_0'  => $row['preset_0'],
 			'preset_1'  => $row['preset_1'],
+			'preset_2'  => $row['preset_2'] ?? null,
+			'preset_3'  => $row['preset_3'] ?? null,
 			'img'       => $row['img'],
 			'dbItems'   => is_array( $db_items ) ? $db_items : array(),
 		);
@@ -259,7 +267,7 @@ final class ASF_Ringconf_Database {
 		return is_array( $row ) ? $row : null;
 	}
 
-	private function insert_preset( string $id, string $preset_0, string $preset_1, string $img ): void {
+	private function insert_preset( string $id, string $preset_0, string $preset_1, ?string $preset_2, ?string $preset_3, string $img ): void {
 		global $wpdb;
 
 		$wpdb->insert(
@@ -268,27 +276,40 @@ final class ASF_Ringconf_Database {
 				'id'       => $id,
 				'preset_0' => $preset_0,
 				'preset_1' => $preset_1,
+				'preset_2' => $preset_2,
+				'preset_3' => $preset_3,
 				'img'      => $img,
 				'price'    => $this->calculate_price( null ),
 			),
-			array( '%s', '%s', '%s', '%s', '%f' )
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%f' )
 		);
 	}
 
-	private function update_preset( string $id, string $preset_0, string $preset_1, string $img ): void {
+	private function update_preset( string $id, string $preset_0, string $preset_1, ?string $preset_2, ?string $preset_3, string $img ): void {
 		global $wpdb;
+
+		$values = array(
+			'preset_0'   => $preset_0,
+			'preset_1'   => $preset_1,
+			'img'        => $img,
+			'price'      => $this->calculate_price( null ),
+			'updated_at' => current_time( 'mysql' ),
+		);
+		$formats = array( '%s', '%s', '%s', '%f', '%s' );
+		if ( null !== $preset_2 ) {
+			$values['preset_2'] = $preset_2;
+			$formats[]          = '%s';
+		}
+		if ( null !== $preset_3 ) {
+			$values['preset_3'] = $preset_3;
+			$formats[]          = '%s';
+		}
 
 		$wpdb->update(
 			self::preset_table(),
-			array(
-				'preset_0'   => $preset_0,
-				'preset_1'   => $preset_1,
-				'img'        => $img,
-				'price'      => $this->calculate_price( null ),
-				'updated_at' => current_time( 'mysql' ),
-			),
+			$values,
 			array( 'id' => $id ),
-			array( '%s', '%s', '%s', '%f', '%s' ),
+			$formats,
 			array( '%s' )
 		);
 	}
@@ -311,6 +332,35 @@ final class ASF_Ringconf_Database {
 		}
 
 		return $json;
+	}
+
+	private function optional_preset_slot_json( $preset_slots, string $key ): ?string {
+		if ( ! is_array( $preset_slots ) && ! is_object( $preset_slots ) ) {
+			return null;
+		}
+
+		$exists = false;
+		$value  = null;
+		if ( is_array( $preset_slots ) && array_key_exists( $key, $preset_slots ) ) {
+			$exists = true;
+			$value  = $preset_slots[ $key ];
+		} elseif ( is_object( $preset_slots ) && property_exists( $preset_slots, $key ) ) {
+			$exists = true;
+			$value  = $preset_slots->{$key};
+		}
+
+		if ( ! $exists || null === $value || '' === $value ) {
+			return null;
+		}
+
+		if ( is_string( $value ) ) {
+			json_decode( $value, true );
+			if ( JSON_ERROR_NONE === json_last_error() && strlen( $value ) <= self::MAX_JSON_BYTES ) {
+				return $value;
+			}
+		}
+
+		return $this->encode_limited_json( $value );
 	}
 
 	private function encode_limited_image( string $img_data ): ?string {
