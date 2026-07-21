@@ -10,31 +10,46 @@
     </div>
 
     <x-textbox id="engravingText"
-      [value]="ringData[ringId].engraving"
+      [value]="getInnerEngravingDraft()"
       [class]="'engraving-'+ringData[ringId].engravingFont"
-      infotext="test"
+      [infotext]="getInnerEngravingInfoText()"
       [maxlength]="app.data.engraving.maxLength"
-      [onInfotextFormat]="onEngravingInfoFormat"
+      (onChange)="setInnerEngravingDraft($event)"
+      (onFocus)="onInnerEngravingFocus($event)"
+      (onBlur)="onInnerEngravingBlur($event)"
+      (onCompositionStart)="onInnerCompositionStart()"
+      (onCompositionEnd)="onInnerCompositionEnd($event)"
       #textbox>
     </x-textbox>
 
     <button class="default applyText" (mousedown)="applyEngravingText()">Anwenden</button>
 
-    <h6 class="title">Symbol hinzufügen</h6>
-    <div class="symbol-wrapper">
+    <h6 class="title symbol-title">Symbol hinzufügen</h6>
+    <div class="symbol-wrapper" aria-label="Symbol hinzufÃ¼gen">
       @for (item of app.data.engraving.symbols; track item.unicode) {
-        <div class="symbol" (mousedown)="addSymbol(item.unicode)">
+        <button type="button" class="symbol"
+          (pointerdown)="addSymbol(item.unicode, $event)"
+          (keydown.enter)="addSymbol(item.unicode, $event)"
+          (keydown.space)="addSymbol(item.unicode, $event)">
           <img src="{{env.assetFolderLocation}}/assets/imgui/{{item.img}}" alt="">
-        </div>
+        </button>
       }
     </div>
 
     <h6 class="title">Schriftart</h6>
-    <div class="font-row">
-      <x-checkbox class="engraving-0" [checked]="ringData[ringId].engravingFont===0" (onCheck)="setFont(0)">Abc 123</x-checkbox>
-      <x-checkbox class="engraving-1" [checked]="ringData[ringId].engravingFont===1" (onCheck)="setFont(1)">Abc 123</x-checkbox>
-      <x-checkbox class="engraving-2" [checked]="ringData[ringId].engravingFont===2" (onCheck)="setFont(2)">Abc 123</x-checkbox>
-      <x-checkbox class="engraving-3" [checked]="ringData[ringId].engravingFont===3" (onCheck)="setFont(3)">Abc 123</x-checkbox>
+    <div class="font-row" role="radiogroup" aria-label="Schriftart Innengravur">
+      @for (font of [0, 1, 2, 3]; track font) {
+        <button type="button"
+          role="radio"
+          class="font-option engraving-{{font}}"
+          [class.active]="ringData[ringId].engravingFont===font"
+          [attr.aria-checked]="ringData[ringId].engravingFont===font"
+          (pointerdown)="setFont(font, $event)"
+          (keydown.enter)="setFont(font, $event)"
+          (keydown.space)="setFont(font, $event)">
+          Abc 123
+        </button>
+      }
     </div>
   </section>
 }
@@ -86,18 +101,29 @@
           <label class="engraving-field">
             <span>Text außen</span>
             <input type="text"
+              data-asf-engraving-input="true"
               [value]="getExteriorTextDraft()"
               [attr.maxlength]="getExteriorMaxLength()"
               (input)="setExteriorTextDraft($event)"
+              (compositionstart)="onExteriorCompositionStart()"
+              (compositionend)="onExteriorCompositionEnd(exteriorTextInput.value)"
               #exteriorTextInput>
           </label>
           <button type="button" class="default applyText" (mousedown)="applyExteriorText(exteriorTextInput.value)">Anwenden</button>
           <div class="engraving-counter">noch {{getExteriorRemainingChars()}} Zeichen möglich</div>
-          <div class="font-row compact">
-            <x-checkbox class="engraving-0" [checked]="ringData[ringId].exteriorEngraving.fontId===0" (onCheck)="setExteriorFont(0)">Abc 123</x-checkbox>
-            <x-checkbox class="engraving-1" [checked]="ringData[ringId].exteriorEngraving.fontId===1" (onCheck)="setExteriorFont(1)">Abc 123</x-checkbox>
-            <x-checkbox class="engraving-2" [checked]="ringData[ringId].exteriorEngraving.fontId===2" (onCheck)="setExteriorFont(2)">Abc 123</x-checkbox>
-            <x-checkbox class="engraving-3" [checked]="ringData[ringId].exteriorEngraving.fontId===3" (onCheck)="setExteriorFont(3)">Abc 123</x-checkbox>
+          <div class="font-row compact" role="radiogroup" aria-label="Schriftart Außengravur">
+            @for (font of [0, 1, 2, 3]; track font) {
+              <button type="button"
+                role="radio"
+                class="font-option engraving-{{font}}"
+                [class.active]="ringData[ringId].exteriorEngraving.fontId===font"
+                [attr.aria-checked]="ringData[ringId].exteriorEngraving.fontId===font"
+                (pointerdown)="setExteriorFontFromEvent(font, $event)"
+                (keydown.enter)="setExteriorFontFromEvent(font, $event)"
+                (keydown.space)="setExteriorFontFromEvent(font, $event)">
+                Abc 123
+              </button>
+            }
           </div>
         }
 

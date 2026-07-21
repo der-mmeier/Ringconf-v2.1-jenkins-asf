@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ASF Ringkonfigurator
  * Description: Lokale WordPress-/WooCommerce-Integration fuer den ASF 3D-Ringkonfigurator.
- * Version: 2.7.9.1
+ * Version: 2.7.9.1.3
  * Requires at least: 6.5
  * Requires PHP: 8.1
  * Requires Plugins: woocommerce
@@ -13,7 +13,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'ASF_RINGCONF_VERSION', '2.7.9.1' );
+define( 'ASF_RINGCONF_VERSION', '2.7.9.1.3' );
 define( 'ASF_RINGCONF_PLUGIN_FILE', __FILE__ );
 define( 'ASF_RINGCONF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ASF_RINGCONF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

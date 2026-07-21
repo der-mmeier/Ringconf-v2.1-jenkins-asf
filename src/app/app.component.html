@@ -12,8 +12,11 @@
   [attr.data-layout-mode]="layout.mode"
   [attr.data-orientation]="layout.orientation"
   [attr.data-pointer]="layout.pointer"
+  [attr.data-soft-keyboard]="layout.softKeyboard.open ? 'open' : 'closed'"
+  [attr.data-focused-input]="layout.softKeyboard.focusedElement || 'none'"
   [class.configurator-panel-open]="isConfiguratorPanelOpen()"
-  [class.configurator-panel-closed]="!isConfiguratorPanelOpen()">
+  [class.configurator-panel-closed]="!isConfiguratorPanelOpen()"
+  [class.configurator-engraving-focus]="isEngravingFocusMode()">
   <x-menu class="configurator-nav" mode="adaptive" [layoutMode]="layout.mode"></x-menu>
 
   <main class="configurator-canvas-region" aria-label="3D-Vorschau">
@@ -32,8 +35,17 @@
 
 @if (isLayoutDiagnosticsVisible()) {
   <div class="layout-diagnostics" aria-live="polite">
+    <div>Version: {{state.build}}</div>
+    <div>Commit: {{state.buildShortSha}}</div>
+    <div>Build time: {{state.buildTimestamp}}</div>
+    <div>Build metadata: {{state.buildMetadataStatus}}</div>
     <div>Layout mode: {{layout.mode}}</div>
+    <div>Stable mode: {{layout.stableMode}}</div>
     <div>Host: {{layout.width}} x {{layout.height}}</div>
+    <div>Layout viewport: {{layout.layoutViewport.width}} x {{layout.layoutViewport.height}}</div>
+    <div>Visual viewport: {{layout.visualViewport.width}} x {{layout.visualViewport.height}}</div>
+    <div>Keyboard: {{layout.softKeyboard.open ? 'open' : 'closed'}} / {{layout.softKeyboard.occludedHeight}}px</div>
+    <div>Focused: {{layout.softKeyboard.focusedElement || 'none'}}</div>
     <div>Aspect: {{formatLayoutAspect()}}</div>
     <div>Pointer: {{layout.pointer}}</div>
     <div>Canvas: {{webglDiagnostics.canvasWidth}} x {{webglDiagnostics.canvasHeight}}</div>

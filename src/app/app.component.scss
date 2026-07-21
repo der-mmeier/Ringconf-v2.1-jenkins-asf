@@ -107,6 +107,7 @@
   --config-nav-target-size: 54px;
   --stone-option-target-size: 50px;
   --stone-preview-size: 38px;
+  --engraving-focus-canvas-height: clamp(180px, 30dvh, 260px);
   --configurator-gap: 6px;
   grid-template-areas:
     "canvas"
@@ -122,6 +123,23 @@
 
   .configurator-panel {
     overflow-y: auto;
+  }
+
+  &.configurator-engraving-focus {
+    grid-template-rows: minmax(170px, var(--engraving-focus-canvas-height)) auto minmax(0, 1fr) auto;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+
+    .configurator-canvas-region {
+      min-height: 170px;
+    }
+
+    .configurator-panel {
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
   }
 }
 

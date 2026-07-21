@@ -1,4 +1,4 @@
-import {Component, ElementRef, Input, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
+import {Component, ElementRef, Input, OnDestroy, ViewEncapsulation, ChangeDetectionStrategy} from '@angular/core';
 import {AppComponent} from "../app.component";
 import {RingData} from "../app.ringdata";
 import {onRingDataPropertyChange} from "../property-sync-dialog/property-sync-dialog.component";
@@ -18,6 +18,12 @@ import {
   isEngravingOfferVisible,
   parseCoordinateInput
 } from "../exterior-engraving";
+import {
+  clampToCodePoints,
+  countCodePoints,
+  insertTextAtSelection,
+  TextInsertionSelection
+} from "./engraving-input-utils";
 
 @Component({
     selector: 'x-config-engraving',
@@ -28,7 +34,7 @@ import {
     standalone: false
 })
 
-export class ConfigEngravingComponent
+export class ConfigEngravingComponent implements OnDestroy
 {
   @Input() ringId: number = 0;
   app = AppComponent.app;
@@ -61,56 +67,106 @@ export class ConfigEngravingComponent
     },
   ];
   exteriorConflictMessage = "";
+  innerTextDraft: Record<number, string> = {};
   exteriorTextDraft: Record<number, string> = {};
+  private innerPreviewTimers: Record<number, number> = {};
+  private exteriorPreviewTimers: Record<number, number> = {};
+  private innerComposing: Record<number, boolean> = {};
+  private exteriorComposing: Record<number, boolean> = {};
+  private activeInnerInputs: Record<number, HTMLInputElement | null> = {};
+  private lastInnerSelections: Record<number, TextInsertionSelection> = {};
+  private lastInnerPreviewValues: Record<number, string> = {};
 
   constructor(private elem: ElementRef)
   {
   }
 
-  onEngravingInfoFormat(value: string): string
-  {
-    let length = AppComponent.app.data.engraving.maxLength - value.length;
-    if (length < 0) length = 0;
-    return "noch " + length + " Zeichen möglich";
+  ngOnDestroy(): void {
+    Object.values(this.innerPreviewTimers).forEach(id => window.clearTimeout(id));
+    Object.values(this.exteriorPreviewTimers).forEach(id => window.clearTimeout(id));
   }
 
   applyEngravingText()
   {
-    let input = <HTMLInputElement>this.elem.nativeElement.querySelector('#engravingText input');
+    let input = this.getInnerInput();
 
     if (input)
     {
-      this.ringData[this.ringId].engraving = input.value;
+      this.applyInnerEngravingPreview(input.value);
       onRingDataPropertyChange(this.ringId, "engraving");
     }
   }
 
-  addSymbol(unicode: string)
+  setInnerEngravingDraft(value: string)
   {
-    let input = <HTMLInputElement>this.elem.nativeElement.querySelector('#engravingText input');
+    const clamped = clampToCodePoints(value, this.getInnerMaxLength());
+    this.innerTextDraft[this.ringId] = clamped;
+    this.rememberInnerSelection(this.getInnerInput());
+    if (this.innerComposing[this.ringId]) return;
+    this.scheduleInnerEngravingPreview(clamped);
+  }
+
+  onInnerEngravingFocus(input: HTMLInputElement)
+  {
+    this.activeInnerInputs[this.ringId] = input;
+    this.innerTextDraft[this.ringId] = clampToCodePoints(input.value, this.getInnerMaxLength());
+    this.rememberInnerSelection(input);
+  }
+
+  onInnerEngravingBlur(input: HTMLInputElement)
+  {
+    this.rememberInnerSelection(input);
+    const clamped = clampToCodePoints(input.value, this.getInnerMaxLength());
+    this.innerTextDraft[this.ringId] = clamped;
+    this.applyInnerEngravingPreview(clamped);
+    onRingDataPropertyChange(this.ringId, "engraving");
+    this.activeInnerInputs[this.ringId] = null;
+  }
+
+  onInnerCompositionStart()
+  {
+    this.innerComposing[this.ringId] = true;
+  }
+
+  onInnerCompositionEnd(value: string)
+  {
+    this.innerComposing[this.ringId] = false;
+    this.setInnerEngravingDraft(value);
+  }
+
+  addSymbol(unicode: string, event?: Event)
+  {
+    event?.preventDefault();
+    let input = this.getInnerInput();
 
     if (input)
     {
-      let caretPos = (input.selectionStart || input.selectionStart == 0) ? input.selectionStart : 0;
-      let text = input.value;
-      if (text.length >= AppComponent.app.data.engraving.maxLength) return;
-
-      text = text.slice(0, caretPos) + unicode + text.slice(caretPos);
-      input.value = text;
-      if (input.setSelectionRange)
-      {
-        input.focus();
-        input.setSelectionRange(caretPos + 1, caretPos + 1);
-      }
+      this.rememberInnerSelection(input);
+      const selection = this.lastInnerSelections[this.ringId] ?? {start: 0, end: 0};
+      const result = insertTextAtSelection(input.value, unicode, selection, this.getInnerMaxLength());
+      input.value = result.value;
+      this.innerTextDraft[this.ringId] = result.value;
+      this.applyInnerEngravingPreview(result.value);
+      this.restoreInputFocus(input, result.cursor);
     }
   }
 
-  setFont(value:number)
+  setFont(value:number, event?: Event)
   {
-    //this.ringData[this.ringId].engravingFont=value;
+    event?.preventDefault();
+    let changed = false;
     this.ringData.forEach(f=> {
-      f.engravingFont = value;
-    })
+      if (f.engravingFont !== value) {
+        f.engravingFont = value;
+        this.invalidateEngravingTexture(f.index);
+        changed = true;
+      }
+    });
+    if (changed) {
+      this.keepActiveFontVisible(event);
+    }
+    const input = this.getInnerInput();
+    if (input) this.restoreInputFocus(input, this.lastInnerSelections[this.ringId]?.end ?? input.value.length);
   }
 
   isInnerEngravingVisible(): boolean {
@@ -190,7 +246,10 @@ export class ConfigEngravingComponent
   }
 
   setExteriorTextDraft(event: Event) {
-    this.exteriorTextDraft[this.ringId] = (event.target as HTMLInputElement).value;
+    const value = clampToCodePoints((event.target as HTMLInputElement).value, this.getExteriorMaxLength());
+    this.exteriorTextDraft[this.ringId] = value;
+    if (this.exteriorComposing[this.ringId]) return;
+    this.scheduleExteriorEngravingPreview(value);
   }
 
   getExteriorTextDraft(): string {
@@ -198,6 +257,17 @@ export class ConfigEngravingComponent
       this.exteriorTextDraft[this.ringId] = this.ringData[this.ringId].exteriorEngraving.text ?? "";
     }
     return this.exteriorTextDraft[this.ringId];
+  }
+
+  getInnerEngravingDraft(): string {
+    if (this.innerTextDraft[this.ringId] === undefined) {
+      this.innerTextDraft[this.ringId] = this.ringData[this.ringId]?.engraving ?? "";
+    }
+    return this.innerTextDraft[this.ringId];
+  }
+
+  getInnerEngravingInfoText(): string {
+    return formatRemainingChars(this.getInnerRemainingChars(this.getInnerEngravingDraft()));
   }
 
   applyExteriorText(value = this.getExteriorTextDraft()) {
@@ -212,6 +282,22 @@ export class ConfigEngravingComponent
     RingData.setExteriorEngravingFont(this.ringData[this.ringId], value);
     this.applyPlacementToPair();
     this.invalidateEngravingTexture(this.ringId);
+  }
+
+  setExteriorFontFromEvent(value: number, event?: Event) {
+    event?.preventDefault();
+    this.setExteriorFont(value);
+    this.keepActiveFontVisible(event);
+  }
+
+  onExteriorCompositionStart() {
+    this.exteriorComposing[this.ringId] = true;
+  }
+
+  onExteriorCompositionEnd(value: string) {
+    this.exteriorComposing[this.ringId] = false;
+    this.exteriorTextDraft[this.ringId] = clampToCodePoints(value, this.getExteriorMaxLength());
+    this.scheduleExteriorEngravingPreview(this.exteriorTextDraft[this.ringId]);
   }
 
   setCoordinateLatitude(event: Event) {
@@ -265,7 +351,15 @@ export class ConfigEngravingComponent
   }
 
   getExteriorRemainingChars(): number {
-    return Math.max(0, this.getExteriorMaxLength() - this.getExteriorTextDraft().length);
+    return Math.max(0, this.getExteriorMaxLength() - countCodePoints(this.getExteriorTextDraft()));
+  }
+
+  getInnerMaxLength(): number {
+    return this.app.data.engraving.maxLength;
+  }
+
+  getInnerRemainingChars(value = this.ringData[this.ringId]?.engraving ?? ""): number {
+    return Math.max(0, this.getInnerMaxLength() - countCodePoints(value));
   }
 
   private confirmRemoveStonesForExterior(ringId: number): boolean {
@@ -306,4 +400,78 @@ export class ConfigEngravingComponent
     }
     this.ringData[ringId].isDirty = true;
   }
+
+  private getInnerInput(): HTMLInputElement | null {
+    const active = this.activeInnerInputs[this.ringId];
+    if (active) return active;
+    return this.elem.nativeElement.querySelector('#engravingText input');
+  }
+
+  private rememberInnerSelection(input: HTMLInputElement | null) {
+    if (!input) return;
+    this.lastInnerSelections[this.ringId] = {
+      start: input.selectionStart ?? input.value.length,
+      end: input.selectionEnd ?? input.value.length,
+    };
+  }
+
+  private scheduleInnerEngravingPreview(value: string) {
+    const ringId = this.ringId;
+    if (this.innerPreviewTimers[ringId]) {
+      window.clearTimeout(this.innerPreviewTimers[ringId]);
+    }
+    this.innerPreviewTimers[ringId] = window.setTimeout(() => {
+      this.innerPreviewTimers[ringId] = 0;
+      this.applyInnerEngravingPreview(value);
+    }, 140);
+  }
+
+  private applyInnerEngravingPreview(value: string) {
+    const next = clampToCodePoints(value, this.getInnerMaxLength());
+    if (this.lastInnerPreviewValues[this.ringId] === next && this.ringData[this.ringId].engraving === next) {
+      return;
+    }
+    this.lastInnerPreviewValues[this.ringId] = next;
+    this.ringData[this.ringId].engraving = next;
+    this.invalidateEngravingTexture(this.ringId);
+  }
+
+  private scheduleExteriorEngravingPreview(value: string) {
+    const ringId = this.ringId;
+    if (this.exteriorPreviewTimers[ringId]) {
+      window.clearTimeout(this.exteriorPreviewTimers[ringId]);
+    }
+    this.exteriorPreviewTimers[ringId] = window.setTimeout(() => {
+      this.exteriorPreviewTimers[ringId] = 0;
+      this.applyExteriorTextPreview(value);
+    }, 140);
+  }
+
+  private applyExteriorTextPreview(value: string) {
+    const next = clampToCodePoints(value, this.getExteriorMaxLength());
+    const config = this.ringData[this.ringId].exteriorEngraving;
+    if (config.text === next && config.type === "text" && config.enabled) return;
+    config.text = next;
+    config.type = "text";
+    config.enabled = true;
+    this.applyPlacementToPair();
+    this.invalidateEngravingTexture(this.ringId);
+  }
+
+  private restoreInputFocus(input: HTMLInputElement, cursor: number) {
+    window.requestAnimationFrame(() => {
+      input.focus({preventScroll: true});
+      input.setSelectionRange(cursor, cursor);
+      this.rememberInnerSelection(input);
+    });
+  }
+
+  private keepActiveFontVisible(event?: Event) {
+    const element = event?.currentTarget as HTMLElement | null;
+    element?.scrollIntoView({block: "nearest", inline: "center", behavior: "smooth"});
+  }
+}
+
+export function formatRemainingChars(remaining: number): string {
+  return "noch " + Math.max(0, Math.trunc(remaining)) + " Zeichen möglich";
 }
