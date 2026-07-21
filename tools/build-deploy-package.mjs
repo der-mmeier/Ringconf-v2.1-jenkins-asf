@@ -239,7 +239,14 @@ function walkFiles(dir) {
 function copyPhpRuntimeFiles(targetDir, channelValue) {
   const files = [
     "api.php",
-    ...(channelValue === "development" ? ["appdata-admin.php"] : []),
+
+    ...(channelValue === "development"
+      ? [
+        "appdata-admin.php",
+        "calibration-admin.php",
+      ]
+      : []),
+
     "config.php",
     "database.php",
     "browsers.json",
