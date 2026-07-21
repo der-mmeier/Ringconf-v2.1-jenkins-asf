@@ -4,6 +4,9 @@ export interface ConfiguratorLayoutBreakpoints {
   compactLandscapeMaxHeight: number;
   desktopWideMinWidth: number;
   hysteresis: number;
+  softKeyboardMinOccludedHeight: number;
+  softKeyboardMinOccludedRatio: number;
+  softKeyboardWidthTolerance: number;
 }
 
 export const CONFIGURATOR_LAYOUT_BREAKPOINTS: ConfiguratorLayoutBreakpoints = {
@@ -12,4 +15,7 @@ export const CONFIGURATOR_LAYOUT_BREAKPOINTS: ConfiguratorLayoutBreakpoints = {
   compactLandscapeMaxHeight: 540,
   desktopWideMinWidth: 1440,
   hysteresis: 24,
+  softKeyboardMinOccludedHeight: 120,
+  softKeyboardMinOccludedRatio: 0.18,
+  softKeyboardWidthTolerance: 32,
 };

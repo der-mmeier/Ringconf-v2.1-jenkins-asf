@@ -62,6 +62,128 @@ describe("configurator layout classification", () => {
     expect(fine.pointer).toBe("fine");
   });
 
+  it("keeps Pixel-sized portrait stable without keyboard", () => {
+    const state = buildConfiguratorLayoutState({
+      width: 412,
+      height: 915,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 915,
+      focusedElement: null,
+    });
+    expect(state.mode).toBe("phone-portrait");
+    expect(state.softKeyboard.open).toBeFalse();
+  });
+
+  it("does not switch phone portrait to landscape when a soft keyboard shrinks the visual viewport", () => {
+    const previous = buildConfiguratorLayoutState({
+      width: 412,
+      height: 915,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 915,
+    });
+    const next = buildConfiguratorLayoutState({
+      width: 412,
+      height: 390,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 420,
+      focusedElement: "engraving-input",
+    }, previous);
+    expect(next.mode).toBe("phone-portrait");
+    expect(next.stableMode).toBe("phone-portrait");
+    expect(next.softKeyboard.open).toBeTrue();
+    expect(next.softKeyboard.focusedElement).toBe("engraving-input");
+  });
+
+  it("does not infer a soft keyboard from the same shrink without text focus", () => {
+    const previous = buildConfiguratorLayoutState({
+      width: 412,
+      height: 915,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 915,
+    });
+    const next = buildConfiguratorLayoutState({
+      width: 412,
+      height: 390,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 420,
+      focusedElement: null,
+    }, previous);
+    expect(next.softKeyboard.open).toBeFalse();
+  });
+
+  it("recognizes a real orientation change while a text field is focused", () => {
+    const previous = buildConfiguratorLayoutState({
+      width: 412,
+      height: 915,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 915,
+    });
+    const next = buildConfiguratorLayoutState({
+      width: 915,
+      height: 412,
+      pointer: "coarse",
+      layoutViewportWidth: 915,
+      layoutViewportHeight: 412,
+      visualViewportWidth: 915,
+      visualViewportHeight: 260,
+      focusedElement: "engraving-input",
+    }, previous);
+    expect(next.mode).toBe("phone-landscape");
+    expect(next.orientation).toBe("landscape");
+  });
+
+  it("returns to normal portrait state when the keyboard closes", () => {
+    const portrait = buildConfiguratorLayoutState({
+      width: 412,
+      height: 915,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 915,
+    });
+    const keyboard = buildConfiguratorLayoutState({
+      width: 412,
+      height: 390,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 420,
+      focusedElement: "engraving-input",
+    }, portrait);
+    const closed = buildConfiguratorLayoutState({
+      width: 412,
+      height: 915,
+      pointer: "coarse",
+      layoutViewportWidth: 412,
+      layoutViewportHeight: 915,
+      visualViewportWidth: 412,
+      visualViewportHeight: 915,
+      focusedElement: null,
+    }, keyboard);
+    expect(closed.mode).toBe("phone-portrait");
+    expect(closed.softKeyboard.open).toBeFalse();
+  });
+
   it("does not carry reflow count into pure classification changes", () => {
     const previous = {...buildConfiguratorLayoutState({width: 1920, height: 1080, pointer: "fine"}), reflowCount: 12};
     const next = buildConfiguratorLayoutState({width: 1366, height: 768, pointer: "fine"}, previous);

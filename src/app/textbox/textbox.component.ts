@@ -16,14 +16,15 @@ export class TextboxComponent
   @Input() class: string = "";
   @Input() infotext: string = "";
   @Input() value: string = "";
-  @Output() onChange = new EventEmitter<any>();
-  @Input() onInfotextFormat: Function | null = null;
+  @Output() onChange = new EventEmitter<string>();
+  @Output() onFocus = new EventEmitter<HTMLInputElement>();
+  @Output() onBlur = new EventEmitter<HTMLInputElement>();
+  @Output() onCompositionStart = new EventEmitter<HTMLInputElement>();
+  @Output() onCompositionEnd = new EventEmitter<string>();
 
-  _onChange(value: any)
+  _onChange(value: string)
   {
     this.value=value;
-    if (this.onInfotextFormat)
-      this.infotext = this.onInfotextFormat(value);
 
     this.onChange.emit(value);
   }

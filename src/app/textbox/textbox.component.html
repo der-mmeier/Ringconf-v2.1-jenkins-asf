@@ -1,8 +1,11 @@
 <input type="text" autocomplete="{{autocomplete}}" spellcheck="{{spellcheck}}" class="{{class}}"
-  maxLength="{{maxlength.toFixed()}}" value="{{value}}" (input)="_onChange(input.value)" #input>
-  @if (onInfotextFormat != null) {
+  maxLength="{{maxlength.toFixed()}}" value="{{value}}" (input)="_onChange(input.value)"
+  (focus)="onFocus.emit(input)" (blur)="onBlur.emit(input)"
+  (compositionstart)="onCompositionStart.emit(input)"
+  (compositionend)="_onChange(input.value); onCompositionEnd.emit(input.value)" #input>
+  @if (infotext) {
     <div class="info-text"
-      [innerHTML]="onInfotextFormat ? (onInfotextFormat(value, maxlength) | safeHtml) : value">
+      [innerHTML]="infotext | safeHtml">
     </div>
   }
 

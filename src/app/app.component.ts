@@ -31,6 +31,13 @@ import {
 } from "./layout/configurator-layout.models";
 import {navigation, setNavigationHash, setNavigationLayoutMode} from "./menu/menu.component";
 
+interface ReleaseMetadata {
+  version: string;
+  shortSha: string;
+  buildTime?: string;
+  createdAt?: string;
+}
+
 @Component({
   selector: 'x-app-root',
   templateUrl: './app.component.html',
@@ -45,6 +52,9 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   state = {
     build: packageInfo.version,
+    buildShortSha: "unknown",
+    buildTimestamp: "unknown",
+    buildMetadataStatus: "not-loaded",
     appDataVersionLabel: "unversioned",
     appDataHash: "",
     configMode: 2,
@@ -2429,6 +2439,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         setNavigationHash("", false);
       }
       this.requestAdaptiveWebglResize();
+      this.requestFocusedInputReveal(state, previous);
       this.refreshWebglDiagnostics();
       this.changeDetector.detectChanges();
     });
@@ -2442,6 +2453,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.runtimeAvailable) {
       return;
     }
+    this.loadReleaseMetadata();
 
     dbGetAppData().then(function (data: any) {
       if (data == null) Log("error", "Keine App Daten vorhanden!");
@@ -2482,6 +2494,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.state.debug && !environment.isWooCommerce && getRuntimeChannel() === "development";
   }
 
+  isEngravingFocusMode(): boolean {
+    return this.layout.mode === "phone-portrait"
+      && this.layout.softKeyboard.open
+      && this.layout.softKeyboard.focusedElement === "engraving-input";
+  }
+
   formatLayoutAspect(): string {
     return this.layout.aspectRatio.toFixed(3);
   }
@@ -2503,6 +2521,44 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     if (webgl && typeof webgl.getDiagnostics === "function") {
       this.webglDiagnostics = webgl.getDiagnostics();
     }
+  }
+
+  private loadReleaseMetadata(): void {
+    if (environment.isWooCommerce) {
+      this.state.buildMetadataStatus = "woocommerce";
+      return;
+    }
+
+    this.http.get<Partial<ReleaseMetadata>>("release.json", {
+      headers: new HttpHeaders({"Cache-Control": "no-cache"}),
+    }).subscribe({
+      next: metadata => {
+        this.state.build = String(metadata.version ?? this.state.build);
+        this.state.buildShortSha = String(metadata.shortSha ?? this.state.buildShortSha);
+        this.state.buildTimestamp = String(metadata.buildTime ?? metadata.createdAt ?? this.state.buildTimestamp);
+        this.state.buildMetadataStatus = "loaded";
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.state.buildMetadataStatus = "not-found";
+      },
+    });
+  }
+
+  private requestFocusedInputReveal(state: ConfiguratorLayoutState, previous: ConfiguratorLayoutState | null): void {
+    const enteringEngravingFocus = state.mode === "phone-portrait"
+      && state.softKeyboard.open
+      && state.softKeyboard.focusedElement === "engraving-input"
+      && (!previous?.softKeyboard.open || previous.softKeyboard.focusedElement !== "engraving-input");
+    if (!enteringEngravingFocus) return;
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const active = document.activeElement as HTMLElement | null;
+        if (!active || !active.closest("x-config-engraving")) return;
+        active.scrollIntoView({block: "center", inline: "nearest", behavior: "smooth"});
+      });
+    });
   }
 
   getDetails(): iDetails[] | null {

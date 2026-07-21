@@ -55,6 +55,31 @@ x-config-engraving {
     }
   }
 
+  .font-option {
+    min-height: 44px;
+    min-width: 96px;
+    padding: 8px 12px;
+    border: 1px solid #c6c9c9;
+    background-color: #f7f7f7;
+    color: #262626;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+    touch-action: manipulation;
+
+    &.active,
+    &[aria-checked="true"] {
+      border-color: #ab3333;
+      background-color: #fff;
+      box-shadow: inset 0 0 0 1px #ab3333;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #111;
+      outline-offset: -2px;
+    }
+  }
+
   .symbol-wrapper {
     @include flexbox();
     @include flex-direction(row);
@@ -68,6 +93,8 @@ x-config-engraving {
       @include flexbox();
       @include justify-content(center);
       @include align-items(center);
+      min-width: 48px;
+      min-height: 48px;
       margin: 5px;
       padding: 7px;
       border-style: solid;
@@ -76,6 +103,7 @@ x-config-engraving {
       background-color: #f2f2f2;
       box-shadow: 0 4px 9px -7px #000;
       cursor: pointer;
+      touch-action: manipulation;
 
       img {
         height: 15px;
@@ -83,6 +111,11 @@ x-config-engraving {
 
       &:hover {
         background-color: #d5d8d8;
+      }
+
+      &:focus-visible {
+        outline: 2px solid #111;
+        outline-offset: -2px;
       }
     }
   }
@@ -228,6 +261,53 @@ x-config-engraving {
     .coordinate-grid {
       grid-template-columns: 1fr;
     }
+
+    .symbol-wrapper,
+    .font-row {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x proximity;
+      padding-bottom: 4px;
+    }
+
+    .symbol-wrapper {
+      margin-left: 0;
+      margin-right: 0;
+      gap: 8px;
+
+      .symbol {
+        flex: 0 0 56px;
+        margin: 0;
+
+        img {
+          height: 22px;
+          max-width: 34px;
+          object-fit: contain;
+        }
+      }
+    }
+
+    .font-option {
+      flex: 0 0 auto;
+      min-height: 48px;
+      min-width: 118px;
+      scroll-snap-align: start;
+      white-space: nowrap;
+    }
+  }
+}
+
+.configurator-shell.configurator-engraving-focus x-config-engraving {
+  .symbol-title {
+    display: none;
+  }
+
+  .symbol-wrapper,
+  .font-row {
+    flex-wrap: nowrap;
   }
 }
 
