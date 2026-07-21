@@ -31,7 +31,7 @@ function runCalibrationAdminEndpoint(): never
   header('X-Content-Type-Options: nosniff');
 
   try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
       fail(405, 'METHOD_NOT_ALLOWED', 'Only POST is supported.');
     }
 
