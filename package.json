@@ -7,7 +7,7 @@
     "build": "ng build",
     "build:development": "ng build --configuration development",
     "build:production": "ng build --configuration production",
-    "build:woocommerce": "ng build --configuration woocommerce && node tools/check-admin-exclusion.mjs && node tools/build-woocommerce-package.mjs && npm run check:woocommerce-module-entry && npm run check:wordpress-plugin-static && npm run check:woocommerce-package && npm run test:wordpress-plugin-bootstrap && npm run test:wordpress-package-validator",
+    "build:woocommerce": "ng build --configuration woocommerce && node tools/check-admin-exclusion.mjs --target woocommerce && node tools/build-woocommerce-package.mjs && npm run check:woocommerce-module-entry && npm run check:wordpress-plugin-static && npm run check:woocommerce-package && npm run test:wordpress-plugin-bootstrap && npm run test:wordpress-package-validator",
     "build:deploy": "npm run build:deploy:release",
     "build:deploy:release": "ng build --configuration production --base-href ./ && node tools/build-deploy-package.mjs --channel releases",
     "build:deploy:development": "ng build --configuration development --base-href ./ && node tools/build-deploy-package.mjs --channel development",
