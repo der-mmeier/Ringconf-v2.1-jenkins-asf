@@ -171,6 +171,52 @@ select {
   margin-bottom: 8px;
 }
 
+.auth-grid,
+.profile-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.view-table {
+  display: grid;
+  gap: 4px;
+  min-width: 980px;
+}
+
+.view-table-header,
+.view-table-row {
+  display: grid;
+  grid-template-columns: 52px 70px 76px minmax(120px, 1fr) minmax(100px, 140px) minmax(130px, 1fr) 76px 70px 92px 150px minmax(300px, 1.4fr);
+  gap: 6px;
+  align-items: center;
+}
+
+.view-table-header {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.view-table-row {
+  padding: 6px;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  background: #172033;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.draft-editor {
+  margin-top: 12px;
+  border-top: 1px solid #334155;
+  padding-top: 10px;
+}
+
 pre {
   margin: 0;
   white-space: pre-wrap;

@@ -135,13 +135,87 @@
         }
 
         @if (activeTab === 'views') {
-          <section>
-            <h4>Ansichten und Framing</h4>
-            <p>View-Presets bleiben ueber RingViewService aktiv. Das Studio verwendet dieselben Presentation-Roots und getrennte Kameraposen.</p>
-            <ul>
-              <li>fitMode, Ortho-Hoehe, Safety Padding und Shadow Envelope sind exportierbare Felder.</li>
-              <li>Engagement- und Memoire-Fokus werden als ring2/ring3 normalisiert.</li>
-            </ul>
+          <section class="view-workflow">
+            <div class="studio-actions">
+              <label>
+                <span>Komposition</span>
+                <select [(ngModel)]="selectedCompositionKey" (ngModelChange)="viewDraft = null">
+                  @for (composition of calibrationProfile?.compositions || []; track composition.compositionKey) {
+                    <option [value]="composition.compositionKey">{{composition.label}}</option>
+                  }
+                </select>
+              </label>
+              <button type="button" (click)="loadCalibrationProfile()">Neu laden</button>
+              <button type="button" (click)="createNewView()" [disabled]="!selectedComposition">+ Neue Ansicht</button>
+            </div>
+
+            <div class="auth-grid">
+              <label><span>Interner Login</span><input [(ngModel)]="auth.username" autocomplete="off"></label>
+              <label><span>Mitarbeiter-PIN</span><input type="password" [(ngModel)]="auth.pin" autocomplete="off"></label>
+              <label><span>Grund</span><input [(ngModel)]="auth.reason"></label>
+            </div>
+
+            @if (selectedComposition; as composition) {
+              <div class="view-table">
+                <div class="view-table-header">
+                  <span>Aktiv</span>
+                  <span>Standard</span>
+                  <span>Sortierung</span>
+                  <span>Name</span>
+                  <span>View-Key</span>
+                  <span>Komposition</span>
+                  <span>Ringanzahl</span>
+                  <span>Kamera</span>
+                  <span>Aufstellung</span>
+                  <span>Geaendert</span>
+                  <span>Aktionen</span>
+                </div>
+                @for (view of selectedViews; track view.id || view.viewKey) {
+                  <div class="view-table-row">
+                    <input type="checkbox" [checked]="view.enabled" (change)="setViewEnabled(view, $any($event.target).checked)">
+                    <input type="radio" name="calibration-default-view" [checked]="view.isDefault" (change)="setDefaultView(view)">
+                    <span>{{view.sortOrder}}</span>
+                    <strong>{{view.name}}</strong>
+                    <code>{{view.viewKey}}</code>
+                    <span>{{composition.label}}</span>
+                    <span>{{view.ringLayout.rings?.length || 0}}</span>
+                    <span>{{view.camera ? 'ja' : 'nein'}}</span>
+                    <span>{{view.ringLayout.rings?.length ? 'ja' : 'nein'}}</span>
+                    <span>{{view.updatedAt || '-'}}</span>
+                    <div class="row-actions">
+                      <button type="button" (click)="editView(view)">Bearbeiten</button>
+                      <button type="button" (click)="previewView(view)">Vorschau</button>
+                      <button type="button" (click)="duplicateView(view)">Duplizieren</button>
+                      <button type="button" (click)="deleteView(view)">Loeschen</button>
+                      <button type="button" (click)="moveView(view, -1)">Nach oben</button>
+                      <button type="button" (click)="moveView(view, 1)">Nach unten</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (viewDraft) {
+              <section class="draft-editor">
+                <h4>Ansicht bearbeiten</h4>
+                <div class="studio-actions">
+                  <button type="button" (click)="captureDraftCamera()">Aus Kamera uebernehmen</button>
+                  <button type="button" (click)="captureDraftRings()">Ringaufstellung uebernehmen</button>
+                  <button type="button" (click)="captureDraftCameraAndRings()">Kamera + Aufstellung uebernehmen</button>
+                  <button type="button" (click)="previewDraft()">Vorschau</button>
+                  <button type="button" (click)="saveDraft()">Speichern</button>
+                  <button type="button" (click)="discardDraft()">Verwerfen</button>
+                </div>
+                <div class="profile-rule-grid">
+                  <label><span>Name</span><input [(ngModel)]="viewDraft.name"></label>
+                  <label><span>View-Key</span><input [(ngModel)]="viewDraft.viewKey" [disabled]="!!viewDraft.id"></label>
+                  <label><span>Sortierung</span><input type="number" [(ngModel)]="viewDraft.sortOrder"></label>
+                  <label class="check-row"><input type="checkbox" [(ngModel)]="viewDraft.enabled"><span>Aktiv</span></label>
+                  <label class="check-row"><input type="checkbox" [(ngModel)]="viewDraft.isDefault"><span>Standard</span></label>
+                </div>
+                <pre>{{viewDraft | json}}</pre>
+              </section>
+            }
           </section>
         }
 

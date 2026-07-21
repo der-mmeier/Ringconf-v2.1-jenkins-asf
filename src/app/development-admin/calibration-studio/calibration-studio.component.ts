@@ -9,6 +9,8 @@ import {frustumFromOrthoHeight, shortestAngleDelta} from "../../webgl/ring-view-
 import {RingPresentationHandle} from "../../webgl/ring-presentation";
 import {CALIBRATION_FIELD_DEFINITIONS, getCalibrationFieldDefinition} from "./calibration-field-definitions";
 import {createCalibrationJson, createCalibrationTypeScript} from "./calibration-export";
+import {AppDataAdminService} from "../appdata-admin.service";
+import {CalibrationRuntimeComposition, CalibrationRuntimeProfile, CalibrationRuntimeRingTransform, CalibrationRuntimeView} from "../../calibration/calibration-runtime.models";
 import {
   CalibrationEasing,
   CalibrationFieldDefinition,
@@ -34,6 +36,11 @@ interface StudioSnapshot {
   rings: RingPresentationCalibration[];
 }
 
+interface CalibrationViewDraft extends CalibrationRuntimeView {
+  id?: number;
+  compositionId: number;
+}
+
 const STORAGE_KEY = "ringconf.calibrationStudio.v2.modal";
 const LEGACY_VIEW_CALIBRATION_STORAGE_KEY = "ringconf.dev.view-calibration.v1";
 
@@ -52,13 +59,19 @@ export class CalibrationStudioComponent {
   modal = this.loadModalGeometry();
   fields = CALIBRATION_FIELD_DEFINITIONS;
   easingOptions: CalibrationEasing[] = ["linear", "ease-in", "ease-out", "ease-in-out", "legacy-exponential"];
+  calibrationProfile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean} | null = null;
+  selectedCompositionKey = "wedding-pair";
+  selectedViewId = 0;
+  viewDraft: CalibrationViewDraft | null = null;
+  stepMode: "coarse" | "fine" = "coarse";
+  auth = {username: "", pin: "", reason: "Kalibrierungsansicht aktualisieren"};
   private pointerSession: PointerSession | null = null;
   private snapshot: StudioSnapshot | null = null;
   private animationFrame = 0;
   private animationStart = 0;
   private animationDelayTimer = 0;
 
-  constructor() {
+  constructor(private adminApi: AppDataAdminService) {
     try {
       localStorage.removeItem(LEGACY_VIEW_CALIBRATION_STORAGE_KEY);
     } catch {
@@ -86,6 +99,7 @@ export class CalibrationStudioComponent {
     }
     this.open = true;
     this.captureSession();
+    void this.loadCalibrationProfile();
   }
 
   close(): void {
@@ -136,6 +150,171 @@ export class CalibrationStudioComponent {
       rings: rings.map(cloneRingCalibration),
     };
     this.status = "Session-Snapshot erfasst.";
+  }
+
+  async loadCalibrationProfile(): Promise<void> {
+    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationBootstrap");
+    if (!response.ok || !response.data?.profile) {
+      this.status = response.error?.message ?? "Kalibrierungsprofil konnte nicht geladen werden.";
+      return;
+    }
+    this.calibrationProfile = response.data.profile;
+    this.selectedCompositionKey = this.selectedComposition?.compositionKey || this.calibrationProfile.compositions[0]?.compositionKey || this.selectedCompositionKey;
+    this.status = "Kalibrierungsprofil geladen.";
+  }
+
+  get selectedComposition(): CalibrationRuntimeComposition | null {
+    return this.calibrationProfile?.compositions.find(item => item.compositionKey === this.selectedCompositionKey) || null;
+  }
+
+  get selectedViews(): CalibrationRuntimeView[] {
+    return [...(this.selectedComposition?.views || [])].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  }
+
+  get calibrationStep(): number {
+    return this.stepMode === "fine" ? 0.5 : 1.0;
+  }
+
+  createNewView(): void {
+    const composition = this.selectedComposition;
+    if (!composition) return;
+    const name = "Neue Ansicht";
+    const viewKey = this.uniqueViewKey(slugify(name), composition.views);
+    const camera = this.captureCurrentCameraPoseForView();
+    this.viewDraft = {
+      compositionId: composition.id || 0,
+      viewKey,
+      name,
+      enabled: true,
+      isDefault: composition.views.length === 0,
+      sortOrder: composition.views.length * 10,
+      revision: 1,
+      camera,
+      ringLayout: {rings: this.captureCurrentRingLayout()},
+      framing: camera.safety,
+    };
+    this.selectedViewId = 0;
+    this.activeTab = "views";
+    this.previewDraft();
+  }
+
+  editView(view: CalibrationRuntimeView): void {
+    const composition = this.selectedComposition;
+    if (!composition) return;
+    this.selectedViewId = view.id || 0;
+    this.viewDraft = clone({...view, compositionId: composition.id || 0});
+  }
+
+  duplicateView(view: CalibrationRuntimeView): void {
+    const composition = this.selectedComposition;
+    if (!composition) return;
+    const name = `${view.name} Kopie`;
+    this.viewDraft = {
+      ...clone(view),
+      id: undefined,
+      compositionId: composition.id || 0,
+      name,
+      viewKey: this.uniqueViewKey(`${view.viewKey}-copy`, composition.views),
+      isDefault: false,
+      sortOrder: view.sortOrder + 1,
+      revision: 1,
+    };
+    this.selectedViewId = 0;
+  }
+
+  previewView(view: CalibrationRuntimeView): void {
+    this.editView(view);
+    this.previewDraft();
+  }
+
+  async saveDraft(): Promise<void> {
+    if (!this.viewDraft) return;
+    const payload = this.authPayload({
+      compositionId: this.viewDraft.compositionId,
+      viewId: this.viewDraft.id,
+      revision: this.viewDraft.revision,
+      view: this.viewDraft,
+    });
+    const action = this.viewDraft.id ? "calibrationUpdateView" : "calibrationCreateView";
+    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>(action, payload);
+    this.applyCalibrationResponse(response);
+  }
+
+  async deleteView(view: CalibrationRuntimeView): Promise<void> {
+    if (!view.id) return;
+    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationDeleteView", this.authPayload({
+      viewId: view.id,
+      revision: view.revision,
+    }));
+    this.applyCalibrationResponse(response);
+  }
+
+  async setDefaultView(view: CalibrationRuntimeView): Promise<void> {
+    if (!view.id) return;
+    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationSetDefaultView", this.authPayload({viewId: view.id}));
+    this.applyCalibrationResponse(response);
+  }
+
+  async setViewEnabled(view: CalibrationRuntimeView, enabled: boolean): Promise<void> {
+    if (!view.id) return;
+    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationSetViewEnabled", this.authPayload({
+      viewId: view.id,
+      revision: view.revision,
+      enabled,
+    }));
+    this.applyCalibrationResponse(response);
+  }
+
+  async moveView(view: CalibrationRuntimeView, delta: -1 | 1): Promise<void> {
+    const composition = this.selectedComposition;
+    if (!composition) return;
+    const views = this.selectedViews;
+    const index = views.findIndex(item => item.id === view.id);
+    const next = index + delta;
+    if (index < 0 || next < 0 || next >= views.length) return;
+    [views[index], views[next]] = [views[next], views[index]];
+    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationSortViews", this.authPayload({
+      compositionId: composition.id,
+      viewIds: views.map(item => item.id),
+    }));
+    this.applyCalibrationResponse(response);
+  }
+
+  captureDraftCamera(): void {
+    if (!this.viewDraft) return;
+    this.viewDraft.camera = this.captureCurrentCameraPoseForView();
+    this.viewDraft.framing = this.viewDraft.camera.safety;
+    this.previewDraft();
+  }
+
+  captureDraftRings(): void {
+    if (!this.viewDraft) return;
+    this.viewDraft.ringLayout = {rings: this.captureCurrentRingLayout()};
+    this.previewDraft();
+  }
+
+  captureDraftCameraAndRings(): void {
+    this.captureDraftCamera();
+    this.captureDraftRings();
+  }
+
+  previewDraft(): void {
+    if (!this.viewDraft || !this.state) return;
+    this.applyRings(this.viewDraft.ringLayout.rings?.map(ring => ({
+      slot: ring.slot as RingPresetSlot,
+      role: (ring.role || `ring-${ring.slot}`) as RingPresentationCalibration["role"],
+      position: ring.position,
+      rotationQuaternion: ring.rotationQuaternion,
+      visible: ring.visible,
+    })) || []);
+    this.applyCamera(this.viewDraft.camera);
+    this.requestRender(4);
+    this.status = "Ansichtsvorschau angewendet.";
+  }
+
+  discardDraft(): void {
+    this.viewDraft = null;
+    this.discard();
   }
 
   applyLive(): void {
@@ -442,6 +621,69 @@ export class CalibrationStudioComponent {
     }
   }
 
+  private applyCalibrationResponse(response: {ok: boolean; data?: {profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}; error?: {message: string}}): void {
+    if (!response.ok || !response.data?.profile) {
+      this.status = response.error?.message ?? "Kalibrierungsdaten konnten nicht gespeichert werden.";
+      return;
+    }
+    this.calibrationProfile = response.data.profile;
+    this.viewDraft = null;
+    this.status = "Kalibrierungsdaten gespeichert.";
+  }
+
+  private authPayload(payload: Record<string, unknown>): Record<string, unknown> {
+    return {
+      ...payload,
+      username: this.auth.username,
+      pin: this.auth.pin,
+      changeReason: this.auth.reason || "Kalibrierungsansicht aktualisieren",
+    };
+  }
+
+  private captureCurrentCameraPoseForView(): CalibrationRuntimeView["camera"] {
+    const camera = WebglComponent.WEBGL?.camera as ArcRotateCamera | undefined;
+    const captured = camera ? this.captureCamera(camera) : this.state?.startup.end;
+    const pose = captured ? cloneCameraPose(captured) : {
+      alpha: -Math.PI / 2,
+      beta: Math.PI / 2.6,
+      target: [0, 10, 0] as [number, number, number],
+      projection: {mode: "orthographic" as const, orthoHeight: 23.5, radius: 60, screenOffsetX: 0, screenOffsetY: 0},
+    };
+    return {
+      ...pose,
+      safety: {
+        fitMode: "zoom-out-only",
+        paddingTop: 0.08,
+        paddingRight: 0.1,
+        paddingBottom: 0.18,
+        paddingLeft: 0.1,
+        includeShadowEnvelope: true,
+        shadowExtraBottom: 0.18,
+        shadowExtraLeft: 0.05,
+        shadowExtraRight: 0.05,
+      },
+      focus: "all",
+      targetMode: "selection-center",
+    };
+  }
+
+  private captureCurrentRingLayout(): CalibrationRuntimeRingTransform[] {
+    const registry = this.service()?.getPresentationRegistry();
+    if (!registry) return [];
+    return registry.getAvailableHandles().map((handle: RingPresentationHandle) => this.captureRing(handle.slot, handle.role, handle.root));
+  }
+
+  private uniqueViewKey(base: string, views: readonly CalibrationRuntimeView[]): string {
+    const used = new Set(views.map(view => view.viewKey));
+    let key = base || "view";
+    let suffix = 2;
+    while (used.has(key)) {
+      key = `${base}-${suffix}`;
+      suffix++;
+    }
+    return key;
+  }
+
   private service() {
     return WebglComponent.WEBGL?.ringViewService || null;
   }
@@ -539,6 +781,14 @@ function cloneRingCalibration(ring: RingPresentationCalibration): RingPresentati
     rotationQuaternion: [...ring.rotationQuaternion],
     visible: ring.visible,
   };
+}
+
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function slugify(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "view";
 }
 
 function lerp(a: number, b: number, t: number): number {
