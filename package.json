@@ -28,7 +28,10 @@
     "test:ci": "ng test --watch=false --browsers=ChromeHeadless",
     "stones:generate": "node tools/stone-preview-generator/generate-colored-stone-previews.mjs",
     "stones:verify": "node tools/stone-preview-generator/verify-colored-stone-previews.mjs",
-    "test:stone-previews": "node tools/stone-preview-generator/test-colored-stone-previews.mjs"
+    "test:stone-previews": "node tools/stone-preview-generator/test-colored-stone-previews.mjs",
+    "calibration:legacy:inspect": "node tools/legacy-shopware-calibration-patcher/inspect.mjs",
+    "calibration:legacy:patch": "node tools/legacy-shopware-calibration-patcher/patch.mjs",
+    "test:legacy-calibration-patcher": "node tools/legacy-shopware-calibration-patcher/test.mjs"
   },
   "private": true,
   "engines": {

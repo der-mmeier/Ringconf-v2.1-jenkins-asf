@@ -8,6 +8,7 @@ import {WebglComponent} from "../../webgl/webgl.component";
 import {frustumFromOrthoHeight, shortestAngleDelta} from "../../webgl/ring-view-fit";
 import {RingPresentationHandle} from "../../webgl/ring-presentation";
 import {CALIBRATION_FIELD_DEFINITIONS, getCalibrationFieldDefinition} from "./calibration-field-definitions";
+import {createCalibrationJson, createCalibrationTypeScript} from "./calibration-export";
 import {
   CalibrationEasing,
   CalibrationFieldDefinition,
@@ -212,6 +213,27 @@ export class CalibrationStudioComponent {
     this.status = "Endkamera angewendet.";
   }
 
+  async copyJson(): Promise<void> {
+    if (!this.state) return;
+    await this.copyText(createCalibrationJson(this.state), "JSON kopiert.");
+  }
+
+  downloadJson(): void {
+    if (!this.state) return;
+    const blob = new Blob([createCalibrationJson(this.state)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ringconf-calibration-v2.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async copyTypeScript(): Promise<void> {
+    if (!this.state) return;
+    await this.copyText(createCalibrationTypeScript(this.state), "TypeScript kopiert.");
+  }
+
   applyLegacyIntro(): void {
     if (!this.state) return;
     const end = this.state.startup.end;
@@ -400,6 +422,15 @@ export class CalibrationStudioComponent {
     if (!webgl) return;
     webgl.cameraChanged = true;
     if (webgl.forceFrames < forceFrames) webgl.forceFrames = forceFrames;
+  }
+
+  private async copyText(text: string, successMessage: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+      this.status = successMessage;
+    } catch {
+      this.status = "Clipboard konnte nicht beschrieben werden.";
+    }
   }
 
   private service() {

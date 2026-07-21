@@ -147,6 +147,11 @@
 
         @if (activeTab === 'export') {
           <section>
+            <div class="studio-actions">
+              <button type="button" (click)="copyJson()">JSON kopieren</button>
+              <button type="button" (click)="downloadJson()">JSON herunterladen</button>
+              <button type="button" (click)="copyTypeScript()">TypeScript kopieren</button>
+            </div>
             <h4>Exportfelder</h4>
             @for (field of exportableFields; track field.key) {
               <div class="field-row">
