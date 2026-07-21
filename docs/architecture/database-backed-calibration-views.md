@@ -46,7 +46,7 @@ RingData, preset payloads and price contracts are unchanged.
 
 ## Authoring
 
-Calibration Studio is development-only and independent from the AppData admin panel window state. It uses the AppData admin endpoint for authenticated writes:
+Calibration Studio is development-only and independent from the AppData admin panel window state. It uses the dedicated development-only `calibration-admin.php` endpoint for authenticated writes:
 
 ```text
 calibrationCreateView
@@ -63,6 +63,10 @@ Each write requires employee verification, a change reason and current row revis
 
 The Studio captures camera pose and ring presentation roots separately, but a saved view row always contains camera, framing and ring layout atomically.
 
+`appdata-admin.php` is still used for AppData authoring and shared helper functions. Calibration authoring is routed separately so deployment omissions and server errors report the concrete Calibration endpoint and request ID.
+
 ## Build Boundary
 
 Development, production and WooCommerce builds do not run migrations and do not need database credentials. Database access is runtime-only through PHP endpoints. Development admin code remains excluded from production and WooCommerce bundles through the existing Angular file replacement.
+
+Development deploy packaging copies `calibration-admin.php` with the other development PHP endpoints and validates direct PHP include dependencies before writing release metadata.

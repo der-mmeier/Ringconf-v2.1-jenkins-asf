@@ -2,7 +2,98 @@
 
 declare(strict_types=1);
 
+if (!defined('RINGCONF_ADMIN_COMMON_ONLY')) {
+  define('RINGCONF_ADMIN_COMMON_ONLY', true);
+}
+
+require_once __DIR__ . '/appdata-admin.php';
+
 const CALIBRATION_JSON_LIMIT = 1048576;
+
+if (calibrationAdminIsDirectRequest()) {
+  runCalibrationAdminEndpoint();
+}
+
+function calibrationAdminIsDirectRequest(): bool
+{
+  $script = isset($_SERVER['SCRIPT_FILENAME']) ? realpath((string)$_SERVER['SCRIPT_FILENAME']) : false;
+  $self = realpath(__FILE__);
+  return $script !== false && $self !== false && $script === $self;
+}
+
+function runCalibrationAdminEndpoint(): never
+{
+  ob_start();
+  $requestId = bin2hex(random_bytes(16));
+
+  header('Content-Type: application/json; charset=utf-8');
+  header('Cache-Control: no-store');
+  header('X-Content-Type-Options: nosniff');
+
+  try {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      fail(405, 'METHOD_NOT_ALLOWED', 'Only POST is supported.');
+    }
+
+    $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    if ($contentLength > MAX_REQUEST_BYTES) {
+      fail(413, 'REQUEST_TOO_LARGE', 'Request body is too large.');
+    }
+
+    $input = readJsonBody();
+    $action = requireAction($input);
+    $handlers = [
+      'calibrationBootstrap' => 'handleCalibrationBootstrap',
+      'calibrationUpdateComposition' => 'handleCalibrationUpdateComposition',
+      'calibrationCreateView' => 'handleCalibrationCreateView',
+      'calibrationUpdateView' => 'handleCalibrationUpdateView',
+      'calibrationDuplicateView' => 'handleCalibrationDuplicateView',
+      'calibrationDeleteView' => 'handleCalibrationDeleteView',
+      'calibrationSortViews' => 'handleCalibrationSortViews',
+      'calibrationSetDefaultView' => 'handleCalibrationSetDefaultView',
+      'calibrationSetViewEnabled' => 'handleCalibrationSetViewEnabled',
+      'calibrationActivateProfile' => 'handleCalibrationActivateProfile',
+    ];
+
+    if (!isset($handlers[$action])) {
+      fail(400, 'UNKNOWN_ACTION', 'Action is not supported by the calibration admin endpoint.');
+    }
+
+    $db = openAdminDatabase();
+    $result = $handlers[$action]($db, $input, $requestId);
+    respond(200, [
+      'ok' => true,
+      'requestId' => $requestId,
+      'result' => $result,
+    ]);
+  } catch (AdminHttpError $error) {
+    respond($error->status, [
+      'ok' => false,
+      'requestId' => $requestId,
+      'error' => [
+        'code' => $error->codeName,
+        'message' => $error->safeMessage,
+      ],
+    ]);
+  } catch (Throwable $error) {
+    error_log(sprintf(
+      'calibration-admin request failed [%s]: %s: %s in %s:%d',
+      $requestId,
+      get_class($error),
+      $error->getMessage(),
+      $error->getFile(),
+      $error->getLine()
+    ));
+    respond(500, [
+      'ok' => false,
+      'requestId' => $requestId,
+      'error' => [
+        'code' => 'CALIBRATION_ADMIN_REQUEST_FAILED',
+        'message' => 'The calibration admin request failed. Reference requestId ' . $requestId . '.',
+      ],
+    ]);
+  }
+}
 
 function calibrationTable(string $kind): string
 {

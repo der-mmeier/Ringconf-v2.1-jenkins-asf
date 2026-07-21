@@ -54,7 +54,8 @@ export interface AppDataAdminDebugInfo {
 
 @Injectable({providedIn: "root"})
 export class AppDataAdminService {
-  private readonly endpoint = this.resolveEndpoint();
+  private readonly appDataEndpoint = this.resolveEndpoint("appdata-admin.php", "__ONE_RINGCONF_APPDATA_ADMIN_ENDPOINT");
+  private readonly calibrationEndpoint = this.resolveEndpoint("calibration-admin.php", "__ONE_RINGCONF_CALIBRATION_ADMIN_ENDPOINT");
   lastDebugInfo: AppDataAdminDebugInfo | null = null;
 
   constructor(private http: HttpClient)
@@ -63,10 +64,11 @@ export class AppDataAdminService {
 
   async request<T>(action: AppDataAdminAction, payload: Record<string, unknown> = {}): Promise<AppDataAdminResponse<T>>
   {
+    const endpoint = this.endpointForAction(action);
     const payloadSummary = this.summarizePayload(payload);
     this.lastDebugInfo = {
       action,
-      endpoint: this.endpoint,
+      endpoint,
       status: "pending",
       requestId: "",
       payloadSummary,
@@ -74,11 +76,11 @@ export class AppDataAdminService {
       baseVersionId: this.numberOrUndefined(payload["baseVersionId"]),
     };
     if (this.debugEnabled()) {
-      console.info("[AppDataAdmin] request", action, this.endpoint, payloadSummary);
+      console.info("[AppDataAdmin] request", action, endpoint, payloadSummary);
     }
 
     try {
-      const response = await lastValueFrom(this.http.post<AppDataAdminResponse<T>>(this.endpoint, {
+      const response = await lastValueFrom(this.http.post<AppDataAdminResponse<T>>(endpoint, {
         action,
         ...payload,
       }));
@@ -96,7 +98,7 @@ export class AppDataAdminService {
       }
       return normalized;
     } catch (error) {
-      const normalized = this.normalizeError<T>(action, error);
+      const normalized = this.normalizeError<T>(action, error, endpoint);
       this.lastDebugInfo = {
         ...this.lastDebugInfo,
         status: "error",
@@ -111,22 +113,32 @@ export class AppDataAdminService {
     }
   }
 
-  getEndpointForDebug(): string
+  getEndpointForDebug(action?: AppDataAdminAction): string
   {
-    return this.endpoint;
+    return action ? this.endpointForAction(action) : this.appDataEndpoint;
   }
 
-  private resolveEndpoint(): string
+  private endpointForAction(action: AppDataAdminAction): string
   {
-    const globalEndpoint = (window as unknown as {__ONE_RINGCONF_APPDATA_ADMIN_ENDPOINT?: unknown}).__ONE_RINGCONF_APPDATA_ADMIN_ENDPOINT;
+    return this.isCalibrationAction(action) ? this.calibrationEndpoint : this.appDataEndpoint;
+  }
+
+  private isCalibrationAction(action: AppDataAdminAction): boolean
+  {
+    return action.startsWith("calibration");
+  }
+
+  private resolveEndpoint(fileName: string, globalName: "__ONE_RINGCONF_APPDATA_ADMIN_ENDPOINT" | "__ONE_RINGCONF_CALIBRATION_ADMIN_ENDPOINT"): string
+  {
+    const globalEndpoint = (window as unknown as Record<string, unknown>)[globalName];
     if (typeof globalEndpoint === "string" && globalEndpoint.trim() !== "") {
       return globalEndpoint.trim();
     }
 
     try {
-      return new URL("appdata-admin.php", document.baseURI || window.location.href).toString();
+      return new URL(fileName, document.baseURI || window.location.href).toString();
     } catch {
-      return "./appdata-admin.php";
+      return `./${fileName}`;
     }
   }
 
@@ -139,7 +151,7 @@ export class AppDataAdminService {
     };
   }
 
-  private normalizeError<T>(action: AppDataAdminAction, error: unknown): AppDataAdminResponse<T>
+  private normalizeError<T>(action: AppDataAdminAction, error: unknown, endpoint: string): AppDataAdminResponse<T>
   {
     if (error instanceof HttpErrorResponse) {
       const parsed = this.parseErrorBody<T>(error.error);
@@ -153,12 +165,12 @@ export class AppDataAdminService {
         requestId: "",
         error: {
           code: this.statusToCode(error.status),
-          message: this.statusToMessage(error),
+          message: this.statusToMessage(error, endpoint),
           details: {
             status: error.status,
             statusText: error.statusText,
-            url: error.url || this.endpoint,
-            endpoint: this.endpoint,
+            url: error.url || endpoint,
+            endpoint,
             body: typeof error.error === "string" ? error.error.slice(0, 1000) : error.error,
           },
         },
@@ -222,14 +234,14 @@ export class AppDataAdminService {
     return "REQUEST_FAILED";
   }
 
-  private statusToMessage(error: HttpErrorResponse): string
+  private statusToMessage(error: HttpErrorResponse, endpoint: string): string
   {
     if (error.status === 0) {
       return "Der Admin-Endpunkt konnte nicht erreicht werden. Prüfe Netzwerk, CORS oder die URL.";
     }
 
     if (error.status === 404) {
-      return `Der Admin-Endpunkt wurde nicht gefunden: ${error.url || this.endpoint}`;
+      return `Der Admin-Endpunkt wurde nicht gefunden: ${error.url || endpoint}`;
     }
 
     return `Die Admin-Anfrage ist fehlgeschlagen. HTTP ${error.status} ${error.statusText || ""}`.trim();

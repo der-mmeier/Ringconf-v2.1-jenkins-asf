@@ -1,5 +1,5 @@
 import {copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync} from "node:fs";
-import {join, resolve} from "node:path";
+import {dirname, join, resolve} from "node:path";
 import {execFileSync} from "node:child_process";
 
 const CHANNELS = new Set(["releases", "development"]);
@@ -41,6 +41,7 @@ ensureRelativeBaseHref(deployDir);
 ensureRelativeAssetUrls(deployDir);
 
 const copiedPhpFiles = copyPhpRuntimeFiles(deployDir, channel);
+validateCopiedPhpIncludes(deployDir);
 const release = {
   id: releaseId,
   version,
@@ -261,6 +262,22 @@ function copyPhpRuntimeFiles(targetDir, channelValue) {
     copied.push(`src/php/${file}`);
   }
   return copied;
+}
+
+function validateCopiedPhpIncludes(targetDir) {
+  const phpFiles = walkFiles(targetDir).filter(file => file.endsWith(".php"));
+  const phpFileSet = new Set(phpFiles.map(file => resolve(file)));
+  const includePattern = /\b(?:require|require_once|include|include_once)\s*(?:\(?\s*)?__DIR__\s*\.\s*["']\/([^"']+)["']/g;
+
+  for (const file of phpFiles) {
+    const content = readFileSync(file, "utf8");
+    for (const match of content.matchAll(includePattern)) {
+      const includePath = resolve(dirname(file), match[1]);
+      if (!phpFileSet.has(includePath) && !existsSync(includePath)) {
+        fail(`Missing PHP include dependency in deploy package: ${relativePath(file)} requires ${match[1]}`);
+      }
+    }
+  }
 }
 
 function relativePath(path) {
