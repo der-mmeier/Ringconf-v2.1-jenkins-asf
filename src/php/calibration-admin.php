@@ -25,6 +25,9 @@ function runCalibrationAdminEndpoint(): never
 {
   ob_start();
   $requestId = bin2hex(random_bytes(16));
+  $input = [];
+  $action = 'unknown';
+  $db = null;
 
   header('Content-Type: application/json; charset=utf-8');
   header('Cache-Control: no-store');
@@ -64,18 +67,20 @@ function runCalibrationAdminEndpoint(): never
       'calibrationActivateProfile' => 'handleCalibrationActivateProfile',
     ];
 
-    if (!isset($handlers[$action])) {
+    $handler = $handlers[$action] ?? null;
+    if (!is_string($handler) || !is_callable($handler)) {
       fail(400, 'UNKNOWN_ACTION', 'Action is not supported by the calibration admin endpoint.');
     }
 
     $db = openAdminDatabase();
-    $result = $handlers[$action]($db, $input, $requestId);
+    $result = $handler($db, $input, $requestId);
     respond(200, [
       'ok' => true,
       'requestId' => $requestId,
       'result' => $result,
     ]);
   } catch (AdminHttpError $error) {
+    rollbackCalibrationTransaction($db);
     respond($error->status, [
       'ok' => false,
       'requestId' => $requestId,
@@ -85,9 +90,11 @@ function runCalibrationAdminEndpoint(): never
       ],
     ]);
   } catch (Throwable $error) {
+    rollbackCalibrationTransaction($db);
     error_log(sprintf(
-      'calibration-admin request failed [%s]: %s: %s in %s:%d',
+      'calibration-admin request failed [%s] action=%s: %s: %s in %s:%d',
       $requestId,
+      $action,
       get_class($error),
       $error->getMessage(),
       $error->getFile(),
@@ -104,6 +111,13 @@ function runCalibrationAdminEndpoint(): never
   }
 }
 
+function rollbackCalibrationTransaction(?PDO $db): void
+{
+  if ($db instanceof PDO && $db->inTransaction()) {
+    $db->rollBack();
+  }
+}
+
 function calibrationTable(string $kind): string
 {
   $map = [
@@ -117,10 +131,14 @@ function calibrationTable(string $kind): string
 function handleCalibrationAuthenticate(array $input): array
 {
   $actor = verifyEmployee($input, editorPermissions());
+
   return [
     'authenticated' => true,
     'username' => actorUsername($actor),
-    'permissions' => array_values(array_filter(array_map('strval', $actor['permissions'] ?? []))),
+    'permissions' => array_values(array_filter(array_map(
+      'strval',
+      $actor['permissions'] ?? []
+    ))),
     'authenticatedAt' => gmdate('c'),
   ];
 }
@@ -128,12 +146,12 @@ function handleCalibrationAuthenticate(array $input): array
 function handleCalibrationBootstrap(PDO $db, array $input, string $requestId): array
 {
   verifyEmployee($input, editorPermissions());
+  ensureCalibrationStorage($db);
   return calibrationBootstrapPayload($db);
 }
 
 function calibrationBootstrapPayload(PDO $db): array
 {
-  ensureCalibrationStorage($db);
   $profile = fetchActiveCalibrationProfileRow($db);
   return [
     'profile' => $profile ? hydrateCalibrationProfileForAdmin($db, $profile, true) : null,
@@ -166,11 +184,11 @@ function handleCalibrationUpdateComposition(PDO $db, array $input, string $reque
   $stmt->execute([
     'id' => $compositionId,
     'label' => cleanCalibrationName($payload['label'] ?? $row['label']),
-    'active_slots_json' => encodeCalibrationJson($payload['activeSlots'] ?? json_decode((string)$row['active_slots_json'], true)),
-    'startup_sequence_json' => encodeCalibrationJson($payload['startupSequence'] ?? json_decode((string)$row['startup_sequence_json'], true)),
-    'natural_ring_layout_json' => encodeCalibrationJson($payload['naturalRingLayout'] ?? json_decode((string)$row['natural_ring_layout_json'], true)),
-    'default_framing_json' => encodeCalibrationJson($payload['defaultFraming'] ?? json_decode((string)$row['default_framing_json'], true)),
-    'enabled' => ($payload['enabled'] ?? true) === false ? 0 : 1,
+    'active_slots_json' => encodeCalibrationJson($payload['activeSlots'] ?? decodeCalibrationJson((string)$row['active_slots_json'], 'active_slots_json')),
+    'startup_sequence_json' => encodeCalibrationJson($payload['startupSequence'] ?? decodeCalibrationJson((string)$row['startup_sequence_json'], 'startup_sequence_json')),
+    'natural_ring_layout_json' => encodeCalibrationJson($payload['naturalRingLayout'] ?? decodeCalibrationJson((string)$row['natural_ring_layout_json'], 'natural_ring_layout_json')),
+    'default_framing_json' => encodeCalibrationJson($payload['defaultFraming'] ?? decodeCalibrationJson((string)$row['default_framing_json'], 'default_framing_json')),
+    'enabled' => calibrationBooleanValue($payload, 'enabled', (bool)$row['enabled']),
     'sort_order' => (int)($payload['sortOrder'] ?? $row['sort_order']),
   ]);
   audit($db, $requestId, 'calibrationUpdateComposition', null, null, null, $actor, ['compositionId' => $compositionId]);
@@ -200,8 +218,11 @@ function handleCalibrationCreateView(PDO $db, array $input, string $requestId): 
       (:composition_id, :view_key, :name, :enabled, :is_default, :sort_order, :camera_json, :ring_layout_json, :framing_json, 1, :created_by, :updated_by)
   ');
   $stmt->execute(viewSqlPayload($compositionId, $view, $actor, $viewKey, $name));
+  $newViewId = (int)$db->lastInsertId();
   if (($view['isDefault'] ?? false) === true) {
-    setDefaultView($db, $compositionId, (int)$db->lastInsertId());
+    setDefaultView($db, $compositionId, $newViewId);
+  } else {
+    ensureDefaultViewForComposition($db, $compositionId);
   }
   audit($db, $requestId, 'calibrationCreateView', null, null, null, $actor, ['compositionId' => $compositionId, 'viewKey' => $viewKey]);
   $db->commit();
@@ -220,6 +241,13 @@ function handleCalibrationUpdateView(PDO $db, array $input, string $requestId): 
   $db->beginTransaction();
   $row = fetchViewForUpdate($db, $viewId);
   requireRevision((int)$row['revision'], $expectedRevision);
+
+  $enabled = calibrationBooleanValue($view, 'enabled', (bool)$row['enabled']);
+  $isDefault = calibrationBooleanValue($view, 'isDefault', (bool)$row['is_default']);
+  if ($enabled === 0) {
+    $isDefault = 0;
+  }
+
   $stmt = $db->prepare('
     update ' . calibrationTable('view') . '
     set name = :name,
@@ -236,17 +264,21 @@ function handleCalibrationUpdateView(PDO $db, array $input, string $requestId): 
   $stmt->execute([
     'id' => $viewId,
     'name' => cleanCalibrationName($view['name'] ?? $row['name']),
-    'enabled' => ($view['enabled'] ?? true) === false ? 0 : 1,
-    'is_default' => ($view['isDefault'] ?? false) === true ? 1 : 0,
+    'enabled' => $enabled,
+    'is_default' => $isDefault,
     'sort_order' => (int)($view['sortOrder'] ?? $row['sort_order']),
-    'camera_json' => encodeCalibrationJson($view['camera'] ?? json_decode((string)$row['camera_json'], true)),
-    'ring_layout_json' => encodeCalibrationJson($view['ringLayout'] ?? json_decode((string)$row['ring_layout_json'], true)),
-    'framing_json' => encodeCalibrationJson($view['framing'] ?? json_decode((string)$row['framing_json'], true)),
+    'camera_json' => encodeCalibrationJson($view['camera'] ?? decodeCalibrationJson((string)$row['camera_json'], 'camera_json')),
+    'ring_layout_json' => encodeCalibrationJson($view['ringLayout'] ?? decodeCalibrationJson((string)$row['ring_layout_json'], 'ring_layout_json')),
+    'framing_json' => encodeCalibrationJson($view['framing'] ?? decodeCalibrationJson((string)$row['framing_json'], 'framing_json')),
     'updated_by' => actorUsername($actor),
   ]);
-  if (($view['isDefault'] ?? false) === true) {
+
+  if ($isDefault === 1) {
     setDefaultView($db, (int)$row['composition_id'], $viewId);
+  } elseif ((bool)$row['is_default']) {
+    ensureDefaultViewForComposition($db, (int)$row['composition_id'], $viewId);
   }
+
   audit($db, $requestId, 'calibrationUpdateView', null, null, null, $actor, ['viewId' => $viewId]);
   $db->commit();
 
@@ -302,6 +334,9 @@ function handleCalibrationDeleteView(PDO $db, array $input, string $requestId): 
   requireRevision((int)$row['revision'], $revision);
   $stmt = $db->prepare('delete from ' . calibrationTable('view') . ' where id = :id');
   $stmt->execute(['id' => $viewId]);
+  if ((bool)$row['is_default']) {
+    ensureDefaultViewForComposition($db, (int)$row['composition_id']);
+  }
   audit($db, $requestId, 'calibrationDeleteView', null, null, null, $actor, ['viewId' => $viewId]);
   $db->commit();
 
@@ -319,14 +354,26 @@ function handleCalibrationSortViews(PDO $db, array $input, string $requestId): a
   }
   $db->beginTransaction();
   fetchCompositionForUpdate($db, $compositionId);
+  $normalizedIds = [];
+  foreach (array_values($ids) as $id) {
+    $normalizedId = positiveId($id, 'viewIds');
+    if (isset($normalizedIds[$normalizedId])) {
+      fail(422, 'VALIDATION_FAILED', 'viewIds must not contain duplicates.');
+    }
+    $normalizedIds[$normalizedId] = true;
+  }
+
   $stmt = $db->prepare('update ' . calibrationTable('view') . ' set sort_order = :sort_order, revision = revision + 1, updated_by = :updated_by where id = :id and composition_id = :composition_id');
-  foreach (array_values($ids) as $index => $id) {
+  foreach (array_keys($normalizedIds) as $index => $id) {
     $stmt->execute([
-      'id' => positiveId($id, 'viewIds'),
+      'id' => $id,
       'composition_id' => $compositionId,
       'sort_order' => $index * 10,
       'updated_by' => actorUsername($actor),
     ]);
+    if ($stmt->rowCount() !== 1) {
+      fail(422, 'VALIDATION_FAILED', 'A view does not belong to the selected composition.');
+    }
   }
   audit($db, $requestId, 'calibrationSortViews', null, null, null, $actor, ['compositionId' => $compositionId]);
   $db->commit();
@@ -352,12 +399,35 @@ function handleCalibrationSetViewEnabled(PDO $db, array $input, string $requestI
   ensureCalibrationStorage($db);
   $viewId = positiveId($input['viewId'] ?? 0, 'viewId');
   $revision = positiveId($input['revision'] ?? 0, 'revision');
-  $enabled = ($input['enabled'] ?? false) === true ? 1 : 0;
+  if (!array_key_exists('enabled', $input) || !is_bool($input['enabled'])) {
+    fail(422, 'VALIDATION_FAILED', 'enabled must be a boolean.');
+  }
+  $enabled = $input['enabled'] ? 1 : 0;
+
   $db->beginTransaction();
   $row = fetchViewForUpdate($db, $viewId);
   requireRevision((int)$row['revision'], $revision);
-  $stmt = $db->prepare('update ' . calibrationTable('view') . ' set enabled = :enabled, revision = revision + 1, updated_by = :updated_by where id = :id');
-  $stmt->execute(['id' => $viewId, 'enabled' => $enabled, 'updated_by' => actorUsername($actor)]);
+  $stmt = $db->prepare('
+    update ' . calibrationTable('view') . '
+    set enabled = :enabled,
+        is_default = case when :disable_default = 1 then 0 else is_default end,
+        revision = revision + 1,
+        updated_by = :updated_by
+    where id = :id
+  ');
+  $stmt->execute([
+    'id' => $viewId,
+    'enabled' => $enabled,
+    'disable_default' => $enabled === 0 ? 1 : 0,
+    'updated_by' => actorUsername($actor),
+  ]);
+
+  if ($enabled === 0 && (bool)$row['is_default']) {
+    ensureDefaultViewForComposition($db, (int)$row['composition_id'], $viewId);
+  } elseif ($enabled === 1) {
+    ensureDefaultViewForComposition($db, (int)$row['composition_id']);
+  }
+
   audit($db, $requestId, 'calibrationSetViewEnabled', null, null, null, $actor, ['viewId' => $viewId, 'enabled' => $enabled]);
   $db->commit();
   return calibrationBootstrapPayload($db);
@@ -369,7 +439,13 @@ function handleCalibrationActivateProfile(PDO $db, array $input, string $request
   ensureCalibrationStorage($db);
   $profileId = positiveId($input['profileId'] ?? 0, 'profileId');
   $db->beginTransaction();
-  $stmt = $db->prepare('update ' . calibrationTable('profile') . ' set is_active = 0 where id <> :id');
+  $stmt = $db->prepare('select id from ' . calibrationTable('profile') . ' where id = :id for update');
+  $stmt->execute(['id' => $profileId]);
+  if (!$stmt->fetchColumn()) {
+    fail(404, 'NOT_FOUND', 'Calibration profile was not found.');
+  }
+
+  $stmt = $db->prepare('update ' . calibrationTable('profile') . ' set is_active = 0 where id <> :id and is_active = 1');
   $stmt->execute(['id' => $profileId]);
   $stmt = $db->prepare("update " . calibrationTable('profile') . " set is_active = 1, status = 'active', revision = revision + 1, updated_by = :updated_by, activated_at = current_timestamp where id = :id");
   $stmt->execute(['id' => $profileId, 'updated_by' => actorUsername($actor)]);
@@ -397,18 +473,18 @@ function installCalibrationTablesForAdmin(PDO $db): void
         id             int unsigned auto_increment primary key,
         profile_key    varchar(80)                         not null,
         name           varchar(160)                        not null,
-        schema_version int unsigned default 1              not null,
-        status         varchar(20) default 'draft'         not null,
-        revision       int unsigned default 1              not null,
-        is_active      tinyint(1) default 0                not null,
+        schema_version int unsigned                         not null default 1,
+        status         varchar(20)                          not null default 'draft',
+        revision       int unsigned                         not null default 1,
+        is_active      tinyint(1)                          not null default 0,
         created_by     varchar(120)                        null,
         updated_by     varchar(120)                        null,
-        created_at     timestamp default CURRENT_TIMESTAMP not null,
-        updated_at     timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP,
-        activated_at   timestamp null,
+        created_at     timestamp                            not null default CURRENT_TIMESTAMP,
+        updated_at     timestamp                            not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+        activated_at   timestamp                            null default null,
         unique key uq_profile_key (profile_key),
         key active_status (is_active, status)
-      );
+      ) engine=InnoDB default charset=utf8mb4;
     ");
   }
 
@@ -424,15 +500,15 @@ function installCalibrationTablesForAdmin(PDO $db): void
         startup_sequence_json    longtext                             not null,
         natural_ring_layout_json longtext                             not null,
         default_framing_json     text                                 not null,
-        enabled                  tinyint(1) default 1                 not null,
-        sort_order               int default 0                        not null,
-        revision                 int unsigned default 1               not null,
-        created_at               timestamp default CURRENT_TIMESTAMP  not null,
-        updated_at               timestamp default CURRENT_TIMESTAMP  not null on update CURRENT_TIMESTAMP,
+        enabled                  tinyint(1)                            not null default 1,
+        sort_order               int                                   not null default 0,
+        revision                 int unsigned                          not null default 1,
+        created_at               timestamp                             not null default CURRENT_TIMESTAMP,
+        updated_at               timestamp                             not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
         unique key uq_profile_composition (profile_id, composition_key),
         key profile_enabled_sort (profile_id, enabled, sort_order),
         constraint fk_calibration_composition_profile foreign key (profile_id) references " . calibrationTable('profile') . " (id) on delete cascade
-      );
+      ) engine=InnoDB default charset=utf8mb4;
     ");
   }
 
@@ -444,28 +520,34 @@ function installCalibrationTablesForAdmin(PDO $db): void
         composition_id   int unsigned                         not null,
         view_key         varchar(80)                          not null,
         name             varchar(160)                         not null,
-        enabled          tinyint(1) default 1                 not null,
-        is_default       tinyint(1) default 0                 not null,
-        sort_order       int default 0                        not null,
+        enabled          tinyint(1)                            not null default 1,
+        is_default       tinyint(1)                            not null default 0,
+        sort_order       int                                   not null default 0,
         camera_json      longtext                             not null,
         ring_layout_json longtext                             not null,
         framing_json     text                                 not null,
-        revision         int unsigned default 1               not null,
+        revision         int unsigned                          not null default 1,
         created_by       varchar(120)                         null,
         updated_by       varchar(120)                         null,
-        created_at       timestamp default CURRENT_TIMESTAMP  not null,
-        updated_at       timestamp default CURRENT_TIMESTAMP  not null on update CURRENT_TIMESTAMP,
+        created_at       timestamp                             not null default CURRENT_TIMESTAMP,
+        updated_at       timestamp                             not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
         unique key uq_composition_view (composition_id, view_key),
         key composition_enabled_sort (composition_id, enabled, sort_order),
         constraint fk_calibration_view_composition foreign key (composition_id) references " . calibrationTable('composition') . " (id) on delete cascade
-      );
+      ) engine=InnoDB default charset=utf8mb4;
     ");
   }
 }
 
 function calibrationTableExists(PDO $db, string $table): bool
 {
-  $stmt = $db->prepare('show tables like :table_name');
+  $stmt = $db->prepare('
+    select 1
+    from information_schema.tables
+    where table_schema = database()
+      and table_name = :table_name
+    limit 1
+  ');
   $stmt->execute(['table_name' => assertIdentifier($table)]);
   return (bool)$stmt->fetchColumn();
 }
@@ -531,7 +613,7 @@ function seedDefaultCalibrationProfileForAdmin(PDO $db): void
     }
     $db->commit();
   } catch (Throwable $error) {
-    $db->rollBack();
+    rollbackCalibrationTransaction($db);
     throw $error;
   }
 }
@@ -664,9 +746,9 @@ function hydrateCalibrationCompositionForAdmin(PDO $db, array $composition, bool
       'enabled' => (bool)$view['enabled'],
       'isDefault' => (bool)$view['is_default'],
       'sortOrder' => (int)$view['sort_order'],
-      'camera' => json_decode((string)$view['camera_json'], true),
-      'ringLayout' => json_decode((string)$view['ring_layout_json'], true),
-      'framing' => json_decode((string)$view['framing_json'], true),
+      'camera' => decodeCalibrationJson((string)$view['camera_json'], 'camera_json'),
+      'ringLayout' => decodeCalibrationJson((string)$view['ring_layout_json'], 'ring_layout_json'),
+      'framing' => decodeCalibrationJson((string)$view['framing_json'], 'framing_json'),
       'revision' => (int)$view['revision'],
       'updatedAt' => $view['updated_at'],
     ];
@@ -675,10 +757,10 @@ function hydrateCalibrationCompositionForAdmin(PDO $db, array $composition, bool
     'id' => (int)$composition['id'],
     'compositionKey' => $composition['composition_key'],
     'label' => $composition['label'],
-    'activeSlots' => json_decode((string)$composition['active_slots_json'], true),
-    'startupSequence' => json_decode((string)$composition['startup_sequence_json'], true),
-    'naturalRingLayout' => json_decode((string)$composition['natural_ring_layout_json'], true),
-    'defaultFraming' => json_decode((string)$composition['default_framing_json'], true),
+    'activeSlots' => decodeCalibrationJson((string)$composition['active_slots_json'], 'active_slots_json'),
+    'startupSequence' => decodeCalibrationJson((string)$composition['startup_sequence_json'], 'startup_sequence_json'),
+    'naturalRingLayout' => decodeCalibrationJson((string)$composition['natural_ring_layout_json'], 'natural_ring_layout_json'),
+    'defaultFraming' => decodeCalibrationJson((string)$composition['default_framing_json'], 'default_framing_json'),
     'enabled' => (bool)$composition['enabled'],
     'sortOrder' => (int)$composition['sort_order'],
     'revision' => (int)$composition['revision'],
@@ -710,18 +792,99 @@ function fetchViewForUpdate(PDO $db, int $viewId): array
 
 function setDefaultView(PDO $db, int $compositionId, int $viewId): void
 {
-  $stmt = $db->prepare('update ' . calibrationTable('view') . ' set is_default = case when id = :view_id then 1 else 0 end, revision = revision + 1 where composition_id = :composition_id');
-  $stmt->execute(['view_id' => $viewId, 'composition_id' => $compositionId]);
+  $stmt = $db->prepare('
+    select id
+    from ' . calibrationTable('view') . '
+    where id = :view_id
+      and composition_id = :composition_id
+      and enabled = 1
+    for update
+  ');
+  $stmt->execute([
+    'view_id' => $viewId,
+    'composition_id' => $compositionId,
+  ]);
+  if (!$stmt->fetchColumn()) {
+    fail(404, 'NOT_FOUND', 'An enabled calibration view was not found in the selected composition.');
+  }
+
+  $stmt = $db->prepare('
+    update ' . calibrationTable('view') . '
+    set is_default = 0,
+        revision = revision + 1
+    where composition_id = :composition_id
+      and id <> :view_id
+      and is_default = 1
+  ');
+  $stmt->execute([
+    'composition_id' => $compositionId,
+    'view_id' => $viewId,
+  ]);
+
+  $stmt = $db->prepare('
+    update ' . calibrationTable('view') . '
+    set is_default = 1,
+        revision = revision + 1
+    where composition_id = :composition_id
+      and id = :view_id
+      and is_default = 0
+  ');
+  $stmt->execute([
+    'composition_id' => $compositionId,
+    'view_id' => $viewId,
+  ]);
+}
+
+function ensureDefaultViewForComposition(PDO $db, int $compositionId, ?int $excludeViewId = null): void
+{
+  $stmt = $db->prepare('
+    select id
+    from ' . calibrationTable('view') . '
+    where composition_id = :composition_id
+      and is_default = 1
+      and enabled = 1
+    limit 1
+  ');
+  $stmt->execute(['composition_id' => $compositionId]);
+  if ($stmt->fetchColumn()) {
+    return;
+  }
+
+  $sql = '
+    select id
+    from ' . calibrationTable('view') . '
+    where composition_id = :composition_id
+      and enabled = 1
+  ';
+  $params = ['composition_id' => $compositionId];
+  if ($excludeViewId !== null) {
+    $sql .= ' and id <> :exclude_view_id';
+    $params['exclude_view_id'] = $excludeViewId;
+  }
+  $sql .= ' order by sort_order asc, id asc limit 1 for update';
+
+  $stmt = $db->prepare($sql);
+  $stmt->execute($params);
+  $replacementId = (int)$stmt->fetchColumn();
+  if ($replacementId > 0) {
+    setDefaultView($db, $compositionId, $replacementId);
+  }
 }
 
 function viewSqlPayload(int $compositionId, array $view, array $actor, string $viewKey, string $name): array
 {
+  $enabled = calibrationBooleanValue($view, 'enabled', true);
+  $isDefault = calibrationBooleanValue($view, 'isDefault', false);
+  if ($enabled === 0 && $isDefault === 1) {
+    fail(422, 'VALIDATION_FAILED', 'A disabled calibration view cannot be the default view.');
+  }
+
   return [
     'composition_id' => $compositionId,
     'view_key' => $viewKey,
     'name' => $name,
-    'enabled' => ($view['enabled'] ?? true) === false ? 0 : 1,
-    'is_default' => ($view['isDefault'] ?? false) === true ? 1 : 0,
+    'enabled' => $enabled,
+    'is_default' => $isDefault,
     'sort_order' => (int)($view['sortOrder'] ?? 0),
     'camera_json' => encodeCalibrationJson($view['camera'] ?? null),
     'ring_layout_json' => encodeCalibrationJson($view['ringLayout'] ?? ['rings' => []]),
@@ -733,11 +896,39 @@ function viewSqlPayload(int $compositionId, array $view, array $actor, string $v
 
 function encodeCalibrationJson(mixed $value): string
 {
-  $json = json_encode(canonicalize($value), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-  if (!is_string($json) || strlen($json) > CALIBRATION_JSON_LIMIT) {
-    fail(422, 'VALIDATION_FAILED', 'Calibration JSON is invalid or too large.');
+  try {
+    $json = json_encode(
+      canonicalize($value),
+      JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+    );
+  } catch (JsonException $error) {
+    fail(422, 'VALIDATION_FAILED', 'Calibration JSON is invalid.');
+  }
+
+  if (strlen($json) > CALIBRATION_JSON_LIMIT) {
+    fail(422, 'VALIDATION_FAILED', 'Calibration JSON is too large.');
   }
   return $json;
+}
+
+function decodeCalibrationJson(string $json, string $field): mixed
+{
+  try {
+    return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+  } catch (JsonException $error) {
+    throw new RuntimeException('Stored calibration JSON is invalid in ' . $field . '.', 0, $error);
+  }
+}
+
+function calibrationBooleanValue(array $payload, string $key, bool $fallback): int
+{
+  if (!array_key_exists($key, $payload)) {
+    return $fallback ? 1 : 0;
+  }
+  if (!is_bool($payload[$key])) {
+    fail(422, 'VALIDATION_FAILED', $key . ' must be a boolean.');
+  }
+  return $payload[$key] ? 1 : 0;
 }
 
 function requireRevision(int $actual, int $expected): void
@@ -749,7 +940,14 @@ function requireRevision(int $actual, int $expected): void
 
 function positiveId(mixed $value, string $label): int
 {
-  $id = (int)$value;
+  if (is_int($value)) {
+    $id = $value;
+  } elseif (is_string($value) && preg_match('/^[1-9][0-9]*$/', $value) === 1) {
+    $id = (int)$value;
+  } else {
+    fail(422, 'VALIDATION_FAILED', $label . ' must be a positive integer.');
+  }
+
   if ($id <= 0) {
     fail(422, 'VALIDATION_FAILED', $label . ' must be a positive integer.');
   }
@@ -758,7 +956,11 @@ function positiveId(mixed $value, string $label): int
 
 function cleanCalibrationKey(string $value): string
 {
-  return strtolower(trim(preg_replace('/[^a-zA-Z0-9_-]+/', '-', $value) ?? '', '-'));
+  $key = strtolower(trim(preg_replace('/[^a-zA-Z0-9_-]+/', '-', $value) ?? '', '-'));
+  if ($key === '' || strlen($key) > 80) {
+    fail(422, 'VALIDATION_FAILED', 'Calibration key is invalid.');
+  }
+  return $key;
 }
 
 function cleanCalibrationName(mixed $value): string
