@@ -46,9 +46,13 @@ RingData, preset payloads and price contracts are unchanged.
 
 ## Authoring
 
-Calibration Studio is development-only and independent from the AppData admin panel window state. It uses the dedicated development-only `calibration-admin.php` endpoint for authenticated writes:
+Calibration Studio is development-only and independent from the AppData admin panel window state. Since 2.7.10.3 it is also gated before bootstrap: the Studio button opens a login dialog, `calibrationAuthenticate` verifies the employee server-side, and only then does the modal open and send one `calibrationBootstrap` request with the in-memory admin session.
+
+It uses the dedicated development-only `calibration-admin.php` endpoint:
 
 ```text
+calibrationAuthenticate
+calibrationBootstrap
 calibrationCreateView
 calibrationUpdateView
 calibrationDuplicateView
@@ -59,7 +63,7 @@ calibrationSetViewEnabled
 calibrationActivateProfile
 ```
 
-Each write requires employee verification, a change reason and current row revision where applicable. Conflicting revisions return a conflict response and do not overwrite.
+`calibrationAuthenticate` does not read or write calibration rows. It only verifies the employee and returns minimal non-secret session information. `calibrationBootstrap` and all writes require the verified username/PIN payload from the shared in-memory admin session. Each write also requires a change reason and current row revision where applicable. Conflicting revisions return a conflict response and do not overwrite.
 
 The Studio captures camera pose and ring presentation roots separately, but a saved view row always contains camera, framing and ring layout atomically.
 
