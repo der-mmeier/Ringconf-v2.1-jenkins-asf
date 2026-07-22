@@ -2,9 +2,11 @@ import {TestBed} from "@angular/core/testing";
 import {provideHttpClient} from "@angular/common/http";
 import {HttpTestingController, provideHttpClientTesting} from "@angular/common/http/testing";
 import {AppDataAdminService} from "./appdata-admin.service";
+import {AdminSessionService} from "./admin-session.service";
 
 describe("AppDataAdminService endpoints", () => {
   let service: AppDataAdminService;
+  let adminSession: AdminSessionService;
   let http: HttpTestingController;
 
   beforeEach(() => {
@@ -15,6 +17,7 @@ describe("AppDataAdminService endpoints", () => {
       ],
     });
     service = TestBed.inject(AppDataAdminService);
+    adminSession = TestBed.inject(AdminSessionService);
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -34,14 +37,39 @@ describe("AppDataAdminService endpoints", () => {
   });
 
   it("routes calibration actions to the dedicated calibration admin endpoint", async () => {
+    adminSession.authenticate({username: "editor", pin: "1234"}, {authenticated: true, username: "editor"});
     const request = service.request("calibrationBootstrap");
     const req = http.expectOne(request => request.url.endsWith("/calibration-admin.php"));
     expect(req.request.body.action).toBe("calibrationBootstrap");
+    expect(req.request.body.username).toBe("editor");
+    expect(req.request.body.pin).toBe("1234");
+    expect(req.request.body.changeReason).toBeUndefined();
     req.flush({ok: true, action: "calibrationBootstrap", requestId: "calibration-request", result: {profile: null}});
 
     const response = await request;
     expect(response.ok).toBeTrue();
     expect(service.lastDebugInfo?.endpoint.endsWith("/calibration-admin.php")).toBeTrue();
     expect(service.getEndpointForDebug("calibrationBootstrap").endsWith("/calibration-admin.php")).toBeTrue();
+  });
+
+  it("does not attach existing credentials to calibrationAuthenticate", async () => {
+    adminSession.authenticate({username: "editor", pin: "1234"}, {authenticated: true, username: "editor"});
+    const request = service.request("calibrationAuthenticate", {username: "next", pin: "9999"});
+    const req = http.expectOne(request => request.url.endsWith("/calibration-admin.php"));
+    expect(req.request.body.action).toBe("calibrationAuthenticate");
+    expect(req.request.body.username).toBe("next");
+    expect(req.request.body.pin).toBe("9999");
+    req.flush({ok: true, action: "calibrationAuthenticate", requestId: "auth-request", result: {authenticated: true, username: "next"}});
+
+    const response = await request;
+    expect(response.ok).toBeTrue();
+  });
+
+  it("blocks calibration actions locally when no admin session exists", async () => {
+    const response = await service.request("calibrationBootstrap");
+
+    expect(response.ok).toBeFalse();
+    expect(response.error?.code).toBe("AUTHENTICATION_REQUIRED");
+    http.expectNone(request => request.url.endsWith("/calibration-admin.php"));
   });
 });
