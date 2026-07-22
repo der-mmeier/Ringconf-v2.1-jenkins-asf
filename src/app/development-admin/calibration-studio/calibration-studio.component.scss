@@ -20,6 +20,57 @@
   min-width: 0;
 }
 
+.calibration-login-modal,
+.calibration-login-modal * {
+  box-sizing: border-box;
+}
+
+.calibration-login-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10030;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.calibration-login-card {
+  display: grid;
+  gap: 12px;
+  width: min(420px, calc(100vw - 32px));
+  border: 1px solid #4c5565;
+  border-radius: 6px;
+  padding: 14px;
+  background: #111827;
+  color: #f8fafc;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+}
+
+.calibration-login-card header,
+.calibration-login-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.calibration-login-card h3,
+.login-hint,
+.login-error {
+  margin: 0;
+}
+
+.login-hint {
+  color: #bfdbfe;
+  font-size: 13px;
+}
+
+.login-error {
+  color: #fecaca;
+  font-size: 13px;
+}
+
 .calibration-modal {
   position: fixed;
   z-index: 10020;
@@ -203,7 +254,7 @@ button:focus-visible {
 
 .studio-grid,
 .camera-columns,
-.auth-grid,
+.auth-session,
 .profile-rule-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -347,9 +398,28 @@ select {
   overflow-wrap: anywhere;
 }
 
-.auth-grid,
+.auth-session,
 .profile-rule-grid {
   margin: 10px 0;
+}
+
+.auth-session {
+  align-items: end;
+  border: 1px solid #253247;
+  border-radius: 6px;
+  padding: 10px;
+  background: #111b2d;
+}
+
+.auth-session div span,
+.auth-session div strong {
+  display: block;
+}
+
+.auth-session div span {
+  color: #cbd5e1;
+  font-size: 11px;
+  text-transform: uppercase;
 }
 
 .view-table-scroll {

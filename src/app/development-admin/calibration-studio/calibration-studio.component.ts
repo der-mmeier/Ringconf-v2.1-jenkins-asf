@@ -10,6 +10,7 @@ import {RingPresentationHandle} from "../../webgl/ring-presentation";
 import {CALIBRATION_FIELD_DEFINITIONS, getCalibrationFieldDefinition} from "./calibration-field-definitions";
 import {createCalibrationJson, createCalibrationTypeScript} from "./calibration-export";
 import {AppDataAdminService, type AppDataAdminAction} from "../appdata-admin.service";
+import {AdminAuthenticationResult, AdminSessionService} from "../admin-session.service";
 import {CalibrationNumberControlComponent} from "./calibration-number-control.component";
 import {CalibrationRuntimeComposition, CalibrationRuntimeProfile, CalibrationRuntimeRingTransform, CalibrationRuntimeView} from "../../calibration/calibration-runtime.models";
 import {
@@ -80,14 +81,22 @@ export class CalibrationStudioComponent {
   selectedViewId = 0;
   viewDraft: CalibrationViewDraft | null = null;
   stepMode: "coarse" | "fine" = "coarse";
-  auth = {username: "", pin: "", reason: "Kalibrierungsansicht aktualisieren"};
+  loginOpen = false;
+  loginUsername = "";
+  loginPin = "";
+  loginLoading = false;
+  loginError = "";
+  reauthMessage = "";
   private pointerSession: PointerSession | null = null;
   private snapshot: StudioSnapshot | null = null;
   private animationFrame = 0;
   private animationStart = 0;
   private animationDelayTimer = 0;
+  private bootstrapStartedForOpen = false;
+  private pendingAuthenticatedAction: (() => Promise<void>) | null = null;
+  private pendingRetryUsed = false;
 
-  constructor(private adminApi: AppDataAdminService) {
+  constructor(private adminApi: AppDataAdminService, public adminSession: AdminSessionService) {
     try {
       localStorage.removeItem(LEGACY_VIEW_CALIBRATION_STORAGE_KEY);
     } catch {
@@ -113,17 +122,72 @@ export class CalibrationStudioComponent {
       this.close();
       return;
     }
-    this.open = true;
-    this.clampModalGeometry();
-    this.persistModalGeometry();
-    this.captureSession();
-    void this.loadCalibrationProfile();
+    if (!this.adminSession.authenticated) {
+      this.openLoginDialog();
+      return;
+    }
+    this.openStudioAfterAuthentication();
   }
 
   close(): void {
     this.stopIntro();
     this.open = false;
+    this.bootstrapStartedForOpen = false;
     this.persistModalGeometry();
+  }
+
+  openLoginDialog(message = ""): void {
+    this.loginOpen = true;
+    this.loginLoading = false;
+    this.loginError = "";
+    this.reauthMessage = message;
+    this.loginUsername = this.adminSession.username || this.loginUsername;
+    this.loginPin = "";
+  }
+
+  closeLoginDialog(): void {
+    if (this.loginLoading) return;
+    this.loginOpen = false;
+    this.loginError = "";
+    this.reauthMessage = "";
+    this.pendingAuthenticatedAction = null;
+    this.pendingRetryUsed = false;
+  }
+
+  async authenticateFromDialog(): Promise<void> {
+    const username = this.loginUsername.trim();
+    const pin = this.loginPin;
+    if (username === "" || pin === "") {
+      this.loginError = "Interner Login und Mitarbeiter-PIN sind erforderlich.";
+      return;
+    }
+    if (this.loginLoading) {
+      return;
+    }
+
+    this.loginLoading = true;
+    this.loginError = "";
+    const response = await this.adminApi.request<AdminAuthenticationResult>("calibrationAuthenticate", {username, pin});
+    this.loginLoading = false;
+    this.loginPin = "";
+
+    if (!response.ok || response.data?.authenticated === false) {
+      this.adminSession.clearCredentials();
+      this.loginError = response.error?.message ?? "Admin-Anmeldung fehlgeschlagen.";
+      return;
+    }
+
+    this.adminSession.authenticate({username, pin}, response.data ?? null);
+    this.loginOpen = false;
+    this.reauthMessage = "";
+    const pending = this.pendingAuthenticatedAction;
+    this.pendingAuthenticatedAction = null;
+    this.pendingRetryUsed = false;
+    if (pending) {
+      await pending();
+      return;
+    }
+    this.openStudioAfterAuthentication();
   }
 
   minimize(): void {
@@ -170,11 +234,20 @@ export class CalibrationStudioComponent {
     this.status = "Session-Snapshot erfasst.";
   }
 
-  async loadCalibrationProfile(): Promise<void> {
+  async loadCalibrationProfile(retryOnAuthFailure = true): Promise<void> {
+    if (!this.adminSession.authenticated) {
+      this.requestReauthentication(() => this.loadCalibrationProfile(false), "Bitte zuerst fuer das Calibration Studio anmelden.");
+      return;
+    }
     this.calibrationLoadState = "loading";
     this.calibrationError = null;
     this.showCalibrationErrorDetails = false;
     const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationBootstrap");
+    if (!response.ok && retryOnAuthFailure && this.adminSession.isAuthenticationFailure(response)) {
+      this.calibrationLoadState = "idle";
+      this.requestReauthentication(() => this.loadCalibrationProfile(false), "Die Admin-Session ist abgelaufen. Bitte erneut anmelden.");
+      return;
+    }
     if (!response.ok || !response.data?.profile) {
       this.calibrationProfile = null;
       this.calibrationLoadState = "error";
@@ -286,39 +359,43 @@ export class CalibrationStudioComponent {
 
   async saveDraft(): Promise<void> {
     if (!this.viewDraft) return;
-    const payload = this.authPayload({
+    const payload = {
       compositionId: this.viewDraft.compositionId,
       viewId: this.viewDraft.id,
       revision: this.viewDraft.revision,
       view: this.viewDraft,
-    });
+    };
     const action = this.viewDraft.id ? "calibrationUpdateView" : "calibrationCreateView";
-    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>(action, payload);
+    const response = await this.requestCalibration(action, payload);
+    if (!response) return;
     this.applyCalibrationResponse(response);
   }
 
   async deleteView(view: CalibrationRuntimeView): Promise<void> {
     if (!view.id) return;
-    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationDeleteView", this.authPayload({
+    const response = await this.requestCalibration("calibrationDeleteView", {
       viewId: view.id,
       revision: view.revision,
-    }));
+    });
+    if (!response) return;
     this.applyCalibrationResponse(response);
   }
 
   async setDefaultView(view: CalibrationRuntimeView): Promise<void> {
     if (!view.id) return;
-    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationSetDefaultView", this.authPayload({viewId: view.id}));
+    const response = await this.requestCalibration("calibrationSetDefaultView", {viewId: view.id});
+    if (!response) return;
     this.applyCalibrationResponse(response);
   }
 
   async setViewEnabled(view: CalibrationRuntimeView, enabled: boolean): Promise<void> {
     if (!view.id) return;
-    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationSetViewEnabled", this.authPayload({
+    const response = await this.requestCalibration("calibrationSetViewEnabled", {
       viewId: view.id,
       revision: view.revision,
       enabled,
-    }));
+    });
+    if (!response) return;
     this.applyCalibrationResponse(response);
   }
 
@@ -330,10 +407,11 @@ export class CalibrationStudioComponent {
     const next = index + delta;
     if (index < 0 || next < 0 || next >= views.length) return;
     [views[index], views[next]] = [views[next], views[index]];
-    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>("calibrationSortViews", this.authPayload({
+    const response = await this.requestCalibration("calibrationSortViews", {
       compositionId: composition.id,
       viewIds: views.map(item => item.id),
-    }));
+    });
+    if (!response) return;
     this.applyCalibrationResponse(response);
   }
 
@@ -574,6 +652,10 @@ export class CalibrationStudioComponent {
 
   @HostListener("document:keydown", ["$event"])
   handleKeydown(event: KeyboardEvent): void {
+    if (this.loginOpen && event.key === "Escape") {
+      this.closeLoginDialog();
+      return;
+    }
     if (!this.open) return;
     if (event.key === "Escape") {
       this.stopIntro();
@@ -725,13 +807,55 @@ export class CalibrationStudioComponent {
     this.status = "Kalibrierungsdaten gespeichert.";
   }
 
-  private authPayload(payload: Record<string, unknown>): Record<string, unknown> {
-    return {
-      ...payload,
-      username: this.auth.username,
-      pin: this.auth.pin,
-      changeReason: this.auth.reason || "Kalibrierungsansicht aktualisieren",
-    };
+  private openStudioAfterAuthentication(): void {
+    if (!this.adminSession.authenticated) {
+      this.openLoginDialog();
+      return;
+    }
+    this.open = true;
+    this.bootstrapStartedForOpen = false;
+    this.clampModalGeometry();
+    this.persistModalGeometry();
+    this.captureSession();
+    void this.bootstrapOnceForOpen();
+  }
+
+  private async bootstrapOnceForOpen(): Promise<void> {
+    if (this.bootstrapStartedForOpen) {
+      return;
+    }
+    this.bootstrapStartedForOpen = true;
+    await this.loadCalibrationProfile();
+  }
+
+  private async requestCalibration(action: AppDataAdminAction, payload: Record<string, unknown>, retryOnAuthFailure = true): Promise<{ok: boolean; action: AppDataAdminAction; requestId?: string; data?: {profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}; error?: {code?: string; message: string; details?: unknown}} | null> {
+    if (!this.adminSession.authenticated) {
+      this.requestReauthentication(() => this.requestCalibration(action, payload, false).then(response => {
+        if (response) this.applyCalibrationResponse(response);
+      }), "Bitte erneut anmelden, bevor Kalibrierungsdaten gespeichert werden.");
+      return null;
+    }
+
+    const response = await this.adminApi.request<{profile: CalibrationRuntimeProfile & {id?: number; isActive?: boolean}}>(action, payload);
+    if (!response.ok && retryOnAuthFailure && this.adminSession.isAuthenticationFailure(response)) {
+      this.requestReauthentication(() => this.requestCalibration(action, payload, false).then(next => {
+        if (next) this.applyCalibrationResponse(next);
+      }), "Die Admin-Session ist abgelaufen. Bitte erneut anmelden.");
+      return null;
+    }
+    return response;
+  }
+
+  private requestReauthentication(action: () => Promise<void>, message: string): void {
+    this.adminSession.clearCredentials();
+    if (!this.pendingRetryUsed) {
+      this.pendingAuthenticatedAction = action;
+      this.pendingRetryUsed = true;
+    } else {
+      this.pendingAuthenticatedAction = null;
+    }
+    this.openLoginDialog(message);
+    this.status = "Admin-Anmeldung erforderlich.";
   }
 
   private captureCurrentCameraPoseForView(): CalibrationRuntimeView["camera"] {

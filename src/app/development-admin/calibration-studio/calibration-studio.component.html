@@ -1,5 +1,34 @@
 <button class="calibration-open" type="button" (click)="toggle()">Calibration Studio 2.0</button>
 
+@if (loginOpen) {
+  <section class="calibration-login-modal" aria-label="Calibration Studio Anmeldung">
+    <form class="calibration-login-card" (ngSubmit)="authenticateFromDialog()">
+      <header>
+        <h3>Calibration Studio Login</h3>
+        <button type="button" (click)="closeLoginDialog()" aria-label="Login schliessen">x</button>
+      </header>
+      @if (reauthMessage) {
+        <p class="login-hint">{{reauthMessage}}</p>
+      }
+      <label>
+        <span>Interner Login</span>
+        <input name="calibration-login-username" [(ngModel)]="loginUsername" autocomplete="username" required>
+      </label>
+      <label>
+        <span>Mitarbeiter-PIN</span>
+        <input name="calibration-login-pin" type="password" [(ngModel)]="loginPin" autocomplete="current-password" required>
+      </label>
+      @if (loginError) {
+        <p class="login-error" role="alert">{{loginError}}</p>
+      }
+      <footer>
+        <button type="button" (click)="closeLoginDialog()" [disabled]="loginLoading">Abbrechen</button>
+        <button type="submit" [disabled]="loginLoading">{{loginLoading ? 'Pruefe ...' : 'Anmelden'}}</button>
+      </footer>
+    </form>
+  </section>
+}
+
 @if (open) {
   <section
     class="calibration-modal"
@@ -232,10 +261,16 @@
                 <button type="button" (click)="createNewView()" [disabled]="!selectedComposition">+ Neue Ansicht</button>
               </div>
 
-              <div class="auth-grid">
-                <label><span>Interner Login</span><input [(ngModel)]="auth.username" autocomplete="off"></label>
-                <label><span>Mitarbeiter-PIN</span><input type="password" [(ngModel)]="auth.pin" autocomplete="off"></label>
-                <label><span>Grund</span><input [(ngModel)]="auth.reason"></label>
+              <div class="auth-session">
+                <div>
+                  <span>Angemeldet</span>
+                  <strong>{{adminSession.username || '-'}}</strong>
+                </div>
+                <label>
+                  <span>Grund</span>
+                  <input [(ngModel)]="adminSession.changeReason" autocomplete="off">
+                </label>
+                <button type="button" (click)="openLoginDialog('Bitte erneut anmelden, um die Admin-Session zu ersetzen.')">Neu anmelden</button>
               </div>
 
               @if (selectedComposition; as composition) {

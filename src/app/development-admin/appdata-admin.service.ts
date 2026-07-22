@@ -1,6 +1,7 @@
 import {Injectable} from "@angular/core";
 import {HttpClient, HttpErrorResponse} from "@angular/common/http";
 import {lastValueFrom} from "rxjs";
+import {AdminSessionService} from "./admin-session.service";
 
 export type AppDataAdminAction =
   "bootstrap"
@@ -16,6 +17,7 @@ export type AppDataAdminAction =
   | "listTargets"
   | "assignTarget"
   | "rollbackTarget"
+  | "calibrationAuthenticate"
   | "calibrationBootstrap"
   | "calibrationUpdateComposition"
   | "calibrationCreateView"
@@ -58,14 +60,33 @@ export class AppDataAdminService {
   private readonly calibrationEndpoint = this.resolveEndpoint("calibration-admin.php", "__ONE_RINGCONF_CALIBRATION_ADMIN_ENDPOINT");
   lastDebugInfo: AppDataAdminDebugInfo | null = null;
 
-  constructor(private http: HttpClient)
+  constructor(private http: HttpClient, private adminSession: AdminSessionService)
   {
   }
 
   async request<T>(action: AppDataAdminAction, payload: Record<string, unknown> = {}): Promise<AppDataAdminResponse<T>>
   {
     const endpoint = this.endpointForAction(action);
-    const payloadSummary = this.summarizePayload(payload);
+    let requestPayload: Record<string, unknown>;
+    try {
+      requestPayload = this.payloadForAction(action, payload);
+    } catch (error) {
+      const normalized = this.normalizeLocalError<T>(action, error);
+      this.lastDebugInfo = {
+        action,
+        endpoint,
+        status: "error",
+        requestId: "",
+        payloadSummary: this.summarizePayload(payload),
+        errorCode: normalized.error?.code,
+        errorMessage: normalized.error?.message,
+        versionId: this.numberOrUndefined(payload["versionId"]),
+        baseVersionId: this.numberOrUndefined(payload["baseVersionId"]),
+      };
+      return normalized;
+    }
+
+    const payloadSummary = this.summarizePayload(requestPayload);
     this.lastDebugInfo = {
       action,
       endpoint,
@@ -82,7 +103,7 @@ export class AppDataAdminService {
     try {
       const response = await lastValueFrom(this.http.post<AppDataAdminResponse<T>>(endpoint, {
         action,
-        ...payload,
+        ...requestPayload,
       }));
 
       const normalized = this.normalizeResponse(action, response);
@@ -126,6 +147,27 @@ export class AppDataAdminService {
   private isCalibrationAction(action: AppDataAdminAction): boolean
   {
     return action.startsWith("calibration");
+  }
+
+  private isCalibrationAuthenticationAction(action: AppDataAdminAction): boolean
+  {
+    return action === "calibrationAuthenticate";
+  }
+
+  private isCalibrationWriteAction(action: AppDataAdminAction): boolean
+  {
+    return this.isCalibrationAction(action) && action !== "calibrationAuthenticate" && action !== "calibrationBootstrap";
+  }
+
+  private payloadForAction(action: AppDataAdminAction, payload: Record<string, unknown>): Record<string, unknown>
+  {
+    if (!this.isCalibrationAction(action) || this.isCalibrationAuthenticationAction(action)) {
+      return payload;
+    }
+
+    return this.adminSession.withCredentials(payload, {
+      includeChangeReason: this.isCalibrationWriteAction(action),
+    });
   }
 
   private resolveEndpoint(fileName: string, globalName: "__ONE_RINGCONF_APPDATA_ADMIN_ENDPOINT" | "__ONE_RINGCONF_CALIBRATION_ADMIN_ENDPOINT"): string
@@ -245,6 +287,20 @@ export class AppDataAdminService {
     }
 
     return `Die Admin-Anfrage ist fehlgeschlagen. HTTP ${error.status} ${error.statusText || ""}`.trim();
+  }
+
+  private normalizeLocalError<T>(action: AppDataAdminAction, error: unknown): AppDataAdminResponse<T>
+  {
+    return {
+      ok: false,
+      action,
+      requestId: "",
+      error: {
+        code: "AUTHENTICATION_REQUIRED",
+        message: "Eine Admin-Anmeldung ist erforderlich.",
+        details: error instanceof Error ? error.message : undefined,
+      },
+    };
   }
 
   private debugEnabled(): boolean

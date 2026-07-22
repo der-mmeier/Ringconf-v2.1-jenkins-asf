@@ -42,6 +42,15 @@ function runCalibrationAdminEndpoint(): never
 
     $input = readJsonBody();
     $action = requireAction($input);
+    if ($action === 'calibrationAuthenticate') {
+      $result = handleCalibrationAuthenticate($input);
+      respond(200, [
+        'ok' => true,
+        'requestId' => $requestId,
+        'result' => $result,
+      ]);
+    }
+
     $handlers = [
       'calibrationBootstrap' => 'handleCalibrationBootstrap',
       'calibrationUpdateComposition' => 'handleCalibrationUpdateComposition',
@@ -105,7 +114,24 @@ function calibrationTable(string $kind): string
   return assertIdentifier($map[$kind] ?? '');
 }
 
-function handleCalibrationBootstrap(PDO $db): array
+function handleCalibrationAuthenticate(array $input): array
+{
+  $actor = verifyEmployee($input, editorPermissions());
+  return [
+    'authenticated' => true,
+    'username' => actorUsername($actor),
+    'permissions' => array_values(array_filter(array_map('strval', $actor['permissions'] ?? []))),
+    'authenticatedAt' => gmdate('c'),
+  ];
+}
+
+function handleCalibrationBootstrap(PDO $db, array $input, string $requestId): array
+{
+  verifyEmployee($input, editorPermissions());
+  return calibrationBootstrapPayload($db);
+}
+
+function calibrationBootstrapPayload(PDO $db): array
 {
   ensureCalibrationStorage($db);
   $profile = fetchActiveCalibrationProfileRow($db);
@@ -150,7 +176,7 @@ function handleCalibrationUpdateComposition(PDO $db, array $input, string $reque
   audit($db, $requestId, 'calibrationUpdateComposition', null, null, null, $actor, ['compositionId' => $compositionId]);
   $db->commit();
 
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function handleCalibrationCreateView(PDO $db, array $input, string $requestId): array
@@ -180,7 +206,7 @@ function handleCalibrationCreateView(PDO $db, array $input, string $requestId): 
   audit($db, $requestId, 'calibrationCreateView', null, null, null, $actor, ['compositionId' => $compositionId, 'viewKey' => $viewKey]);
   $db->commit();
 
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function handleCalibrationUpdateView(PDO $db, array $input, string $requestId): array
@@ -224,7 +250,7 @@ function handleCalibrationUpdateView(PDO $db, array $input, string $requestId): 
   audit($db, $requestId, 'calibrationUpdateView', null, null, null, $actor, ['viewId' => $viewId]);
   $db->commit();
 
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function handleCalibrationDuplicateView(PDO $db, array $input, string $requestId): array
@@ -261,7 +287,7 @@ function handleCalibrationDuplicateView(PDO $db, array $input, string $requestId
   audit($db, $requestId, 'calibrationDuplicateView', null, null, null, $actor, ['viewId' => $viewId, 'newKey' => $newKey]);
   $db->commit();
 
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function handleCalibrationDeleteView(PDO $db, array $input, string $requestId): array
@@ -279,7 +305,7 @@ function handleCalibrationDeleteView(PDO $db, array $input, string $requestId): 
   audit($db, $requestId, 'calibrationDeleteView', null, null, null, $actor, ['viewId' => $viewId]);
   $db->commit();
 
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function handleCalibrationSortViews(PDO $db, array $input, string $requestId): array
@@ -304,7 +330,7 @@ function handleCalibrationSortViews(PDO $db, array $input, string $requestId): a
   }
   audit($db, $requestId, 'calibrationSortViews', null, null, null, $actor, ['compositionId' => $compositionId]);
   $db->commit();
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function handleCalibrationSetDefaultView(PDO $db, array $input, string $requestId): array
@@ -317,7 +343,7 @@ function handleCalibrationSetDefaultView(PDO $db, array $input, string $requestI
   setDefaultView($db, (int)$row['composition_id'], $viewId);
   audit($db, $requestId, 'calibrationSetDefaultView', null, null, null, $actor, ['viewId' => $viewId]);
   $db->commit();
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function handleCalibrationSetViewEnabled(PDO $db, array $input, string $requestId): array
@@ -334,7 +360,7 @@ function handleCalibrationSetViewEnabled(PDO $db, array $input, string $requestI
   $stmt->execute(['id' => $viewId, 'enabled' => $enabled, 'updated_by' => actorUsername($actor)]);
   audit($db, $requestId, 'calibrationSetViewEnabled', null, null, null, $actor, ['viewId' => $viewId, 'enabled' => $enabled]);
   $db->commit();
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function handleCalibrationActivateProfile(PDO $db, array $input, string $requestId): array
@@ -349,7 +375,7 @@ function handleCalibrationActivateProfile(PDO $db, array $input, string $request
   $stmt->execute(['id' => $profileId, 'updated_by' => actorUsername($actor)]);
   audit($db, $requestId, 'calibrationActivateProfile', null, null, null, $actor, ['profileId' => $profileId]);
   $db->commit();
-  return handleCalibrationBootstrap($db);
+  return calibrationBootstrapPayload($db);
 }
 
 function ensureCalibrationStorage(PDO $db): void
