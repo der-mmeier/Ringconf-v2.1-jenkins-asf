@@ -72,4 +72,16 @@ describe("AppDataAdminService endpoints", () => {
     expect(response.error?.code).toBe("AUTHENTICATION_REQUIRED");
     http.expectNone(request => request.url.endsWith("/calibration-admin.php"));
   });
+
+  it("normalizes bare HTTP auth failures for reauthentication handling", async () => {
+    adminSession.authenticate({username: "editor", pin: "1234"}, {authenticated: true, username: "editor"});
+    const request = service.request("calibrationBootstrap");
+    const req = http.expectOne(request => request.url.endsWith("/calibration-admin.php"));
+    req.flush("Forbidden", {status: 403, statusText: "Forbidden"});
+
+    const response = await request;
+    expect(response.ok).toBeFalse();
+    expect(response.error?.code).toBe("FORBIDDEN");
+    expect(adminSession.isAuthenticationFailure(response)).toBeTrue();
+  });
 });

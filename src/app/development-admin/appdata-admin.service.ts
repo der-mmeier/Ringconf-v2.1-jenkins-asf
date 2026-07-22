@@ -258,6 +258,12 @@ export class AppDataAdminService {
     if (status === 0) {
       return "NETWORK_ERROR";
     }
+    if (status === 401) {
+      return "AUTHENTICATION_REQUIRED";
+    }
+    if (status === 403) {
+      return "FORBIDDEN";
+    }
     if (status === 404) {
       return "ENDPOINT_NOT_FOUND";
     }
