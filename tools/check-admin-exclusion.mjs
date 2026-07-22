@@ -1,10 +1,17 @@
 import {existsSync, readdirSync, readFileSync, statSync} from "node:fs";
 import {join, relative} from "node:path";
 
+const target = readArgValue("--target") || process.env.RINGCONF_ADMIN_EXCLUSION_TARGET || "all";
 const roots = [
-  "dist/ringconf-v2.1",
-  "_shop/woocommerce/OneRingconf/dist",
+  {target: "standalone", path: "dist/ringconf-v2.1"},
+  {target: "woocommerce", path: "_shop/woocommerce/OneRingconf/dist"},
 ];
+const allowedTargets = new Set(["all", "standalone", "woocommerce"]);
+
+if (!allowedTargets.has(target)) {
+  console.error(`Unknown admin exclusion target "${target}". Use all, standalone or woocommerce.`);
+  process.exit(1);
+}
 
 const forbiddenText = [
   "AppData und WebGL-Settings",
@@ -52,16 +59,16 @@ function* walk(path) {
 
 const violations = [];
 
-for (const root of roots) {
-  if (!existsSync(root)) {
-    violations.push(`${root}: output folder is missing`);
+for (const rootConfig of roots.filter(root => target === "all" || root.target === target)) {
+  if (!existsSync(rootConfig.path)) {
+    violations.push(`${rootConfig.path}: output folder is missing`);
     continue;
   }
 
-  for (const file of walk(root)) {
+  for (const file of walk(rootConfig.path)) {
     const fileName = file.replace(/\\/g, "/");
     const baseName = fileName.split("/").pop().toLowerCase();
-    if (root === "_shop/woocommerce/OneRingconf/dist" && (forbiddenWooCommerceFiles.has(baseName) || extensionOf(file) === ".php")) {
+    if (rootConfig.target === "woocommerce" && (forbiddenWooCommerceFiles.has(baseName) || extensionOf(file) === ".php")) {
       violations.push(`${relative(process.cwd(), file)}: PHP file copied to WooCommerce output`);
       continue;
     }
@@ -93,3 +100,8 @@ if (violations.length > 0) {
 }
 
 console.log("Admin exclusion check passed.");
+
+function readArgValue(name) {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? null : process.argv[index + 1] || null;
+}

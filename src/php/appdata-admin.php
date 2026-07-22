@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
-require_once __DIR__ . '/calibration-admin.php';
 
 const MAX_REQUEST_BYTES = 5242880;
 const ADMIN_TABLE_BUILD = 'ringcfg_appdata_build';
@@ -13,97 +12,83 @@ const ADMIN_TABLE_TARGET = 'ringcfg_appdata_target';
 const ADMIN_TABLE_RELEASE_HISTORY = 'ringcfg_appdata_release_history';
 const ADMIN_TABLE_AUDIT = 'ringcfg_appdata_audit_log';
 
-$requestId = bin2hex(random_bytes(16));
+if (!defined('RINGCONF_ADMIN_COMMON_ONLY')) {
+  ob_start();
 
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
-header('X-Content-Type-Options: nosniff');
+  $requestId = bin2hex(random_bytes(16));
 
-try {
-  if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    fail(405, 'METHOD_NOT_ALLOWED', 'Only POST is supported.');
-  }
+  header('Content-Type: application/json; charset=utf-8');
+  header('Cache-Control: no-store');
+  header('X-Content-Type-Options: nosniff');
 
-  $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
-  if ($contentLength > MAX_REQUEST_BYTES) {
-    fail(413, 'REQUEST_TOO_LARGE', 'Request body is too large.');
-  }
+  try {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+      fail(405, 'METHOD_NOT_ALLOWED', 'Only POST is supported.');
+    }
 
-  $input = readJsonBody();
-  $action = requireAction($input);
+    $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    if ($contentLength > MAX_REQUEST_BYTES) {
+      fail(413, 'REQUEST_TOO_LARGE', 'Request body is too large.');
+    }
 
-  $handlers = [
-    'bootstrap' => 'handleBootstrap',
-    'listBuilds' => 'handleListBuilds',
-    'registerBuild' => 'handleRegisterBuild',
-    'listVersions' => 'handleListVersions',
-    'getVersion' => 'handleGetVersion',
-    'importCurrentBaseline' => 'handleImportCurrentBaseline',
-    'saveVersion' => 'handleSaveVersion',
-    'setCompatibility' => 'handleSetCompatibility',
-    'approveVersion' => 'handleApproveVersion',
-    'retireVersion' => 'handleRetireVersion',
-    'listTargets' => 'handleListTargets',
-    'assignTarget' => 'handleAssignTarget',
-    'rollbackTarget' => 'handleRollbackTarget',
-    'calibrationBootstrap' => 'handleCalibrationBootstrap',
-    'calibrationUpdateComposition' => 'handleCalibrationUpdateComposition',
-    'calibrationCreateView' => 'handleCalibrationCreateView',
-    'calibrationUpdateView' => 'handleCalibrationUpdateView',
-    'calibrationDuplicateView' => 'handleCalibrationDuplicateView',
-    'calibrationDeleteView' => 'handleCalibrationDeleteView',
-    'calibrationSortViews' => 'handleCalibrationSortViews',
-    'calibrationSetDefaultView' => 'handleCalibrationSetDefaultView',
-    'calibrationSetViewEnabled' => 'handleCalibrationSetViewEnabled',
-    'calibrationActivateProfile' => 'handleCalibrationActivateProfile',
-  ];
+    $input = readJsonBody();
+    $action = requireAction($input);
 
-  if (!isset($handlers[$action])) {
-    fail(400, 'UNKNOWN_ACTION', 'Action is not supported.');
-  }
-
-  $db = openAdminDatabase();
-  $result = $handlers[$action]($db, $input, $requestId);
-  respond(200, [
-    'ok' => true,
-    'requestId' => $requestId,
-    'result' => $result,
-  ]);
-} catch (AdminHttpError $error) {
-  respond($error->status, [
-    'ok' => false,
-    'requestId' => $requestId,
-    'error' => [
-      'code' => $error->codeName,
-      'message' => $error->safeMessage,
-    ],
-  ]);
-} catch (Throwable $error) {
-  error_log(sprintf(
-    'appdata-admin request failed [%s]: %s: %s in %s:%d',
-    $requestId,
-    get_class($error),
-    $error->getMessage(),
-    $error->getFile(),
-    $error->getLine()
-  ));
-  $payload = [
-    'ok' => false,
-    'requestId' => $requestId,
-    'error' => [
-      'code' => 'SERVER_ERROR',
-      'message' => 'The AppData admin request failed. Reference requestId ' . $requestId . '.',
-    ],
-  ];
-  if (isLocalDebugRequest()) {
-    $payload['error']['details'] = [
-      'type' => get_class($error),
-      'message' => $error->getMessage(),
-      'file' => basename($error->getFile()),
-      'line' => $error->getLine(),
+    $handlers = [
+      'bootstrap' => 'handleBootstrap',
+      'listBuilds' => 'handleListBuilds',
+      'registerBuild' => 'handleRegisterBuild',
+      'listVersions' => 'handleListVersions',
+      'getVersion' => 'handleGetVersion',
+      'importCurrentBaseline' => 'handleImportCurrentBaseline',
+      'saveVersion' => 'handleSaveVersion',
+      'setCompatibility' => 'handleSetCompatibility',
+      'approveVersion' => 'handleApproveVersion',
+      'retireVersion' => 'handleRetireVersion',
+      'listTargets' => 'handleListTargets',
+      'assignTarget' => 'handleAssignTarget',
+      'rollbackTarget' => 'handleRollbackTarget',
     ];
+
+    if (!isset($handlers[$action])) {
+      fail(400, 'UNKNOWN_ACTION', 'Action is not supported.');
+    }
+
+    $db = openAdminDatabase();
+    $result = $handlers[$action]($db, $input, $requestId);
+    respond(200, [
+      'ok' => true,
+      'requestId' => $requestId,
+      'result' => $result,
+    ]);
+  } catch (AdminHttpError $error) {
+    respond($error->status, [
+      'ok' => false,
+      'requestId' => $requestId,
+      'error' => [
+        'code' => $error->codeName,
+        'message' => $error->safeMessage,
+      ],
+    ]);
+  } catch (Throwable $error) {
+    error_log(sprintf(
+      'appdata-admin request failed [%s]: %s: %s in %s:%d',
+      $requestId,
+      get_class($error),
+      $error->getMessage(),
+      $error->getFile(),
+      $error->getLine()
+    ));
+    $payload = [
+      'ok' => false,
+      'requestId' => $requestId,
+      'error' => [
+        'code' => 'SERVER_ERROR',
+        'message' => 'The AppData admin request failed. Reference requestId ' . $requestId . '.',
+      ],
+    ];
+    respond(500, $payload);
   }
-  respond(500, $payload);
 }
 
 final class AdminHttpError extends Exception
@@ -119,6 +104,9 @@ final class AdminHttpError extends Exception
 
 function respond(int $status, array $payload): void
 {
+  while (ob_get_level() > 0) {
+    ob_end_clean();
+  }
   http_response_code($status);
   echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
   exit;

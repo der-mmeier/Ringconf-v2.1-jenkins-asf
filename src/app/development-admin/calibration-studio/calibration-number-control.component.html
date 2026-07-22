@@ -1,0 +1,36 @@
+<div class="calibration-number-control">
+  <div class="control-header">
+    <label [attr.for]="inputId">{{label}}</label>
+    @if (unit) {
+      <span class="unit">{{unit}}</span>
+    }
+    @if (help) {
+      <button type="button" class="help" [title]="help" [attr.aria-label]="label + ' Hilfe'">?</button>
+    }
+  </div>
+
+  <input
+    [id]="inputId"
+    type="number"
+    [value]="value"
+    [min]="min"
+    [max]="max"
+    [step]="step"
+    [disabled]="disabled"
+    (input)="update($any($event.target).value)">
+
+  <input
+    type="range"
+    [attr.aria-label]="label + ' Slider'"
+    [value]="value"
+    [min]="min"
+    [max]="max"
+    [step]="step"
+    [disabled]="disabled"
+    (input)="update($any($event.target).value)">
+
+  <div class="bounds" aria-hidden="true">
+    <span>Min {{min}}</span>
+    <span>Max {{max}}</span>
+  </div>
+</div>

@@ -1,0 +1,78 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.calibration-number-control {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0f172a;
+  box-sizing: border-box;
+}
+
+.control-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+label {
+  min-width: 0;
+  overflow: hidden;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unit,
+.bounds {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.help {
+  width: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 1px solid #526176;
+  border-radius: 4px;
+  background: #243041;
+  color: #f8fafc;
+  cursor: pointer;
+}
+
+input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+input[type="number"] {
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  background: #111827;
+  color: #f8fafc;
+}
+
+input[type="range"] {
+  height: 28px;
+  margin: 0;
+  accent-color: #3b82f6;
+}
+
+.bounds {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}

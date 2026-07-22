@@ -46,9 +46,13 @@ RingData, preset payloads and price contracts are unchanged.
 
 ## Authoring
 
-Calibration Studio is development-only and independent from the AppData admin panel window state. It uses the AppData admin endpoint for authenticated writes:
+Calibration Studio is development-only and independent from the AppData admin panel window state. Since 2.7.10.3 it is also gated before bootstrap: the Studio button opens a login dialog, `calibrationAuthenticate` verifies the employee server-side, and only then does the modal open and send one `calibrationBootstrap` request with the in-memory admin session.
+
+It uses the dedicated development-only `calibration-admin.php` endpoint:
 
 ```text
+calibrationAuthenticate
+calibrationBootstrap
 calibrationCreateView
 calibrationUpdateView
 calibrationDuplicateView
@@ -59,10 +63,14 @@ calibrationSetViewEnabled
 calibrationActivateProfile
 ```
 
-Each write requires employee verification, a change reason and current row revision where applicable. Conflicting revisions return a conflict response and do not overwrite.
+`calibrationAuthenticate` does not read or write calibration rows. It only verifies the employee and returns minimal non-secret session information. `calibrationBootstrap` and all writes require the verified username/PIN payload from the shared in-memory admin session. Each write also requires a change reason and current row revision where applicable. Conflicting revisions return a conflict response and do not overwrite.
 
 The Studio captures camera pose and ring presentation roots separately, but a saved view row always contains camera, framing and ring layout atomically.
+
+`appdata-admin.php` is still used for AppData authoring and shared helper functions. Calibration authoring is routed separately so deployment omissions and server errors report the concrete Calibration endpoint and request ID.
 
 ## Build Boundary
 
 Development, production and WooCommerce builds do not run migrations and do not need database credentials. Database access is runtime-only through PHP endpoints. Development admin code remains excluded from production and WooCommerce bundles through the existing Angular file replacement.
+
+Development deploy packaging copies `calibration-admin.php` with the other development PHP endpoints and validates direct PHP include dependencies before writing release metadata.
